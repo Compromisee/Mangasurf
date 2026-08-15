@@ -1,11 +1,26 @@
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 build/
 dist/
 *.egg-info/
 .pytest_cache/
+.cache/
+.cache
+.npm/
+.npm
+.mangasurf/
+.readerm/
+.mangadl/
+.config/
+.local/
+cf_cookies.dat
+*.part
+*.tmp
 
 # The HeroUI toolchain is a build-time dependency. The *output* is committed
 # (readerm/reader/app/vendor/) so the packaged app and a pip install need
 # nothing but Python.
 ui/node_modules/
+node_modules/

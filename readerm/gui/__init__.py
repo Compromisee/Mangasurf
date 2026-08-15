@@ -41,7 +41,7 @@ SETTINGS_PATH = appconfig.CONFIG_PATH
 LEGACY_SETTINGS_PATH = appconfig.LEGACY_SETTINGS_PATH
 
 DEFAULT_SETTINGS = {
-    "output_dir": os.path.join(os.path.expanduser("~"), "Downloads", "ReaderM"),
+    "output_dir": os.path.join(os.path.expanduser("~"), "Downloads", "Mangasurf"),
     "format": "cbz",
     "bundle": 0,
     "chapter_workers": 3,

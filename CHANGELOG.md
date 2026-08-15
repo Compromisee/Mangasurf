@@ -30,6 +30,9 @@ All notable changes to **Mangasurf**, newest first.
   - **VyManga** (`vymanga_downloader`): adult warning bypass, chapter list parsing, vertical reader image extraction.
   - **MangaDotNet** (`mangadotnet_downloader`): Nuxt-style packed API search unpacker, chapter list parser, direct CDN extraction.
   - **Plus 18 additional sources**: MangaDex, AsuraScans, FlameComics, DemonicScans, MadaraScans, OmegaScans, ManhwaRead, MadaraNet, Natomanga, WitchScans, WriterScans, Webtoons, Mangadass, Manhwa18, Manga18Club, HentaiAkane, Nhentai.
+- **Search Relevance Engine (`filter_and_rank_query`)**:
+  - Eliminates un-filtered catalog dumps from scrapers when searching.
+  - Scored ranking (exact matches > prefix matches > token matches).
 
 ---
 
