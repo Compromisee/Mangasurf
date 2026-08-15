@@ -1,0 +1,19 @@
+{
+  "name": "readerm-ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "HeroUI component layer for the ReaderM desktop reader. Built to a static bundle; nothing here runs at runtime.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@heroui/react": "^3.2.3",
+    "esbuild": "^0.28.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.18",
+    "@tailwindcss/cli": "^4.1.18"
+  }
+}

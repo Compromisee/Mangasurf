@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "readerm"
+version = "1.0.1"
+description = "Download manga, manhwa and manhua from 28 sites as CBZ, PDF or EPUB - CLI, menu, TUI and GUI"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "rich>=13.0",
+    "Pillow>=10.0",
+    "fpdf2>=2.7",
+    "EbookLib>=0.18",
+]
+
+[project.optional-dependencies]
+gui = ["pywebview>=5.0"]
+tui = ["textual>=0.60"]
+tray = ["pystray>=0.19", "Pillow>=10.0"]
+server = ["flask>=3.0"]
+opds = ["flask>=3.0"]
+dev = ["pytest>=7.0"]
+all = ["pywebview>=5.0", "textual>=0.60", "pystray>=0.19", "flask>=3.0"]
+
+[project.urls]
+Homepage = "https://github.com/Compromisee/ReaderM"
+Issues = "https://github.com/Compromisee/ReaderM/issues"
+
+[project.scripts]
+readerm = "readerm.cli:main"
+readerm-gui = "readerm.gui:run_gui"
+readerm-tui = "readerm.tui:run_tui"
+
+[tool.setuptools.packages.find]
+include = ["readerm*"]
+
+[tool.setuptools.package-data]
+# The reader is JavaScript, HTML and CSS: without this a pip install ships
+# the Python and none of the interface.
+"readerm.reader" = ["app/*", "foliate/*", "foliate/vendor/*",
+                    "foliate/vendor/pdfjs/*", "foliate/vendor/pdfjs/**/*",
+                    "*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["network: hits live sites; needs READERM_NETWORK_TESTS=1"]

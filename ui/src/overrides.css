@@ -1,0 +1,73 @@
+
+/* ── ReaderM overrides ────────────────────────────────────────────────────
+ *
+ * HeroUI v3 is driven by unprefixed CSS variables and switches palette on a
+ * `.dark` class or `[data-theme=dark]`. Checked against the shipped sheet
+ * rather than guessed -- a first attempt used `--heroui-*` names that appear
+ * nowhere in it, so the components rendered in the default light palette on
+ * our dark background.
+ *
+ * Mapping ReaderM's own tokens onto HeroUI's is what makes a HeroUI slider
+ * follow the user's accent colour instead of shipping a second theme system.
+ *
+ * TWO NAMES ARE DELIBERATELY ABSENT: `--accent` and `--border`.
+ * HeroUI happens to spell those exactly as ReaderM already does, so writing
+ * `--accent: var(--accent)` here is a *self-reference*. Per CSS Variables a
+ * cycle resolves to the guaranteed-invalid value and the fallback is NOT
+ * applied -- measured in Chromium, `--accent` read back as the empty string
+ * on every element carrying `[data-theme]`. That blanked the middle swatch of
+ * every theme tile. Because the names already match, the correct mapping is
+ * no mapping at all: HeroUI's `var(--accent)` picks up theme.css directly.
+ */
+:root,
+[data-theme] {
+    --background: var(--bg, #14141b);
+    --background-secondary: var(--surface, #1e1e28);
+    --background-tertiary: var(--surface-2, #262632);
+    --foreground: var(--text, #eaeaf2);
+    --default: var(--surface-2, #262632);
+    --default-foreground: var(--text, #eaeaf2);
+    --default-hover: var(--surface-3, #2f2f3d);
+    --accent-foreground: var(--accent-text, #101018);
+    --primary: var(--accent, #7aa2f7);
+    --primary-foreground: var(--accent-text, #101018);
+    --focus: var(--accent, #7aa2f7);
+    --divider: var(--border, #2c2c39);
+    --radius-medium: var(--r-md, 11px);
+    --radius-small: var(--r-sm, 8px);
+    --radius-large: var(--r-lg, 15px);
+
+    /* HeroUI swaps to its dark palette on `.dark` / `[data-theme=dark]`.
+     * ReaderM's themes are called midnight/mocha/forest/..., so that selector
+     * never matches and anything not mapped here keeps a LIGHT value on a
+     * dark UI. Measured on the running app before this block existed:
+     * --overlay painted oklch(1 0 0) (pure white, 13 background-color uses),
+     * --surface-secondary and --surface-tertiary painted ~0.95 lightness.
+     * These are backgrounds and surfaces, so they must follow the theme. */
+    --muted: var(--text-2, #a2a2b6);
+    --overlay: var(--surface, #1e1e28);
+    --overlay-foreground: var(--text, #eaeaf2);
+    --surface-foreground: var(--text, #eaeaf2);
+    --surface-secondary: var(--surface-2, #262632);
+    --surface-tertiary: var(--surface-3, #2f2f3d);
+    --scrollbar-thumb: var(--border-2, #3a3a4a);
+}
+
+/* Islands sit inside the app's layout, so they must not impose margins. */
+.rm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rm-chip-button {
+    appearance: none; border: 0; background: none; padding: 0; cursor: pointer;
+    border-radius: var(--r-pill, 999px);
+}
+.rm-chip-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rm-slider-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin-bottom: 4px;
+}
+.rm-slider-head [data-slot="label"] {
+    font-size: var(--fs-md, 13.5px); font-weight: var(--fw-semi, 600);
+}
+.rm-slider-head [data-slot="slider-output"] {
+    font-size: var(--fs-sm, 12.5px); color: var(--accent);
+    font-weight: var(--fw-bold, 680); font-variant-numeric: tabular-nums;
+}

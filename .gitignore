@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# The HeroUI toolchain is a build-time dependency. The *output* is committed
+# (readerm/reader/app/vendor/) so the packaged app and a pip install need
+# nothing but Python.
+ui/node_modules/

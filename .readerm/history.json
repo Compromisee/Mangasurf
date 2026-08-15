@@ -1,0 +1,20 @@
+[
+  {
+    "query": "naruto",
+    "source": "mangakatana",
+    "results": 1,
+    "date": "2026-08-15 21:11:03"
+  },
+  {
+    "query": "solo leveling",
+    "source": "weebcentral",
+    "results": 10,
+    "date": "2026-08-15 21:11:03"
+  },
+  {
+    "query": "@mangakatana naruto",
+    "source": "all",
+    "results": 22,
+    "date": "2026-08-15 21:10:02"
+  }
+]

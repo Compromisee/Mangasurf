@@ -1,0 +1,36 @@
+# Everything needed to run ReaderM with all interfaces.
+#
+# Prefer the package extras if you are installing from source:
+#     pip install -e ".[all]"      GUI + TUI + tray
+#     pip install -e ".[gui]"      desktop app only
+#     pip install -e ".[tray]"     background/system-tray mode
+#
+# This file is the "give me everything" list.
+
+# --- core -------------------------------------------------------------
+requests>=2.31
+beautifulsoup4>=4.12
+rich>=13.0
+Pillow>=10.0
+fpdf2>=2.7
+EbookLib>=0.18
+
+# --- desktop app and reader -------------------------------------------
+# The reader (a fork of foliate-js) is plain JavaScript that runs inside the
+# webview, so it adds no Python dependency of its own. On Windows pywebview
+# uses WebView2, which ships with Windows 11 and current Windows 10; on
+# Linux it uses WebKitGTK, on macOS WKWebView.
+pywebview>=5.0
+
+# --- full-screen terminal UI -----------------------------------------
+textual>=0.60
+
+# --- system tray / background mode -----------------------------------
+# Optional: without it "Minimise to system tray" is unavailable and the
+# window closes normally. Importing pystray needs a desktop session --
+# on a headless box it raises at import time, which ReaderM handles.
+pystray>=0.19
+
+# --- servers: phone UI (server.py) and OPDS catalog (opdsserve.py) ---
+# Optional: without Flask both explain how to install it and exit.
+flask>=3.0

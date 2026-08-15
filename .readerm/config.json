@@ -1,0 +1,234 @@
+{
+  "sources": {
+    "mangadex": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 0,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "mangakatana": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 1,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "weebcentral": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 2,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "kagane": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 3,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "comix": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 4,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "vymanga": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 5,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "mangadotnet": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 6,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "natomanga": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 7,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "asurascans": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 8,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "flamecomics": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 9,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "demonicscans": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 10,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "madarascans": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 11,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "omegascans": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 12,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "manhwaread": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 13,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "madaranet": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 14,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "witchscans": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 15,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "writerscans": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 16,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "webtoons": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 17,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "mangadass": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 18,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "manhwa18": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 19,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "manga18club": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 20,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "hentaiakane": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 21,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    },
+    "nhentai": {
+      "enabled": true,
+      "search_enabled": true,
+      "rank": 22,
+      "weight": 1.0,
+      "limit": 0,
+      "language": "",
+      "delay": 0.0,
+      "note": ""
+    }
+  }
+}
