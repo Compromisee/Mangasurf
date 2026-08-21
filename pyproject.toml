@@ -30,16 +30,14 @@ dev = ["pytest>=7.0"]
 all = ["PyQt6>=6.5.0", "pywebview>=5.0", "textual>=0.60", "pystray>=0.19", "flask>=3.0"]
 
 [project.scripts]
-mangasurf = "readerm.cli:main"
-mangasurf-gui = "readerm.gui:run_gui"
-readerm = "readerm.cli:main"
-readerm-gui = "readerm.gui:run_gui"
+mangasurf = "mangasurf.cli:main"
+mangasurf-gui = "mangasurf.gui:run_gui"
 
 [tool.setuptools.packages.find]
-include = ["readerm*", "mangasurf*"]
+include = ["mangasurf*", "mangasurf*"]
 
 [tool.setuptools.package-data]
-"readerm.reader" = [
+"mangasurf.reader" = [
     "app/*",
     "app/**/*",
     "foliate/*",
@@ -51,4 +49,4 @@ include = ["readerm*", "mangasurf*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["network: hits live sites; needs READERM_NETWORK_TESTS=1"]
+markers = ["network: hits live sites; needs MANGASURF_NETWORK_TESTS=1"]
