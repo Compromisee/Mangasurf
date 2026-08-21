@@ -17,7 +17,7 @@ dependencies = [
     "fpdf2>=2.7",
     "EbookLib>=0.18",
     "PyQt6>=6.5.0",
-    "curl_cffi>=0.7.0; python_version<'3.14'",
+    "curl_cffi>=0.7.0; python_version < '3.14'",
 ]
 
 [project.optional-dependencies]
@@ -27,7 +27,13 @@ tray = ["pystray>=0.19", "Pillow>=10.0"]
 server = ["flask>=3.0"]
 opds = ["flask>=3.0"]
 dev = ["pytest>=7.0"]
-all = ["PyQt6>=6.5.0", "pywebview>=5.0", "textual>=0.60", "pystray>=0.19", "flask>=3.0"]
+all = [
+    "PyQt6>=6.5.0",
+    "pywebview>=5.0",
+    "textual>=0.60",
+    "pystray>=0.19",
+    "flask>=3.0",
+]
 
 [project.scripts]
 mangasurf = "mangasurf.cli:main"
@@ -37,16 +43,17 @@ mangasurf-gui = "mangasurf.gui:run_gui"
 include = ["mangasurf*"]
 
 [tool.setuptools.package-data]
+# Note: If foliate/ has deep nested folders, consider using a MANIFEST.in file instead.
 "mangasurf.reader" = [
     "app/*",
-    "app/**/*",
     "foliate/*",
     "foliate/vendor/*",
     "foliate/vendor/pdfjs/*",
-    "foliate/vendor/pdfjs/**/*",
     "*.md",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["network: hits live sites; needs MANGASURF_NETWORK_TESTS=1"]
+markers = [
+    "network: hits live sites; needs MANGASURF_NETWORK_TESTS=1",
+]
