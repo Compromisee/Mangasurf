@@ -31,7 +31,7 @@ jobs:
           python - << 'EOF'
           import sys
           import time
-          from readerm.sources import ALL_SOURCES
+          from mangasurf.sources import ALL_SOURCES
 
           print("=" * 60)
           print(f"MANGASURF HEALTH RADAR: Testing {len(ALL_SOURCES)} Scrapers")
