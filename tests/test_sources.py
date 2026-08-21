@@ -14,17 +14,17 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from readerm.sources import (  # noqa: E402
+from mangasurf.sources import (  # noqa: E402
     SOURCES,
     detect_source,
     get_source,
     list_sources,
     source_for_url,
 )
-from readerm.sources.base import ScrapeError, Source  # noqa: E402
-from readerm.sources.mangadex import MangaDexSource  # noqa: E402
-from readerm.sources.mangakatana import MangakatanaSource  # noqa: E402
-from readerm.sources.natomanga import NatomangaSource  # noqa: E402
+from mangasurf.sources.base import ScrapeError, Source  # noqa: E402
+from mangasurf.sources.mangadex import MangaDexSource  # noqa: E402
+from mangasurf.sources.mangakatana import MangakatanaSource  # noqa: E402
+from mangasurf.sources.natomanga import NatomangaSource  # noqa: E402
 
 NETWORK = pytest.mark.skipif(
     not os.environ.get("READERM_NETWORK_TESTS"),
@@ -204,7 +204,7 @@ def test_extract_id_from_various_urls():
 def test_page_list_ignores_the_decoy_array():
     """Chapter pages ship as two JS arrays; the short one is a decoy."""
     import re
-    from readerm.sources.mangakatana import _JS_ARRAY, _JS_URL
+    from mangasurf.sources.mangakatana import _JS_ARRAY, _JS_URL
 
     html = """
     <script>
@@ -304,7 +304,7 @@ def test_retry_after_header_parsing():
 
 
 def test_download_options_carry_source_fields():
-    from readerm.downloader import DownloadOptions
+    from mangasurf.downloader import DownloadOptions
     opt = DownloadOptions(url="x")
     assert opt.source == ""
     assert opt.language == "en"
@@ -312,7 +312,7 @@ def test_download_options_carry_source_fields():
 
 
 def test_engine_autodetects_the_source():
-    from readerm.downloader import DownloadEngine, DownloadOptions
+    from mangasurf.downloader import DownloadEngine, DownloadOptions
     engine = DownloadEngine(DownloadOptions(
         url="https://mangakatana.com/manga/naruto.1205"))
     assert engine.source.id == "mangakatana"
@@ -321,13 +321,13 @@ def test_engine_autodetects_the_source():
 
 
 def test_engine_respects_an_explicit_source():
-    from readerm.downloader import DownloadEngine, DownloadOptions
+    from mangasurf.downloader import DownloadEngine, DownloadOptions
     engine = DownloadEngine(DownloadOptions(url="whatever", source="natomanga"))
     assert engine.source.id == "natomanga"
 
 
 def test_legacy_scraper_import_still_works():
-    from readerm.scraper import WeebCentralScraper
+    from mangasurf.scraper import WeebCentralScraper
     assert WeebCentralScraper().id == "weebcentral"
 
 
@@ -393,8 +393,8 @@ def test_manhwa18_is_flagged_adult():
 def test_manhwa18_results_carry_an_adult_rating(monkeypatch):
     """Tagging results lets the existing safe_mode filter drop them without
     any special-casing in the filter code."""
-    from readerm.features import apply_filters
-    from readerm.sources.manhwa18 import Manhwa18Source
+    from mangasurf.features import apply_filters
+    from mangasurf.sources.manhwa18 import Manhwa18Source
 
     source = Manhwa18Source()
     row = source._result("Some Title", "https://manhwa18.cc/webtoon/x",
@@ -413,7 +413,7 @@ def test_new_sources_detect_their_urls(url, expected):
 
 
 def test_omegascans_slug_extraction():
-    from readerm.sources.omegascans import OmegaScansSource
+    from mangasurf.sources.omegascans import OmegaScansSource
 
     assert OmegaScansSource.slug_of(
         "https://omegascans.org/series/affair-agency") == "affair-agency"
@@ -427,7 +427,7 @@ def test_manhwaread_decodes_base64_chapter_data():
     import base64
     import json
 
-    from readerm.sources.manhwaread import _CHAPTER_DATA
+    from mangasurf.sources.manhwaread import _CHAPTER_DATA
 
     pages = [{"src": "126682/mr_001.jpg"}, {"src": "126682/mr_002.jpg"}]
     encoded = base64.b64encode(json.dumps(pages).encode()).decode()
@@ -445,7 +445,7 @@ def test_manhwaread_decodes_base64_chapter_data():
 def test_manhwaread_sends_a_referer():
     """manread.xyz answers 403 without one and 200 with the site origin."""
     source = open(os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), "readerm", "sources",
+        os.path.abspath(__file__))), "mangasurf", "sources",
         "manhwaread.py"), encoding="utf-8").read()
     assert "def download_file" in source
     assert "manhwaread.com" in source

@@ -29,7 +29,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(name):
@@ -121,11 +121,11 @@ def test_a_proxied_cover_is_cached():
 def test_the_proxy_endpoint_returns_a_data_uri(tmp_path, monkeypatch):
     """proxy_cover fetches server-side, where there is no browser Referer."""
     monkeypatch.setenv("HOME", str(tmp_path))
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     source = read("../../gui/__init__.py") if False else open(
-        os.path.join(ROOT, "readerm", "gui", "__init__.py"), encoding="utf-8").read()
+        os.path.join(ROOT, "mangasurf", "gui", "__init__.py"), encoding="utf-8").read()
     block = source[source.index("def proxy_cover"):]
     block = block[:block.index("\n    def ")]
     assert "base64" in block
@@ -335,14 +335,14 @@ def shelf(tmp_path, monkeypatch):
         (chapter / f"{i:03d}.jpg").write_bytes(png(40, 60, (10 * i, 90, 200)))
     (series / "cover.jpg").write_bytes(png(40, 60, (220, 90, 140)))
 
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     yield api, str(chapter)
     server = api._asset_server()
     if server:
         server.stop()
-    from readerm.reader.api import ReaderApi
+    from mangasurf.reader.api import ReaderApi
     ReaderApi._assets = None
 
 

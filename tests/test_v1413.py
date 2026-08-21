@@ -2,13 +2,13 @@
 
 Two additions and one bug fix:
 
-* ``readerm search`` gained ``--type``, ``--status``, ``-n/--limit``,
+* ``mangasurf search`` gained ``--type``, ``--status``, ``-n/--limit``,
   ``--sort``, ``--reverse``, ``--json``, ``--urls``, ``--open`` and
   ``--download``.
-* ``readerm menu`` is a progressive, numbered interface that needs nothing
+* ``mangasurf menu`` is a progressive, numbered interface that needs nothing
   beyond ``rich`` -- the Textual TUI is an optional extra that is frequently
   not installed.
-* ``readerm tui`` crashed with a raw ``ModuleNotFoundError`` traceback when
+* ``mangasurf tui`` crashed with a raw ``ModuleNotFoundError`` traceback when
   Textual was missing, because the friendly message lived *after* the
   module-level import.
 """
@@ -31,9 +31,9 @@ def isolated_home(monkeypatch):
     home = tempfile.mkdtemp()
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
-    import readerm.config as appconfig
-    import readerm.features as features
-    import readerm.library as library
+    import mangasurf.config as appconfig
+    import mangasurf.features as features
+    import mangasurf.library as library
     for module in (appconfig, features, library):
         importlib.reload(module)
     yield home
@@ -47,7 +47,7 @@ def restore_menu_console():
     later test -- which is exactly how the "no terminal" test came to see an
     empty capsys instead of the real message.
     """
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     original = menu.console
     yield
@@ -58,7 +58,7 @@ def restore_menu_console():
 
 
 def test_new_search_flags_are_accepted():
-    from readerm.cli import build_parser
+    from mangasurf.cli import build_parser
 
     args = build_parser().parse_args([
         "search", "one piece", "--type", "manhwa", "--status", "Ongoing",
@@ -73,21 +73,21 @@ def test_new_search_flags_are_accepted():
 
 
 def test_invalid_type_is_rejected():
-    from readerm.cli import build_parser
+    from mangasurf.cli import build_parser
 
     with pytest.raises(SystemExit):
         build_parser().parse_args(["search", "x", "--type", "nonsense"])
 
 
 def test_invalid_sort_key_is_rejected():
-    from readerm.cli import build_parser
+    from mangasurf.cli import build_parser
 
     with pytest.raises(SystemExit):
         build_parser().parse_args(["search", "x", "--sort", "nonsense"])
 
 
 def test_menu_is_a_known_command():
-    from readerm.cli import build_parser
+    from mangasurf.cli import build_parser
 
     for name in ("menu", "i", "interactive"):
         assert build_parser().parse_args([name]).target == name
@@ -98,7 +98,7 @@ def test_menu_is_a_known_command():
 
 def test_type_narrowing_keeps_unknown_types():
     """A source that reports no type must not vanish from a filtered search."""
-    from readerm.cli import _narrow
+    from mangasurf.cli import _narrow
 
     rows = [
         {"title": "A", "series_type": "Manga", "source": "mangadex"},
@@ -110,7 +110,7 @@ def test_type_narrowing_keeps_unknown_types():
 
 
 def test_type_any_is_a_noop():
-    from readerm.cli import _narrow
+    from mangasurf.cli import _narrow
 
     rows = [{"title": "A", "series_type": "Manga", "source": "mangadex"}]
     assert _narrow(rows, series_type="any") == rows
@@ -118,7 +118,7 @@ def test_type_any_is_a_noop():
 
 
 def test_status_narrowing_keeps_unknown_status():
-    from readerm.cli import _narrow
+    from mangasurf.cli import _narrow
 
     rows = [{"title": "A", "status": "Ongoing"},
             {"title": "B", "status": "Completed"},
@@ -128,7 +128,7 @@ def test_status_narrowing_keeps_unknown_status():
 
 
 def test_source_level_type_fallback_applies():
-    from readerm.cli import _narrow
+    from mangasurf.cli import _narrow
 
     rows = [{"title": "W", "source": "webtoons"}]
     assert len(_narrow(rows, series_type="manhwa")) == 1
@@ -139,7 +139,7 @@ def test_source_level_type_fallback_applies():
 
 
 def test_sort_by_title():
-    from readerm.cli import _sort_results
+    from mangasurf.cli import _sort_results
 
     rows = [{"title": "Zed"}, {"title": "alpha"}, {"title": "Mid"}]
     assert [r["title"] for r in _sort_results(rows, "title")] == \
@@ -148,7 +148,7 @@ def test_sort_by_title():
 
 def test_sort_by_chapters_puts_unknown_last():
     """Unknown counts must not sort as zero and bury real results."""
-    from readerm.cli import _sort_results
+    from mangasurf.cli import _sort_results
 
     rows = [{"title": "few", "chapter_count": 3},
             {"title": "unknown"},
@@ -158,14 +158,14 @@ def test_sort_by_chapters_puts_unknown_last():
 
 
 def test_sort_is_stable_without_a_key():
-    from readerm.cli import _sort_results
+    from mangasurf.cli import _sort_results
 
     rows = [{"title": "b"}, {"title": "a"}]
     assert _sort_results(rows, None) == rows
 
 
 def test_reverse_flips_the_order():
-    from readerm.cli import _sort_results
+    from mangasurf.cli import _sort_results
 
     rows = [{"title": "a"}, {"title": "b"}]
     assert [r["title"] for r in _sort_results(rows, "title", reverse=True)] == \
@@ -176,7 +176,7 @@ def test_reverse_flips_the_order():
 
 
 def test_urls_only_prints_bare_urls(capsys):
-    from readerm.cli import _emit
+    from mangasurf.cli import _emit
 
     rows = [{"url": "https://a/1"}, {"url": "https://a/2"}]
     assert _emit(rows, urls_only=True) is True
@@ -185,7 +185,7 @@ def test_urls_only_prints_bare_urls(capsys):
 
 
 def test_json_output_is_parseable(capsys):
-    from readerm.cli import _emit
+    from mangasurf.cli import _emit
 
     rows = [{"title": "A", "url": "https://a/1"}]
     assert _emit(rows, as_json=True) is True
@@ -193,7 +193,7 @@ def test_json_output_is_parseable(capsys):
 
 
 def test_emit_declines_when_neither_flag_is_set():
-    from readerm.cli import _emit
+    from mangasurf.cli import _emit
 
     assert _emit([{"title": "A"}]) is False
 
@@ -203,21 +203,21 @@ def test_emit_declines_when_neither_flag_is_set():
 
 def test_menu_module_imports_without_textual():
     """The menu must work on a bare install; that is its whole point."""
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     for name in ("run_menu", "choose", "ask", "ask_number", "confirm"):
         assert hasattr(menu, name), name
 
 
 def test_choose_returns_a_zero_based_index():
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     menu.console = _FakeConsole(["2"])
     assert menu.choose("t", ["a", "b", "c"]) == 1
 
 
 def test_quit_and_back_work_at_any_prompt():
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     menu.console = _FakeConsole(["q"])
     with pytest.raises(menu.Quit):
@@ -230,7 +230,7 @@ def test_quit_and_back_work_at_any_prompt():
 
 def test_eof_exits_cleanly_instead_of_raising():
     """A closed stdin -- a pipe that ran out -- must not look like a crash."""
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     menu.console = _FakeConsole([])
     with pytest.raises(menu.Quit):
@@ -238,14 +238,14 @@ def test_eof_exits_cleanly_instead_of_raising():
 
 
 def test_ask_number_reprompts_until_valid():
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     menu.console = _FakeConsole(["", "99", "abc", "2"])
     assert menu.ask_number("n", 1, 3) == 2
 
 
 def test_confirm_defaults_both_ways():
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     menu.console = _FakeConsole([""])
     assert menu.confirm("ok?", default=True) is True
@@ -255,7 +255,7 @@ def test_confirm_defaults_both_ways():
 
 def test_menu_refuses_to_run_without_a_terminal(monkeypatch, capsys):
     """Otherwise it would block forever reading a stdin that never answers."""
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
     assert menu.run_menu() == 1
@@ -266,7 +266,7 @@ def test_every_main_menu_entry_is_handled():
     """A number with no branch behind it would silently do nothing."""
     import inspect
 
-    import readerm.menu as menu
+    import mangasurf.menu as menu
 
     body = inspect.getsource(menu.run_menu)
     for index in range(len(menu.MAIN_MENU)):
@@ -279,7 +279,7 @@ def test_every_main_menu_entry_is_handled():
 def test_tui_module_imports_without_textual():
     """It used to raise ModuleNotFoundError while still being imported, so
     the friendly message in run_tui() never printed."""
-    import readerm.tui as tui
+    import mangasurf.tui as tui
 
     importlib.reload(tui)
     assert hasattr(tui, "run_tui")
@@ -291,22 +291,22 @@ def test_tui_module_imports_without_textual():
     reason="Textual is installed, so the fallback path cannot be exercised")
 def test_missing_textual_prints_guidance_not_a_traceback():
     result = subprocess.run(
-        [sys.executable, "-m", "readerm.cli", "tui"],
+        [sys.executable, "-m", "mangasurf.cli", "tui"],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
     )
     assert "Traceback" not in result.stderr
     assert "pip install textual" in result.stdout
     # and it points at the thing that does work without an extra install
-    assert "readerm menu" in result.stdout
+    assert "mangasurf menu" in result.stdout
 
 
 def test_cli_help_documents_the_new_syntax():
     result = subprocess.run(
-        [sys.executable, "-m", "readerm.cli", "--help"],
+        [sys.executable, "-m", "mangasurf.cli", "--help"],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
     )
     for fragment in ("--type", "--sort", "--urls", "--json",
-                     "--open", "--download", "readerm menu"):
+                     "--open", "--download", "mangasurf menu"):
         assert fragment in result.stdout, fragment
 
 
@@ -340,7 +340,7 @@ def test_menu_can_be_run_as_a_bare_file():
     """
     result = subprocess.run(
         [sys.executable, "menu.py"],
-        cwd=os.path.join(ROOT, "readerm"),
+        cwd=os.path.join(ROOT, "mangasurf"),
         capture_output=True, text=True, timeout=120,
     )
     assert "attempted relative import" not in result.stderr
@@ -352,7 +352,7 @@ def test_menu_can_be_run_as_a_bare_file():
 ])
 def test_every_relative_import_module_self_bootstraps(module):
     """Generalises the fix, so the next added module cannot repeat it."""
-    src = open(os.path.join(ROOT, "readerm", f"{module}.py"),
+    src = open(os.path.join(ROOT, "mangasurf", f"{module}.py"),
                encoding="utf-8").read()
     assert '__package__ in (None, "")' in src, f"{module}.py cannot run directly"
 
@@ -361,7 +361,7 @@ def test_no_module_using_relative_imports_is_left_unguarded():
     import re
 
     unguarded = []
-    package = os.path.join(ROOT, "readerm")
+    package = os.path.join(ROOT, "mangasurf")
     for name in sorted(os.listdir(package)):
         if not name.endswith(".py") or name.startswith("__"):
             continue
@@ -372,6 +372,6 @@ def test_no_module_using_relative_imports_is_left_unguarded():
 
 
 def test_menu_runs_the_menu_when_executed_directly():
-    src = open(os.path.join(ROOT, "readerm", "menu.py"), encoding="utf-8").read()
+    src = open(os.path.join(ROOT, "mangasurf", "menu.py"), encoding="utf-8").read()
     assert '__name__ == "__main__"' in src
     assert "run_menu()" in src

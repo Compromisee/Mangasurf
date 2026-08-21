@@ -28,7 +28,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -112,9 +112,9 @@ def test_closing_to_tray_does_not_end_the_process():
     the downloads with it. Measured before the fix: 0.06s to exit.
     """
     result = run_child(FAKE_WEBVIEW + textwrap.dedent("""
-        from readerm.config import update_settings
+        from mangasurf.config import update_settings
         update_settings({"minimize_to_tray": True})
-        import readerm.gui as g
+        import mangasurf.gui as g
         g.Api.get_progress = lambda self: {"active": 1, "queued": 0, "jobs": []}
         g.run_gui()
         print("run_gui-returned", flush=True)
@@ -129,8 +129,8 @@ def test_quit_from_the_tray_lets_the_process_exit():
     """The hold must not become a hang: Quit has to end it."""
     result = run_child(textwrap.dedent("""
         import threading
-        from readerm.tray import TrayController
-        from readerm.gui import _hold_for_tray
+        from mangasurf.tray import TrayController
+        from mangasurf.gui import _hold_for_tray
         class Api:
             _really_quitting = False
             def get_progress(self): return {"active": 5, "queued": 0}
@@ -160,8 +160,8 @@ def test_an_idle_app_stays_in_the_tray():
     returns a controller once the icon is actually running.
     """
     result = run_child(textwrap.dedent("""
-        from readerm.tray import TrayController
-        from readerm.gui import _hold_for_tray
+        from mangasurf.tray import TrayController
+        from mangasurf.gui import _hold_for_tray
         class Api:
             _really_quitting = False
             def get_progress(self): return {"active": 0, "queued": 0}
@@ -181,8 +181,8 @@ def test_reopening_from_the_tray_does_not_shut_the_app_down():
     """The window must survive being reopened while the queue is idle."""
     result = run_child(textwrap.dedent("""
         import threading, time
-        from readerm.tray import TrayController
-        from readerm.gui import _hold_for_tray
+        from mangasurf.tray import TrayController
+        from mangasurf.gui import _hold_for_tray
         class Api:
             _really_quitting = False
             def get_progress(self): return {"active": 0, "queued": 0}
@@ -212,7 +212,7 @@ def test_reopening_from_the_tray_does_not_shut_the_app_down():
 def test_no_tray_means_no_hold():
     """Without a tray the app must exit exactly as it always did."""
     result = run_child(textwrap.dedent("""
-        from readerm.gui import _hold_for_tray
+        from mangasurf.gui import _hold_for_tray
         class Api:
             _really_quitting = False
             def get_progress(self): return {"active": 9}
@@ -230,7 +230,7 @@ def test_run_gui_actually_calls_the_hold():
     An earlier version of this suite exercised _hold_for_tray directly and
     still passed with the call deleted from run_gui.
     """
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def run_gui():"):]
     assert "_hold_for_tray(api, tray)" in body
 
@@ -242,8 +242,8 @@ def test_turning_the_setting_off_lets_the_window_close():
     sys.modules.pop("pystray", None)
     exec(FAKE_PYSTRAY, {"sys": sys})
 
-    from readerm.config import update_settings
-    from readerm.gui import _install_tray
+    from mangasurf.config import update_settings
+    from mangasurf.gui import _install_tray
 
     class Window:
         def __init__(self):
@@ -291,7 +291,7 @@ def test_turning_the_setting_off_lets_the_window_close():
 
 
 def test_tray_keepalive_is_exposed():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     controller = TrayController()
     assert hasattr(controller, "wait_for_quit")
@@ -320,7 +320,7 @@ def test_packaging_bundles_pystray():
 
 
 def test_advanced_log_setting_exists():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert "queue_log_advanced" in DEFAULT_SETTINGS
     assert DEFAULT_SETTINGS["queue_log_advanced"] is False
@@ -330,7 +330,7 @@ def test_advanced_log_setting_exists():
 
 
 def test_calendar_covers_whole_weeks_and_fills_gaps():
-    from readerm import features
+    from mangasurf import features
 
     cal = features.stat_calendar(weeks=53, today="2026-07-30")
     assert len(cal["days"]) == 53 * 7
@@ -349,7 +349,7 @@ def test_calendar_levels_scale_to_the_busiest_day(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
 
     today = datetime.date.today()
@@ -371,7 +371,7 @@ def test_per_day_sources_are_recorded(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
 
     features.record_stat("mangadex", chapters=3)
@@ -390,7 +390,7 @@ def test_old_stats_without_source_days_still_count(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
 
     day = datetime.date.today().isoformat()
@@ -409,12 +409,12 @@ def test_calendar_api_returns_display_names(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
     features.record_stat("madara.toonily", chapters=2)
     features.record_stat("mangadex", chapters=1)
 
-    from readerm.gui import Api
+    from mangasurf.gui import Api
     result = Api().get_calendar()
     assert result["ok"]
     names = result["calendar"]["names"]
@@ -424,7 +424,7 @@ def test_calendar_api_returns_display_names(tmp_path, monkeypatch):
 
 
 def test_source_name_resolution():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     assert api._source_name("mangadex") == "MangaDex"

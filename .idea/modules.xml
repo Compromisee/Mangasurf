@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Mangasurf.iml" filepath="$PROJECT_DIR$/.idea/Mangasurf.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/mangasurf.iml" filepath="$PROJECT_DIR$/.idea/mangasurf.iml" />
     </modules>
   </component>
 </project>

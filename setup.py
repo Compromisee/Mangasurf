@@ -7,7 +7,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        "readerm.reader": [
+        "mangasurf.reader": [
             "app/*",
             "app/**/*",
             "foliate/*",
@@ -34,10 +34,10 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "mangasurf=readerm.cli:main",
-            "mangasurf-gui=readerm.gui:run_gui",
-            "readerm=readerm.cli:main",
-            "readerm-gui=readerm.gui:run_gui",
+            "mangasurf=mangasurf.cli:main",
+            "mangasurf-gui=mangasurf.gui:run_gui",
+            "mangasurf=mangasurf.cli:main",
+            "mangasurf-gui=mangasurf.gui:run_gui",
         ],
     },
     python_requires=">=3.9",

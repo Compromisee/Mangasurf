@@ -1,8 +1,8 @@
 """Comprehensive unit tests for Mangasurf v1.6.7 release fixes."""
 
 import pytest
-from readerm.gui import Api
-from readerm.sources import (
+from mangasurf.gui import Api
+from mangasurf.sources import (
     KuraMangaSource,
     KuraHentaiSource,
     HiperdexSource,

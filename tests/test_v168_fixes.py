@@ -3,15 +3,15 @@
 import os
 import tempfile
 import pytest
-from readerm.gui import Api
-from readerm.sources import (
+from mangasurf.gui import Api
+from mangasurf.sources import (
     WitchScansSource,
     KuraMangaSource,
     KuraHentaiSource,
     HiperdexSource,
     MangaKSource,
 )
-from readerm.library import record_chapter, record_outputs, load_library
+from mangasurf.library import record_chapter, record_outputs, load_library
 
 
 def test_witchtoons_different_series_routing():

@@ -10,7 +10,7 @@
  * Everything is exposed on `window.ReaderMUI`, so app.js calls it the same way
  * it calls anything else and never imports React.
  *
- * Built by ../build.mjs into readerm/reader/app/vendor/heroui.js. Node is a
+ * Built by ../build.mjs into mangasurf/reader/app/vendor/heroui.js. Node is a
  * build-time tool only; the shipped app has no runtime dependency on it.
  */
 

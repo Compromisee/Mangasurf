@@ -4,9 +4,9 @@ import os
 import shutil
 import tempfile
 import pytest
-from readerm.gui import Api
-from readerm.sources import WitchtoonsSource, WitchScansSource, search_all, get_source
-from readerm import library
+from mangasurf.gui import Api
+from mangasurf.sources import WitchtoonsSource, WitchScansSource, search_all, get_source
+from mangasurf import library
 
 
 def test_witchtoons_source_integration():
@@ -120,7 +120,7 @@ def test_delete_all_files_and_folder():
 
 def test_search_timeout_allows_flaresolverr():
     """Item 2: search concurrency timeout is extended to 30.0s so FlareSolverr has time to resolve challenges."""
-    from readerm.sources import search_all
+    from mangasurf.sources import search_all
     # Testing search_all returns within timeout
     res = search_all("solo", source_ids=["mangadex"], limit=3)
     assert isinstance(res, list)

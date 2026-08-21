@@ -12,7 +12,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -33,7 +33,7 @@ def isolated_home(monkeypatch):
 def test_closed_handler_returns_nothing():
     """pywebview does `return_values.add(handler())` into a *set*, so any
     handler returning a dict raises "unhashable type: 'dict'"."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     assert "window.events.closed += _on_closed" in source
     assert "window.events.closed += api.shutdown" not in source
 
@@ -51,7 +51,7 @@ def test_closed_handler_returns_nothing():
 def test_shutdown_result_would_break_the_event_system():
     """Guards the reason for the wrapper: shutdown() must stay dict-returning
     for the JS bridge, so it cannot be attached to the event directly."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()
@@ -61,7 +61,7 @@ def test_shutdown_result_would_break_the_event_system():
 
 
 def test_wrapped_handler_is_set_safe():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()
@@ -76,7 +76,7 @@ def test_wrapped_handler_is_set_safe():
 
 
 def test_loaded_handler_also_returns_none():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def _on_loaded():"):]
     handler = handler[:handler.index("window.events.loaded")]
     assert not re.search(r"^\s+return\s+\S", handler, re.M)
@@ -96,14 +96,14 @@ def test_cover_host_is_never_rewritten():
     the host therefore sends the UI to guaranteed 404s, so the URL from the
     page must be the only candidate.
     """
-    from readerm.sources.natomanga import NatomangaSource
+    from mangasurf.sources.natomanga import NatomangaSource
 
     url = "https://img-r1.2xstorage.com/thumb/naruto.webp"
     assert NatomangaSource.cover_mirrors(url) == [url]
 
 
 def test_cover_mirrors_handle_a_foreign_host():
-    from readerm.sources.natomanga import NatomangaSource
+    from mangasurf.sources.natomanga import NatomangaSource
 
     url = "https://storage.waitst.com/thumb/x.webp"
     assert NatomangaSource.cover_mirrors(url) == [url]
@@ -111,7 +111,7 @@ def test_cover_mirrors_handle_a_foreign_host():
 
 @pytest.mark.parametrize("value", [None, "", "not a url"])
 def test_cover_mirrors_degrade_safely(value):
-    from readerm.sources.natomanga import NatomangaSource
+    from mangasurf.sources.natomanga import NatomangaSource
 
     result = NatomangaSource.cover_mirrors(value)
     assert result == ([] if not value else [value])
@@ -128,7 +128,7 @@ def test_cover_mirrors_degrade_safely(value):
 
 def test_settings_round_trip_through_disk():
     """The value must actually land in settings.json, not just in memory."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()
@@ -139,7 +139,7 @@ def test_settings_round_trip_through_disk():
 
 
 def test_output_dir_survives_alongside_other_settings():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()

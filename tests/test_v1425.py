@@ -123,13 +123,13 @@ class FakeApi:
 def tray_setup(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     install_fake_pystray()
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
     update_settings({"minimize_to_tray": True, "tray_notifications": True})
 
     created = []
 
     def build(active=1, queued=0):
-        from readerm.gui import _install_tray
+        from mangasurf.gui import _install_tray
         api, window = FakeApi(active, queued), FakeWindow()
         controller = _install_tray(api, window)
         assert controller is not None
@@ -252,7 +252,7 @@ def test_queued_only_still_counts_as_busy(tray_setup):
 
 
 def test_identical_messages_are_deduplicated():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     install_fake_pystray()
     tray = TrayController()
@@ -272,7 +272,7 @@ def test_different_messages_all_get_through():
     wrong: five books finishing in quick succession are five real events.
     An early version of this fix dropped 4 of 5.
     """
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     install_fake_pystray()
     tray = TrayController()
@@ -287,7 +287,7 @@ def test_different_messages_all_get_through():
 
 
 def test_dedupe_window_expires():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     install_fake_pystray()
     tray = TrayController()
@@ -302,7 +302,7 @@ def test_dedupe_window_expires():
 
 
 def test_once_messages_never_repeat():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     install_fake_pystray()
     tray = TrayController()
@@ -319,7 +319,7 @@ def test_once_messages_never_repeat():
 
 
 def test_notify_without_an_icon_is_safe():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     assert TrayController().notify("no icon here") is False
 
@@ -332,9 +332,9 @@ def test_every_finished_download_still_notifies(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     install_fake_pystray()
 
-    import readerm.gui as gui
-    from readerm.config import update_settings
-    from readerm.tray import TrayController
+    import mangasurf.gui as gui
+    from mangasurf.config import update_settings
+    from mangasurf.tray import TrayController
 
     update_settings({"tray_notifications": True, "max_concurrent_jobs": 2})
 
@@ -378,9 +378,9 @@ def test_a_stopped_download_stays_quiet(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     install_fake_pystray()
 
-    import readerm.gui as gui
-    from readerm.config import update_settings
-    from readerm.tray import TrayController
+    import mangasurf.gui as gui
+    from mangasurf.config import update_settings
+    from mangasurf.tray import TrayController
 
     update_settings({"tray_notifications": True})
 
@@ -413,14 +413,14 @@ def test_a_stopped_download_stays_quiet(tmp_path, monkeypatch):
 def test_notifications_can_be_switched_off(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     install_fake_pystray()
-    from readerm.config import update_settings
-    from readerm.gui import _install_tray
+    from mangasurf.config import update_settings
+    from mangasurf.gui import _install_tray
 
     update_settings({"minimize_to_tray": True, "tray_notifications": False})
     api, window = FakeApi(), FakeWindow()
     tray = _install_tray(api, window)
     try:
-        import readerm.gui as gui
+        import mangasurf.gui as gui
         api2 = gui.Api()
         api2._tray = tray
         api2._notify_finished({"title": "Book"}, {"ok": True, "downloaded": 2})
@@ -433,7 +433,7 @@ def test_notifications_can_be_switched_off(tmp_path, monkeypatch):
 
 
 def test_close_handler_checks_the_hidden_flag():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def _on_closing():"):]
     handler = handler[:handler.index("def _on_shown():")]
     assert "_hidden_to_tray" in handler, (
@@ -441,7 +441,7 @@ def test_close_handler_checks_the_hidden_flag():
 
 
 def test_show_window_clears_the_hidden_flag():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def show_window():"):]
     handler = handler[:handler.index("def quit_app():")]
     assert "_hidden_to_tray = False" in handler

@@ -13,19 +13,19 @@ import tempfile
 import zipfile
 import pytest
 
-from readerm import paths
-from readerm.sources import SOURCES, get_source, search_all, browse_all
-from readerm.sources.base import filter_and_rank_query
-from readerm.server import local_ip, tailscale_ip, _is_tailscale_ip, create_app
-from readerm.opds import load_opds_folders, save_opds_folders, DEFAULT_OPDS_FOLDERS
-from readerm.reader import books
-from readerm.gui import Api
+from mangasurf import paths
+from mangasurf.sources import SOURCES, get_source, search_all, browse_all
+from mangasurf.sources.base import filter_and_rank_query
+from mangasurf.server import local_ip, tailscale_ip, _is_tailscale_ip, create_app
+from mangasurf.opds import load_opds_folders, save_opds_folders, DEFAULT_OPDS_FOLDERS
+from mangasurf.reader import books
+from mangasurf.gui import Api
 
 
 # ── 1. Custom Sources & Plugin Specification ───────────────────────────────
 
 def test_custom_sources_directory_exists():
-    custom_dir = os.path.join(os.path.dirname(__file__), "..", "readerm", "sources", "customsources")
+    custom_dir = os.path.join(os.path.dirname(__file__), "..", "mangasurf", "sources", "customsources")
     real_dir = os.path.abspath(custom_dir)
     assert os.path.isdir(real_dir)
     
@@ -37,7 +37,7 @@ def test_custom_sources_directory_exists():
 
 
 def test_syntax_source_contains_all_spec_sections():
-    syntax_path = os.path.join(os.path.dirname(__file__), "..", "readerm", "sources", "customsources", "syntax.source")
+    syntax_path = os.path.join(os.path.dirname(__file__), "..", "mangasurf", "sources", "customsources", "syntax.source")
     content = open(syntax_path, encoding="utf-8").read()
     assert "[source]" in content
     assert "[headers]" in content
@@ -54,7 +54,7 @@ def test_syntax_source_contains_all_spec_sections():
 def test_opds_folders_crud_lifecycle(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         test_file = os.path.join(tmpdir, "opds_folders.json")
-        import readerm.opds as opds
+        import mangasurf.opds as opds
         monkeypatch.setattr(opds, "OPDS_FOLDERS_FILE", test_file)
 
         # 1. Load default
@@ -132,7 +132,7 @@ def test_cbz_auto_discovery_and_streaming():
         assert "/book?path=" in res.get("url", "")
 
         # Test Flask server range streaming
-        from readerm.server import Flask as ServerFlask
+        from mangasurf.server import Flask as ServerFlask
         if ServerFlask is not None:
             app = create_app(token="tok123", api=api)
             client = app.test_client()
@@ -167,7 +167,7 @@ def test_search_relevance_ranks_exact_matches_first():
 
 def test_reader_js_has_no_unsafe_search_source_listeners():
     """Ensure search-source event listener is safe and does not crash reader boot."""
-    app_js_path = os.path.join(os.path.dirname(__file__), "..", "readerm", "reader", "app", "app.js")
+    app_js_path = os.path.join(os.path.dirname(__file__), "..", "mangasurf", "reader", "app", "app.js")
     with open(app_js_path, encoding="utf-8") as f:
         content = f.read()
 
@@ -202,7 +202,7 @@ def test_scan_library_folders_discovers_cbz_and_series():
         with open(standalone, "wb") as f:
             f.write(b"PK\x03\x04claymore")
 
-        from readerm import library, opds
+        from mangasurf import library, opds
 
         scan_res = library.scan_library_folders([library_dir])
         assert scan_res["ok"] is True
@@ -242,7 +242,7 @@ def test_api_library_folders_crud():
 
 
 def test_settings_html_contains_library_folders_section():
-    html_path = os.path.join(os.path.dirname(__file__), "..", "readerm", "reader", "app", "index.html")
+    html_path = os.path.join(os.path.dirname(__file__), "..", "mangasurf", "reader", "app", "index.html")
     with open(html_path, encoding="utf-8") as f:
         html = f.read()
 

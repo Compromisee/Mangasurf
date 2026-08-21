@@ -1,8 +1,8 @@
 """Unit tests for Mangasurf v1.6.4 features."""
 
 import pytest
-from readerm.gui import Api
-from readerm.sources import (
+from mangasurf.gui import Api
+from mangasurf.sources import (
     SOURCES,
     get_source,
     MangaKSource,

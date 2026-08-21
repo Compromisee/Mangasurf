@@ -13,7 +13,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 DOCS = os.path.join(ROOT, "docs")
 SITE = os.path.join(DOCS, "index.html")
 
@@ -110,7 +110,7 @@ def test_stated_counters_match_the_repository():
     html = read(SITE)
 
     sources = len(re.findall(r"^\s+\w+Source,",
-                             read(os.path.join(ROOT, "readerm", "sources",
+                             read(os.path.join(ROOT, "mangasurf", "sources",
                                                "__init__.py")), re.M))
 
     # FEATURES.md is prose grouped by topic now, not a numbered list, so
@@ -166,7 +166,7 @@ def test_no_stale_source_count_in_prose():
     """The hero headline, <title> and social meta all state a source count in
     prose. Those are not covered by the .hs-n stat check, and were left
     reading "twelve sources" after the registry grew to 23."""
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     html = read(SITE)
     stale = ["twelve", "nine sources", "four sources", "12 sources"]
@@ -188,7 +188,7 @@ def test_source_tiles_match_the_registry():
     """The grid lists sites by hand, so it can drift from the code."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources import list_sources
+    from mangasurf.sources import list_sources
 
     soup = BeautifulSoup(read(SITE), "html.parser")
     listed = {t.get_text(strip=True).lower() for t in soup.select(".src-n")}
@@ -199,7 +199,7 @@ def test_source_tiles_match_the_registry():
 def test_adult_sources_are_marked():
     from bs4 import BeautifulSoup
 
-    from readerm.sources import list_sources
+    from mangasurf.sources import list_sources
 
     soup = BeautifulSoup(read(SITE), "html.parser")
     tagged = set()
@@ -214,7 +214,7 @@ def test_adult_sources_are_marked():
 
 def test_version_badge_matches_the_package():
     version = re.search(r'__version__ = "([^"]+)"',
-                        read(os.path.join(ROOT, "readerm", "__init__.py"))).group(1)
+                        read(os.path.join(ROOT, "mangasurf", "__init__.py"))).group(1)
     assert version in read(SITE)
 
 
@@ -392,7 +392,7 @@ def test_get_health_endpoint_exists():
     import tempfile
 
     os.environ["HOME"] = tempfile.mkdtemp()
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     assert hasattr(gui.Api, "get_health")
     report = gui.Api().get_health()

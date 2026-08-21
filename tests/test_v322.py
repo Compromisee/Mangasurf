@@ -51,7 +51,7 @@ class _Api:
 
 @pytest.fixture()
 def server():
-    from readerm.reader.assets import AssetServer
+    from mangasurf.reader.assets import AssetServer
 
     api = _Api()
     srv = AssetServer(api=api)
@@ -182,7 +182,7 @@ def test_a_post_outside_the_api_prefix_is_refused_as_a_route(server):
 
 
 def test_a_server_with_no_api_says_so(server):
-    from readerm.reader.assets import AssetServer
+    from mangasurf.reader.assets import AssetServer
 
     bare = AssetServer()
     bare.start()
@@ -200,14 +200,14 @@ def test_a_server_with_no_api_says_so(server):
 @pytest.fixture()
 def live(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api.reader_info()
     server = api._asset_server()
     yield server
     server.stop()
-    from readerm.reader.api import ReaderApi
+    from mangasurf.reader.api import ReaderApi
     ReaderApi._assets = None
 
 
@@ -225,9 +225,9 @@ def test_an_asset_server_created_before_the_api_is_adopted(tmp_path, monkeypatch
     fallback answers 503 forever.
     """
     monkeypatch.setenv("HOME", str(tmp_path))
-    from readerm.gui import Api
-    from readerm.reader.api import ReaderApi
-    from readerm.reader.assets import AssetServer
+    from mangasurf.gui import Api
+    from mangasurf.reader.api import ReaderApi
+    from mangasurf.reader.assets import AssetServer
 
     orphan = AssetServer()          # no api, exactly like the old code path
     orphan.start()
@@ -267,7 +267,7 @@ def test_settings_come_back_populated(live):
 def test_the_front_end_still_declares_the_fallback():
     """If app.js stops using /_api/ this whole route is dead code, and the
     next person should be told rather than left guessing."""
-    app = open(os.path.join(ROOT, "readerm", "reader", "app", "app.js"),
+    app = open(os.path.join(ROOT, "mangasurf", "reader", "app", "app.js"),
                encoding="utf-8").read()
     assert "./_api/" in app
     assert "window.pywebview" in app

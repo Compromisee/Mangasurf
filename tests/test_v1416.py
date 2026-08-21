@@ -38,8 +38,8 @@ def test_genres_all_runs_in_parallel_under_a_deadline():
     this during boot. Parallel + deadline brings that to ~5s."""
     import time
 
-    import readerm.sources.base as base
-    from readerm.sources import genres_all
+    import mangasurf.sources.base as base
+    from mangasurf.sources import genres_all
 
     original = base.Source.fetch
     slowed = {"manhuatop", "manhuaplus", "toonily", "manhwatop", "mangaread",
@@ -66,8 +66,8 @@ def test_genres_all_runs_in_parallel_under_a_deadline():
 def test_genres_all_falls_back_to_offline_lists_on_timeout():
     """A source that times out must contribute its hardcoded genres rather
     than vanishing from the picker."""
-    import readerm.sources.base as base
-    from readerm.sources import genres_all
+    import mangasurf.sources.base as base
+    from mangasurf.sources import genres_all
 
     original = base.Source.fetch
 
@@ -89,9 +89,9 @@ def test_genres_all_falls_back_to_offline_lists_on_timeout():
 def test_genres_all_does_not_cache_a_partial_result():
     """Caching a timed-out answer would freeze a short genre list in place for
     the cache's full hour."""
-    import readerm.sources.base as base
-    from readerm.robust import GENRE_CACHE, cache_key
-    from readerm.sources import genres_all
+    import mangasurf.sources.base as base
+    from mangasurf.robust import GENRE_CACHE, cache_key
+    from mangasurf.sources import genres_all
 
     GENRE_CACHE.clear() if hasattr(GENRE_CACHE, "clear") else None
     original = base.Source.fetch
@@ -115,9 +115,9 @@ def test_genres_all_does_not_cache_a_partial_result():
 def test_genres_all_still_merges_across_sources():
     """The offline floor: with no network at all every source falls back to a
     constant, and the merge must still work."""
-    import readerm.sources.base as base
-    from readerm.sources import genres_all
-    from readerm.sources.base import ScrapeError
+    import mangasurf.sources.base as base
+    from mangasurf.sources import genres_all
+    from mangasurf.sources.base import ScrapeError
 
     original = base.Source.fetch
 
@@ -163,31 +163,31 @@ def run_without_rich(body, argv=()):
 def test_cli_imports_without_rich():
     """It used to die at import: `from rich import box` -> ImportError, before
     argparse ran, so not even --help worked from a bare clone."""
-    result = run_without_rich("import readerm.cli; print('OK')")
+    result = run_without_rich("import mangasurf.cli; print('OK')")
     assert result.returncode == 0, result.stderr[-800:]
     assert "OK" in result.stdout
 
 
 def test_menu_imports_without_rich():
     """menu.py had the identical hard import."""
-    result = run_without_rich("import readerm.menu; print('OK')")
+    result = run_without_rich("import mangasurf.menu; print('OK')")
     assert result.returncode == 0, result.stderr[-800:]
     assert "OK" in result.stdout
 
 
 def test_cli_help_works_without_rich():
     result = run_without_rich(
-        "import sys; sys.argv=['readerm','--help']\n"
-        "from readerm.cli import main\n"
+        "import sys; sys.argv=['mangasurf','--help']\n"
+        "from mangasurf.cli import main\n"
         "try: main()\n"
         "except SystemExit: pass")
     assert result.returncode == 0, result.stderr[-800:]
-    assert "usage: readerm" in result.stdout
+    assert "usage: mangasurf" in result.stdout
 
 
 def test_sources_table_renders_without_rich():
     result = run_without_rich(
-        "from readerm.cli import cmd_sources; cmd_sources()")
+        "from mangasurf.cli import cmd_sources; cmd_sources()")
     assert result.returncode == 0, result.stderr[-800:]
     for source_id in ("mangadex", "witchscans", "asurascans"):
         assert source_id in result.stdout
@@ -195,7 +195,7 @@ def test_sources_table_renders_without_rich():
 
 def test_fallback_console_emits_ansi_when_colour_is_forced():
     result = run_without_rich(
-        "import readerm.console as c\n"
+        "import mangasurf.console as c\n"
         "assert c.RICH is False\n"
         "c.console.print('[bright_cyan]tint[/]')")
     assert result.returncode == 0, result.stderr[-800:]
@@ -206,7 +206,7 @@ def test_fallback_console_strips_markup_when_colour_is_off():
     """Piping must never produce raw [bold] tags or escape codes."""
     result = subprocess.run(
         [sys.executable, "-c", NO_RICH +
-         "import readerm.console as c\nc.console.print('[bold]plain[/] text')"],
+         "import mangasurf.console as c\nc.console.print('[bold]plain[/] text')"],
         capture_output=True, text=True, cwd=ROOT, timeout=120,
         env={**os.environ, "NO_COLOR": "1", "HOME": os.environ.get("HOME", "/tmp")},
     )
@@ -221,7 +221,7 @@ def test_fallback_table_supports_grid():
     lacked it and the download crashed with AttributeError after fetching
     every page."""
     result = run_without_rich(
-        "from readerm.console import Table\n"
+        "from mangasurf.console import Table\n"
         "g = Table.grid(padding=(0, 2))\n"
         "g.add_row('Source', 'Flame Comics')\n"
         "g.add_row('Chapters', '1 of 8')\n"
@@ -233,17 +233,17 @@ def test_fallback_table_supports_grid():
 def test_no_module_imports_rich_at_top_level():
     """Any new hard import of Rich reintroduces the crash."""
     offenders = []
-    for name in sorted(os.listdir(os.path.join(ROOT, "readerm"))):
+    for name in sorted(os.listdir(os.path.join(ROOT, "mangasurf"))):
         if not name.endswith(".py") or name == "console.py":
             continue
-        text = read(os.path.join(ROOT, "readerm", name))
+        text = read(os.path.join(ROOT, "mangasurf", name))
         if re.search(r"(?m)^(from rich[\. ]|import rich\b)", text):
             offenders.append(name)
     assert not offenders, f"import rich directly: {offenders}"
 
 
 def test_console_module_exports_what_the_cli_uses():
-    import readerm.console as console_module
+    import mangasurf.console as console_module
 
     for name in ("console", "Table", "Panel", "box", "ACCENT", "DIM",
                  "download_progress", "strip_markup", "RICH"):
@@ -253,7 +253,7 @@ def test_console_module_exports_what_the_cli_uses():
 def test_colour_is_disabled_when_piped():
     """Redirecting to a file must not produce escape-code soup."""
     result = subprocess.run(
-        [sys.executable, "-m", "readerm.cli", "sources"],
+        [sys.executable, "-m", "mangasurf.cli", "sources"],
         capture_output=True, text=True, cwd=ROOT, timeout=180,
         env={k: v for k, v in os.environ.items()
              if k not in ("FORCE_COLOR", "CLICOLOR_FORCE")},
@@ -275,7 +275,7 @@ def test_syntax_doc_exists():
 def test_every_documented_flag_exists_in_the_parser():
     """A documented flag that the parser rejects is worse than no docs."""
     result = subprocess.run(
-        [sys.executable, "-m", "readerm.cli", "--help"],
+        [sys.executable, "-m", "mangasurf.cli", "--help"],
         capture_output=True, text=True, cwd=ROOT, timeout=180)
     help_text = result.stdout
     documented = set(re.findall(r"(?<![\w-])(--[a-z][a-z-]+)", read(SYNTAX)))
@@ -285,7 +285,7 @@ def test_every_documented_flag_exists_in_the_parser():
 
 
 def test_every_documented_command_is_dispatched():
-    cli = read(os.path.join(ROOT, "readerm", "cli.py"))
+    cli = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     dispatch = cli[cli.index("def main("):]
     for command in ("search", "info", "trending", "genres", "sources",
                     "config", "library", "watch", "disk", "stats", "history",
@@ -295,7 +295,7 @@ def test_every_documented_command_is_dispatched():
 
 
 def test_syntax_doc_source_count_matches_the_registry():
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     text = read(SYNTAX)
     stale = re.findall(r"(\d+)\s+sources", text)
@@ -312,12 +312,12 @@ def test_syntax_doc_documents_colour_control():
 
 def test_cli_description_is_not_stale():
     """It named four sources long after there were twenty-three."""
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
-    cli = read(os.path.join(ROOT, "readerm", "cli.py"))
+    cli = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     assert "Natomanga and Weeb Central as CBZ" not in cli
     result = subprocess.run(
-        [sys.executable, "-m", "readerm.cli", "--help"],
+        [sys.executable, "-m", "mangasurf.cli", "--help"],
         capture_output=True, text=True, cwd=ROOT, timeout=180)
     assert f"{len(SOURCES)} sources" in result.stdout
 
@@ -333,18 +333,18 @@ def test_tui_module_is_unchanged_and_still_guards_textual():
     """The brief was to touch the TUI only if it errored. It did not -- it
     boots, cycles tabs and lists all 23 sources with no exceptions -- so this
     only pins the guard that lets it degrade without Textual."""
-    text = read(os.path.join(ROOT, "readerm", "tui.py"))
+    text = read(os.path.join(ROOT, "mangasurf", "tui.py"))
     assert "TEXTUAL_AVAILABLE" in text
     assert "except ImportError:" in text
 
 
 def test_tui_fallback_message_points_at_the_menu():
-    import readerm.tui as tui
+    import mangasurf.tui as tui
 
     if tui.TEXTUAL_AVAILABLE:
         pytest.skip("Textual is installed; the fallback path is not taken")
-    text = read(os.path.join(ROOT, "readerm", "tui.py"))
-    assert "readerm menu" in text
+    text = read(os.path.join(ROOT, "mangasurf", "tui.py"))
+    assert "mangasurf menu" in text
 
 
 # ======================================= v1.4.17: Madara Scans, and the name
@@ -352,7 +352,7 @@ def test_tui_fallback_message_points_at_the_menu():
 def test_madarascans_is_registered_and_visible():
     """Reported as "Madara doesn't show in settings". Two different things
     are called Madara; the *site* was genuinely missing."""
-    from readerm.sources import SOURCES, list_sources
+    from mangasurf.sources import SOURCES, list_sources
 
     assert "madarascans" in SOURCES
     names = {m["name"] for m in list_sources()}
@@ -362,8 +362,8 @@ def test_madarascans_is_registered_and_visible():
 def test_madara_theme_engine_is_not_a_source():
     """madara.py is the shared WordPress-theme scraper. It must never appear
     in the UI: it has no base_url, so it would render as a blank row."""
-    from readerm.sources import SOURCE_CLASSES, SOURCES
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources import SOURCE_CLASSES, SOURCES
+    from mangasurf.sources.madara import MadaraSource
 
     assert MadaraSource not in SOURCE_CLASSES
     assert "madara" not in SOURCES
@@ -374,7 +374,7 @@ def test_madara_theme_engine_is_not_a_source():
 def test_engine_flag_does_not_leak_to_subclasses():
     """A plain class attribute would inherit and every Madara-based site
     would claim to be engine code."""
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     leaked = [c.id for c in SOURCE_CLASSES
               if hasattr(c, "is_engine") and c.is_engine()]
@@ -383,15 +383,15 @@ def test_engine_flag_does_not_leak_to_subclasses():
 
 def test_madarascans_does_not_subclass_the_theme_engine():
     """Despite the name it runs themes/mangareader (Themesia), not Madara."""
-    from readerm.sources.madara import MadaraSource
-    from readerm.sources.madarascans import MadaraScansSource
+    from mangasurf.sources.madara import MadaraSource
+    from mangasurf.sources.madarascans import MadaraScansSource
 
     assert not issubclass(MadaraScansSource, MadaraSource)
 
 
 def test_madarascans_claims_both_domains():
     """.com 301s to .org; a pasted link to either must be recognised."""
-    from readerm.sources import detect_source
+    from mangasurf.sources import detect_source
 
     assert detect_source("https://madarascans.org/series/x/") == "madarascans"
     assert detect_source("https://madarascans.com/series/x/") == "madarascans"
@@ -403,7 +403,7 @@ def test_madarascans_chapter_selector_matches_the_real_markup():
     li[id^=chapter-item-] (the rows are div.ch-item, not <li>)."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.madarascans import MadaraScansSource
+    from mangasurf.sources.madarascans import MadaraScansSource
 
     html = """
       <div id="chapters-list-container">
@@ -428,7 +428,7 @@ def test_madarascans_chapter_selector_matches_the_real_markup():
 
 def test_madarascans_skips_the_list_mode_toggle():
     """/series/list-mode matches the series selector but is a view toggle."""
-    from readerm.sources.madarascans import MadaraScansSource
+    from mangasurf.sources.madarascans import MadaraScansSource
 
     assert MadaraScansSource._series_slug(
         "https://madarascans.org/series/list-mode") is None
@@ -442,7 +442,7 @@ def test_madarascans_cards_dedupe_the_double_link():
     parse returns each series twice with one entry missing its title."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.madarascans import MadaraScansSource
+    from mangasurf.sources.madarascans import MadaraScansSource
 
     html = """<div class="listupd">
       <a href="https://madarascans.org/series/foo/"><img src="/c.jpg"></a>
@@ -462,7 +462,7 @@ def test_madarascans_cards_dedupe_the_double_link():
 
 def test_madarascans_browse_pages_on_the_query_not_the_path():
     """/series/page/2/ answers 200 and returns page one; ?page=2 is real."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "madarascans.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "madarascans.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     # Strip comments: the decoy path is named in one, to explain why it is
     # avoided, and matching raw text would fail on correct code.
@@ -473,14 +473,14 @@ def test_madarascans_browse_pages_on_the_query_not_the_path():
 
 def test_madarascans_search_pages_on_the_path():
     """Search is the opposite of browse here: /page/<n>/?s=<term>."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "madarascans.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "madarascans.py"))
     body = src[src.index("def search"):src.index("def browse")]
     assert "/page/{page}/?s=" in body
 
 
 def test_madarascans_avoids_the_empty_manga_path():
     """/manga/ returns a 53-byte empty document; /series/ is the catalogue."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "madarascans.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "madarascans.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     assert "/series/" in body
 
@@ -488,8 +488,8 @@ def test_madarascans_avoids_the_empty_manga_path():
 def test_registry_source_count_is_consistent():
     """v1.4.18 folded ten Madara-theme sites into one aggregate, so the row
     count in Settings is smaller than the number of sites reachable."""
-    from readerm.sources import SOURCE_CLASSES, SOURCES
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources import SOURCE_CLASSES, SOURCES
+    from mangasurf.sources.madaranet import MEMBERS
 
     assert len(SOURCES) == len(SOURCE_CLASSES)
     # 18 standalone sources + 1 aggregate standing in for 10 sites

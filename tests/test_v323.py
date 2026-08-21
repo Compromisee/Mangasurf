@@ -26,7 +26,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(name):
@@ -40,7 +40,7 @@ def read(name):
 @pytest.fixture()
 def api(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     return Api()
 
@@ -48,7 +48,7 @@ def api(tmp_path, monkeypatch):
 def test_search_accepts_a_bare_source_string(api, monkeypatch):
     """The front-end called search(query, "mangadex"). Every such call died
     on `'str' object has no attribute 'get'`."""
-    from readerm import sources
+    from mangasurf import sources
 
     monkeypatch.setattr(sources, "search_all", lambda *a, **k: [])
     result = api.search("solo", "mangadex")
@@ -58,7 +58,7 @@ def test_search_accepts_a_bare_source_string(api, monkeypatch):
 @pytest.mark.parametrize("filters", [None, {}, {"source": "mangadex"},
                                      ["junk"], 42, "mangadex"])
 def test_search_never_raises_on_a_odd_filters_value(api, monkeypatch, filters):
-    from readerm import sources
+    from mangasurf import sources
 
     monkeypatch.setattr(sources, "search_all", lambda *a, **k: [])
     result = api.search("solo", filters)
@@ -88,7 +88,7 @@ def test_sources_are_searched_in_a_wide_pool():
     """19 sources through a pool of 4 is five sequential waves, and one slow
     site holds up the wave behind it. Measured over the full registry:
     4 workers 4.23s, 8 -> 2.53s, 12 -> 2.32s, 16 -> 2.58s."""
-    from readerm.sources import SEARCH_WORKERS
+    from mangasurf.sources import SEARCH_WORKERS
 
     assert SEARCH_WORKERS >= 8, SEARCH_WORKERS
 
@@ -97,7 +97,7 @@ def test_search_and_browse_share_the_pool_size():
     """browse_all is the empty-query and genre path; it was left at 4."""
     import inspect
 
-    from readerm import sources
+    from mangasurf import sources
 
     for fn in (sources.search_all, sources.browse_all):
         default = inspect.signature(fn).parameters["workers"].default
@@ -107,7 +107,7 @@ def test_search_and_browse_share_the_pool_size():
 def test_the_pool_never_exceeds_the_number_of_sources():
     """A pool wider than the work just makes idle threads."""
     source = read("../../sources/__init__.py") if False else open(
-        os.path.join(ROOT, "readerm", "sources", "__init__.py"),
+        os.path.join(ROOT, "mangasurf", "sources", "__init__.py"),
         encoding="utf-8").read()
     assert "min(workers, len(ids))" in source
 

@@ -3,7 +3,7 @@
 
 import sys
 
-from readerm.tui import run_tui
+from mangasurf.tui import run_tui
 
 if __name__ == "__main__":
     sys.exit(run_tui())

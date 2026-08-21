@@ -2,9 +2,9 @@
 
 import time
 import pytest
-from readerm.devices import DeviceTracker, parse_device_info, tracker
-from readerm.gui import Api
-from readerm.config import load_settings, update_settings
+from mangasurf.devices import DeviceTracker, parse_device_info, tracker
+from mangasurf.gui import Api
+from mangasurf.config import load_settings, update_settings
 
 
 def test_device_info_parsing():

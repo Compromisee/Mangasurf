@@ -18,7 +18,7 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(ROOT, "readerm", "sources")
+SRC = os.path.join(ROOT, "mangasurf", "sources")
 
 #: The eleven sources v1.4.15 added. Six of them (the Madara-theme sites)
 #: were folded into the single "madaranet" aggregate in v1.4.18, so they are
@@ -35,7 +35,7 @@ MADARA_MEMBERS = [
 
 
 def member(member_id):
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources.madaranet import MEMBERS
 
     for cls in MEMBERS:
         if cls.id == member_id:
@@ -60,7 +60,7 @@ def code(text):
 
 
 def source_code(source_id):
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     module = SOURCES[source_id].__module__.rsplit(".", 1)[-1]
     return read(os.path.join(SRC, module + ".py"))
@@ -70,7 +70,7 @@ def source_code(source_id):
 
 
 def test_every_new_source_is_registered():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     missing = [s for s in NEW_SOURCES if s not in SOURCES]
     assert not missing, missing
@@ -78,7 +78,7 @@ def test_every_new_source_is_registered():
 
 def test_registry_ids_are_unique():
     """A duplicate id would silently shadow a source in the SOURCES dict."""
-    from readerm.sources import SOURCE_CLASSES, SOURCES
+    from mangasurf.sources import SOURCE_CLASSES, SOURCES
 
     assert len(SOURCES) == len(SOURCE_CLASSES)
 
@@ -86,8 +86,8 @@ def test_registry_ids_are_unique():
 def test_madara_members_are_reachable_but_not_registered():
     """v1.4.18 folded the six Madara-theme sites into one aggregate. They
     must still be usable -- just not as separate rows in Settings."""
-    from readerm.sources import SOURCES
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources import SOURCES
+    from mangasurf.sources.madaranet import MEMBERS
 
     ids = {cls.id for cls in MEMBERS}
     for member_id in MADARA_MEMBERS:
@@ -96,7 +96,7 @@ def test_madara_members_are_reachable_but_not_registered():
 
 
 def test_new_sources_claim_their_domains():
-    from readerm.sources import detect_source
+    from mangasurf.sources import detect_source
 
     cases = [
         ("https://witchscans.com/manga/afterlife-diner/", "witchscans"),
@@ -119,7 +119,7 @@ def test_new_sources_claim_their_domains():
 def test_new_sources_do_not_steal_existing_urls():
     """manhwatop/manhuatop/manhwaread are one letter apart; a sloppy domain
     tuple would have one swallow another's URLs."""
-    from readerm.sources import detect_source
+    from mangasurf.sources import detect_source
 
     assert detect_source("https://manhwaread.com/x") == "manhwaread"
     assert detect_source("https://manhwa18.cc/x") == "manhwa18"
@@ -127,7 +127,7 @@ def test_new_sources_do_not_steal_existing_urls():
 
 
 def test_new_sources_are_instantiable_and_declare_capabilities():
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     for source_id in NEW_SOURCES:
         source = get_source(source_id)
@@ -143,7 +143,7 @@ def test_none_of_the_new_sources_are_adult_flagged():
     """All eleven are general-audience scanlation sites. Flagging one adult
     would hide it behind Safe mode; failing to flag a real adult site would
     leak it into a filtered search. These are the former."""
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     for source_id in NEW_SOURCES:
         assert not getattr(SOURCES[source_id], "adult_only", False), source_id
@@ -159,8 +159,8 @@ def test_fetch_stops_retrying_when_flaresolverr_is_absent():
     20-source search from ~4s to 66.1s. After the fix: 0.1s and 3.7s."""
     import time
 
-    from readerm.sources.base import ScrapeError
-    from readerm.sources.madaranet import _SetsuScans as SetsuScansSource
+    from mangasurf.sources.base import ScrapeError
+    from mangasurf.sources.madaranet import _SetsuScans as SetsuScansSource
 
     class Challenged:
         status_code = 403
@@ -180,7 +180,7 @@ def test_fetch_stops_retrying_when_flaresolverr_is_absent():
         raise ConnectionError("FlareSolverr is not reachable")
 
     source.session.get = fake_get
-    import readerm.flaresolverr as fs
+    import mangasurf.flaresolverr as fs
     original = fs.FlareSolverrSession.get
     fs.FlareSolverrSession.get = no_solver
     try:
@@ -200,7 +200,7 @@ def test_fetch_stops_retrying_when_flaresolverr_is_absent():
 
 def test_solverr_down_is_sticky_per_source_instance():
     """Once the solver is known missing, later calls must not re-probe it."""
-    from readerm.sources.madaranet import _SetsuScans as SetsuScansSource
+    from mangasurf.sources.madaranet import _SetsuScans as SetsuScansSource
 
     source = SetsuScansSource()
     try:
@@ -211,7 +211,7 @@ def test_solverr_down_is_sticky_per_source_instance():
 
 
 def test_cloudflare_sources_say_they_need_a_solver():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert member("madara.setsuscans").needs_flaresolverr is True
     assert SOURCES["weebcentral"].needs_flaresolverr is True
@@ -227,8 +227,8 @@ def test_cloudflare_sources_say_they_need_a_solver():
 def test_madara_base_is_not_registered():
     """It is an implementation detail; registering it would put a broken
     "source" with no base_url in the UI."""
-    from readerm.sources import SOURCE_CLASSES
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources import SOURCE_CLASSES
+    from mangasurf.sources.madara import MadaraSource
 
     assert MadaraSource not in SOURCE_CLASSES
     assert not any(cls is MadaraSource for cls in SOURCE_CLASSES)
@@ -238,18 +238,18 @@ def test_madara_search_uses_paged_not_page_path():
     """/page/2/?s= returns page ONE on Toonily -- 18 results, all 18 identical
     to page one. &paged=2 returns a disjoint set. Using the path form would
     make "next page" loop forever there."""
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources.madara import MadaraSource
 
     body = code(read(os.path.join(SRC, "madara.py")))
     search = body[body.index("def search"):body.index("def browse")]
     assert "paged=" in search
     assert "/page/" not in search
-    import readerm.sources.madara as madara_module
+    import mangasurf.sources.madara as madara_module
     assert "paged" in (madara_module.__doc__ or "")
 
 
 def test_madara_browse_pages_with_the_path_segment():
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources.madara import MadaraSource
 
     source = MadaraSource()
     source.base_url = "https://example.com"
@@ -279,7 +279,7 @@ def test_madara_cards_fall_back_to_h3_when_post_title_is_absent():
     for h3 a. Only handling .post-title returned an empty grid there."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources.madara import MadaraSource
 
     html = """
       <div class="page-item-detail">
@@ -302,7 +302,7 @@ def test_madara_cards_prefer_data_src_over_the_lazy_placeholder():
     cover in data-src, so every card would show the same grey rectangle."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources.madara import MadaraSource
 
     html = """
       <div class="page-item-detail">
@@ -323,7 +323,7 @@ def test_madara_genre_labels_strip_seo_noise():
     """Manhwa Top's real slugs are 'genre-action-new-genre' and
     'adventure-genre-hot'. The request must use them verbatim, but the picker
     must not read like that."""
-    from readerm.sources.madara import MadaraSource
+    from mangasurf.sources.madara import MadaraSource
 
     assert MadaraSource._genre_label("genre-action-new-genre") == "Action"
     assert MadaraSource._genre_label("adventure-genre-hot") == "Adventure"
@@ -333,7 +333,7 @@ def test_madara_genre_labels_strip_seo_noise():
 
 def test_each_madara_site_declares_its_measured_genre_prefix():
     """The prefix differs per install and a wrong one is a hard 404."""
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     expected = {
         "madara.manhuaplus": "manga-genre",
@@ -350,14 +350,14 @@ def test_each_madara_site_declares_its_measured_genre_prefix():
 def test_manhuatop_browses_the_manga_path_not_manhua():
     """Series live under /manhua/ but /manhua/?m_orderby= returns ZERO cards
     -- reproduced four times, three seconds apart. /manga/ is the listing."""
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert member("madara.manhuatop").series_prefix == "/manhua/"
     assert member("madara.manhuatop").browse_path == "/manga/"
 
 
 def test_toonily_uses_the_singular_serie_path():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert member("madara.toonily").series_prefix == "/serie/"
     assert member("madara.toonily").browse_path == "/search/"
@@ -370,7 +370,7 @@ def test_witchscans_keeps_the_percent_encoded_emoji_genres():
     """The taxonomy carries emoji, which WordPress encodes into the slug.
     Four genres are reachable ONLY through the encoded form; the plain word
     404s. Fetched: all 20 slugs answered 200 with cards."""
-    from readerm.sources.witchscans import WitchScansSource
+    from mangasurf.sources.witchscans import WitchScansSource
 
     slugs = [slug for slug, _label in WitchScansSource.GENRES]
     assert "action-%e2%9a%94%ef%b8%8f" in slugs
@@ -386,7 +386,7 @@ def test_witchscans_keeps_the_percent_encoded_emoji_genres():
 
 
 def test_witchscans_maps_a_genre_name_back_to_its_encoded_slug():
-    from readerm.sources.witchscans import WitchScansSource
+    from mangasurf.sources.witchscans import WitchScansSource
 
     assert WitchScansSource._genre_slug("Cultivation") == \
         "cultivation-%f0%9f%a7%98%e2%99%82%ef%b8%8f"
@@ -401,7 +401,7 @@ def test_witchscans_uses_the_plural_genres_path():
 
 
 def test_witchscans_parses_the_ts_reader_payload():
-    from readerm.sources.witchscans import WitchScansSource
+    from mangasurf.sources.witchscans import WitchScansSource
 
     payload = {"sources": [{"images": ["https://s/1.jpg", "https://s/2.jpg"]}]}
     html = "ts_reader.run(%s);" % json.dumps(payload)
@@ -415,7 +415,7 @@ def test_witchscans_reads_the_type_off_the_card():
     than the site-wide default."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.witchscans import WitchScansSource
+    from mangasurf.sources.witchscans import WitchScansSource
 
     html = """<div class="bs"><div class="bsx">
       <a href="/manga/x/" title="X"><span class="type Manhwa"></span>
@@ -445,7 +445,7 @@ def test_writerscans_rebuilds_pages_from_uid_not_src():
     """Every page ships src="/assets/images/placeholder.svg" and the real file
     is cdn.meowing.org/uploads/<uid>. Reading src returns six copies of an
     SVG -- which looks like it worked."""
-    from readerm.sources.writerscans import WriterScansSource
+    from mangasurf.sources.writerscans import WriterScansSource
 
     html = """
       <img src="/assets/images/placeholder.svg" count="2" uid="ccc">
@@ -459,7 +459,7 @@ def test_writerscans_rebuilds_pages_from_uid_not_src():
 
 
 def test_writerscans_page_order_follows_count_not_document_order():
-    from readerm.sources.writerscans import WriterScansSource
+    from mangasurf.sources.writerscans import WriterScansSource
 
     html = '<img uid="z" count="9"><img uid="a" count="1">'
     assert WriterScansSource.parse_pages(html) == [
@@ -468,7 +468,7 @@ def test_writerscans_page_order_follows_count_not_document_order():
 
 
 def test_writerscans_parses_the_catalogue_buttons():
-    from readerm.sources.writerscans import WriterScansSource
+    from mangasurf.sources.writerscans import WriterScansSource
 
     html = """<button id="abc" alt="Star Flowers"
        title="Star Flowers Hoshi no Hana" tags='["Romance","Drama"]'
@@ -489,7 +489,7 @@ def test_writerscans_parses_the_catalogue_buttons():
 def test_writerscans_search_matches_alternative_titles():
     """The site's own filter matches the title attribute, which carries every
     alias, so searching the romaji or original-language title works."""
-    from readerm.sources.writerscans import WriterScansSource
+    from mangasurf.sources.writerscans import WriterScansSource
 
     source = WriterScansSource()
     source._catalogue = WriterScansSource.parse_catalogue(
@@ -525,7 +525,7 @@ def test_demonicscans_filters_genres_over_post_only():
 
 def test_demonicscans_uses_numeric_genre_ids():
     """The form posts ids, not slugs: Action is 1, Martial Arts 6, Murim 36."""
-    from readerm.sources.demonicscans import DemonicScansSource
+    from mangasurf.sources.demonicscans import DemonicScansSource
 
     assert DemonicScansSource.GENRE_IDS["Action"] == 1
     assert DemonicScansSource.GENRE_IDS["Martial Arts"] == 6
@@ -593,7 +593,7 @@ def test_asurascans_searches_with_search_not_the_decoys():
 def test_asurascans_strips_the_constant_public_url_suffix():
     """Every public URL ends in the same -059befe1; it is a constant, not a
     per-series hash, and /api/series/<slug> accepts either form."""
-    from readerm.sources.asurascans import AsuraScansSource
+    from mangasurf.sources.asurascans import AsuraScansSource
 
     for value in ("https://asuracomic.net/comics/emperor-of-solo-play-059befe1",
                   "https://asuracomic.net/series/emperor-of-solo-play",
@@ -621,7 +621,7 @@ def test_asurascans_skips_locked_chapters():
 def test_flamecomics_sorts_the_image_dict_numerically():
     """images is a dict keyed by stringified index, not a list. Iterating it
     directly yields dictionary order, which is not page order."""
-    from readerm.sources.flamecomics import FlameComicsSource
+    from mangasurf.sources.flamecomics import FlameComicsSource
 
     chapter = {
         "series_id": 165, "token": "tok", "edit_time": 999,
@@ -636,7 +636,7 @@ def test_flamecomics_sorts_the_image_dict_numerically():
 
 
 def test_flamecomics_reads_the_next_data_payload():
-    from readerm.sources.flamecomics import FlameComicsSource
+    from mangasurf.sources.flamecomics import FlameComicsSource
 
     html = ('<script id="__NEXT_DATA__" type="application/json">'
             '{"props":{"pageProps":{"series":[{"series_id":1}]}}}</script>')
@@ -647,7 +647,7 @@ def test_flamecomics_reads_the_next_data_payload():
 
 
 def test_flamecomics_series_id_parsing():
-    from readerm.sources.flamecomics import FlameComicsSource
+    from mangasurf.sources.flamecomics import FlameComicsSource
 
     assert FlameComicsSource.series_id_of("https://flamecomics.xyz/series/165") == "165"
     assert FlameComicsSource.series_id_of("https://flamecomics.xyz/series/165/") == "165"
@@ -669,7 +669,7 @@ def test_toonily_chapters_carry_a_referer():
 def test_toonily_covers_do_not_need_proxying():
     """static.tnlycdn.com serves covers with no Referer (200 both ways), so
     unlike Webtoons this does not need the Python-side proxy."""
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert member("madara.toonily").cover_needs_referer is False
 
@@ -680,7 +680,7 @@ def test_toonily_covers_do_not_need_proxying():
 def test_landing_page_lists_every_source():
     from bs4 import BeautifulSoup
 
-    from readerm.sources import list_sources
+    from mangasurf.sources import list_sources
 
     soup = BeautifulSoup(read(os.path.join(ROOT, "docs", "index.html")),
                          "html.parser")
@@ -707,7 +707,7 @@ def test_readme_documents_every_source():
     """The Sources table keys on the source *id*, which is what -s takes.
     Checking the registry rather than a hand-written list means a source
     added without a README row fails here."""
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     readme = read(os.path.join(ROOT, "README.md"))
     for source_id in SOURCES:
@@ -715,7 +715,7 @@ def test_readme_documents_every_source():
 
 
 def test_readme_source_table_row_count_matches_the_registry():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     readme = read(os.path.join(ROOT, "README.md"))
     table = readme[readme.index("| Source | Site |"):]

@@ -40,13 +40,13 @@ def read(path):
 
 
 def member_ids():
-    import readerm.sources.madaranet as madaranet
+    import mangasurf.sources.madaranet as madaranet
     return [cls.id for cls in madaranet.MEMBERS]
 
 
 def test_every_member_resolves_through_get_source():
     """The exact call the download engine makes."""
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     for member_id in member_ids():
         source = get_source(member_id)
@@ -58,7 +58,7 @@ def test_every_member_resolves_through_get_source():
 
 
 def test_the_reported_id_specifically():
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source("madara.manhuatop")
     try:
@@ -69,7 +69,7 @@ def test_the_reported_id_specifically():
 
 def test_download_engine_accepts_a_member_source():
     """The reproduction: this raised ScrapeError before the fix."""
-    from readerm.downloader import DownloadEngine, DownloadOptions
+    from mangasurf.downloader import DownloadEngine, DownloadOptions
 
     engine = DownloadEngine(DownloadOptions(
         url="https://manhuatop.org/manga/example/", source="madara.manhuatop"))
@@ -79,8 +79,8 @@ def test_download_engine_accepts_a_member_source():
 
 def test_unknown_members_still_fail_loudly():
     """The fix must not turn every typo into a silent MangaDex."""
-    from readerm.sources import get_source
-    from readerm.sources.base import ScrapeError
+    from mangasurf.sources import get_source
+    from mangasurf.sources.base import ScrapeError
 
     for bogus in ("madara.nope", "notaprefix.thing", "madara."):
         with pytest.raises(ScrapeError):
@@ -88,7 +88,7 @@ def test_unknown_members_still_fail_loudly():
 
 
 def test_plain_sources_are_unaffected():
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     for source_id in ("mangadex", "madaranet", "madarascans"):
         source = get_source(source_id)
@@ -104,7 +104,7 @@ def test_resolve_member_detects_the_capability_not_a_name():
     An earlier version of this fix used ``hasattr(cls, "MEMBERS")``, which
     is False, so it silently fell through to "Unknown source" again.
     """
-    from readerm.sources import SOURCES, resolve_member
+    from mangasurf.sources import SOURCES, resolve_member
 
     parent = SOURCES["madaranet"]
     assert not hasattr(parent, "MEMBERS"), (
@@ -115,7 +115,7 @@ def test_resolve_member_detects_the_capability_not_a_name():
 
 
 def test_resolve_member_returns_none_for_plain_ids():
-    from readerm.sources import resolve_member
+    from mangasurf.sources import resolve_member
 
     assert resolve_member("mangadex") is None
     assert resolve_member("") is None
@@ -124,7 +124,7 @@ def test_resolve_member_returns_none_for_plain_ids():
 
 def test_the_gui_uses_the_shared_resolver():
     """Two copies of this logic is how the bug happened in the first place."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def _source(self"):]
     body = body[:body.index("\n    # ---")]
     assert "resolve_member" in body
@@ -134,7 +134,7 @@ def test_the_gui_uses_the_shared_resolver():
 
 def test_covers_and_cli_go_through_the_same_door():
     """These call get_source() directly, so the registry fix covers them."""
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source("madara.mangaowl")
     try:
@@ -155,7 +155,7 @@ def app(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
     application = server_module.create_app(token="unit-test-token")
     application.config["TESTING"] = True
@@ -396,7 +396,7 @@ def test_no_auth_mode_allows_calls(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
     application = server_module.create_app(token=None)
     with application.test_client() as client:
@@ -411,7 +411,7 @@ def test_local_ip_is_not_loopback_shaped(tmp_path, monkeypatch):
     which is useless to a phone."""
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import server as server_module
+    from mangasurf import server as server_module
 
     address = server_module.local_ip()
     assert address.count(".") == 3

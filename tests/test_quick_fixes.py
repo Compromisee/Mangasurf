@@ -1,7 +1,7 @@
 """Unit tests for Mangasurf v1.6.3 quick fixes."""
 
 import pytest
-from readerm.sources import (
+from mangasurf.sources import (
     get_source,
     ChikariSource,
     KuraMangaSource,

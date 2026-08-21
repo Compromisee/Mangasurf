@@ -27,7 +27,7 @@ import time
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 sys.path.insert(0, ROOT)
 
 
@@ -42,14 +42,14 @@ def isolated_home(monkeypatch):
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
 
-    import readerm.config as appconfig
-    import readerm.features as features
-    import readerm.library as library
-    import readerm.passlock as passlock
+    import mangasurf.config as appconfig
+    import mangasurf.features as features
+    import mangasurf.library as library
+    import mangasurf.passlock as passlock
 
     for module in (appconfig, passlock, features, library):
         importlib.reload(module)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     yield home
 
@@ -70,7 +70,7 @@ def isolated_home(monkeypatch):
 def test_junk_arguments_return_an_error_instead_of_raising(method, args):
     """JavaScript sends nulls from cleared fields and strings from stale
     handlers. Those must come back as data, not as a bridge exception."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     result = getattr(api, method)(*args)
@@ -78,7 +78,7 @@ def test_junk_arguments_return_an_error_instead_of_raising(method, args):
 
 
 def test_the_error_shape_is_what_the_frontend_expects():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     result = Api().queue_move("x", None)
     assert result["ok"] is False
@@ -86,7 +86,7 @@ def test_the_error_shape_is_what_the_frontend_expects():
 
 
 def test_guarding_does_not_swallow_good_return_values():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     assert api.get_settings()["theme"] == "midnight"
@@ -99,7 +99,7 @@ def test_guarding_does_not_swallow_good_return_values():
 def test_a_bad_cart_entry_cannot_kill_the_job_thread():
     """_start_queued runs in the finally of a finished job. An exception
     there killed the worker thread and stalled the whole queue."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     escaped = []
     original = threading.excepthook
@@ -139,13 +139,13 @@ def test_a_bad_cart_entry_cannot_kill_the_job_thread():
 ])
 def test_option_numbers_are_coerced_not_trusted(value, expected):
     """int('abc') used to escape all the way out of _spawn."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     assert Api._as_int(value, 5, 1, 10) == expected
 
 
 def test_option_floats_are_coerced():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     assert Api._as_float("abc", 0.5, 0.0, 60.0) == 0.5
     assert Api._as_float("2.5", 0.5, 0.0, 60.0) == 2.5
@@ -153,7 +153,7 @@ def test_option_floats_are_coerced():
 
 
 def test_build_options_survives_a_hostile_dict():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     opt = Api()._build_options({
         "url": "https://x/a", "chapter_workers": "abc",
@@ -167,7 +167,7 @@ def test_build_options_survives_a_hostile_dict():
 
 
 def test_one_bad_entry_does_not_block_the_rest_of_the_queue():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api._push = lambda event: None
@@ -183,7 +183,7 @@ def test_one_bad_entry_does_not_block_the_rest_of_the_queue():
 def test_cover_cache_is_bounded_by_bytes():
     """A 116 KB data URI x 240 entries held ~28 MB, and grew unbounded for
     sources with larger art, because the cap counted entries."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api._COVER_CACHE.clear()
@@ -198,7 +198,7 @@ def test_cover_cache_is_bounded_by_bytes():
 
 def test_cover_cache_evicts_least_recently_used():
     """The old code called clear(), throwing away every cover at once."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api._COVER_CACHE.clear()
@@ -211,7 +211,7 @@ def test_cover_cache_evicts_least_recently_used():
 
 
 def test_an_oversized_cover_is_not_retained():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api._COVER_CACHE.clear()

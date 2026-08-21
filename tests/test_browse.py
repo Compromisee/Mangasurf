@@ -21,9 +21,9 @@ def isolated_home(monkeypatch):
     home = tempfile.mkdtemp()
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
-    import readerm.config as config
-    import readerm.features as features
-    import readerm.robust as robust
+    import mangasurf.config as config
+    import mangasurf.features as features
+    import mangasurf.robust as robust
     for module in (config, features, robust):
         importlib.reload(module)
     # start every test from a clean breaker/cache
@@ -72,7 +72,7 @@ class FakeSource:
 
 
 def patch_sources(monkeypatch, factory):
-    monkeypatch.setattr("readerm.sources.get_source",
+    monkeypatch.setattr("mangasurf.sources.get_source",
                         lambda sid, **kw: factory(sid))
 
 
@@ -80,7 +80,7 @@ def patch_sources(monkeypatch, factory):
 
 
 def test_every_source_declares_browse_support():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     for cls in SOURCES.values():
         assert isinstance(cls.supports_browse, bool)
@@ -88,14 +88,14 @@ def test_every_source_declares_browse_support():
 
 
 def test_all_sources_support_browse_and_genres():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert all(cls.supports_browse for cls in SOURCES.values())
     assert all(cls.supports_genres for cls in SOURCES.values())
 
 
 def test_list_sources_exposes_browse_metadata():
-    from readerm.sources import list_sources
+    from mangasurf.sources import list_sources
 
     row = list_sources()[0]
     assert "supports_browse" in row
@@ -103,14 +103,14 @@ def test_list_sources_exposes_browse_metadata():
 
 
 def test_base_browse_is_abstract():
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     with pytest.raises(NotImplementedError):
         Source().browse()
 
 
 def test_base_genres_defaults_to_empty():
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     assert Source().genres() == []
 
@@ -119,7 +119,7 @@ def test_base_genres_defaults_to_empty():
 
 
 def test_mangadex_resolves_genre_names_to_tag_ids(monkeypatch):
-    from readerm.sources.mangadex import MangaDexSource
+    from mangasurf.sources.mangadex import MangaDexSource
 
     MangaDexSource._tag_cache = [
         {"id": "uuid-action", "name": "Action", "group": "genre"},
@@ -134,14 +134,14 @@ def test_mangadex_resolves_genre_names_to_tag_ids(monkeypatch):
 
 
 def test_mangadex_passes_through_a_raw_tag_uuid():
-    from readerm.sources.mangadex import MangaDexSource
+    from mangasurf.sources.mangadex import MangaDexSource
 
     uuid = "391b0423-d847-456f-aff0-8b0cfc03066b"
     assert MangaDexSource()._tag_id(uuid) == uuid
 
 
 def test_mangadex_trending_maps_to_follow_count():
-    from readerm.sources.mangadex import MangaDexSource
+    from mangasurf.sources.mangadex import MangaDexSource
 
     assert MangaDexSource._SORTS["Trending"] == ("followedCount", "desc")
 
@@ -150,7 +150,7 @@ def test_mangadex_trending_maps_to_follow_count():
 
 
 def test_browse_all_queries_every_enabled_source(monkeypatch):
-    from readerm.sources import SOURCES, browse_all
+    from mangasurf.sources import SOURCES, browse_all
 
     patch_sources(monkeypatch, lambda sid: FakeSource(sid))
     results = browse_all(limit=2)
@@ -158,8 +158,8 @@ def test_browse_all_queries_every_enabled_source(monkeypatch):
 
 
 def test_browse_all_interleaves_by_default(monkeypatch):
-    from readerm.config import reorder
-    from readerm.sources import browse_all
+    from mangasurf.config import reorder
+    from mangasurf.sources import browse_all
 
     reorder(["mangadex", "mangakatana", "natomanga", "weebcentral"])
     patch_sources(monkeypatch, lambda sid: FakeSource(sid, rows=2))
@@ -168,8 +168,8 @@ def test_browse_all_interleaves_by_default(monkeypatch):
 
 
 def test_browse_all_can_group_instead(monkeypatch):
-    from readerm.config import reorder
-    from readerm.sources import browse_all
+    from mangasurf.config import reorder
+    from mangasurf.sources import browse_all
 
     reorder(["mangadex", "mangakatana", "natomanga", "weebcentral"])
     patch_sources(monkeypatch, lambda sid: FakeSource(sid, rows=2))
@@ -178,8 +178,8 @@ def test_browse_all_can_group_instead(monkeypatch):
 
 
 def test_browse_all_respects_rank(monkeypatch):
-    from readerm.config import reorder
-    from readerm.sources import browse_all
+    from mangasurf.config import reorder
+    from mangasurf.sources import browse_all
 
     pinned = ["weebcentral", "natomanga", "mangakatana", "mangadex"]
     reorder(pinned)
@@ -188,8 +188,8 @@ def test_browse_all_respects_rank(monkeypatch):
 
 
 def test_browse_all_skips_excluded_sources(monkeypatch):
-    from readerm.config import set_enabled
-    from readerm.sources import browse_all
+    from mangasurf.config import set_enabled
+    from mangasurf.sources import browse_all
 
     set_enabled("natomanga", False)
     patch_sources(monkeypatch, lambda sid: FakeSource(sid))
@@ -197,7 +197,7 @@ def test_browse_all_skips_excluded_sources(monkeypatch):
 
 
 def test_browse_all_survives_a_dead_source(monkeypatch):
-    from readerm.sources import browse_all
+    from mangasurf.sources import browse_all
 
     patch_sources(monkeypatch,
                   lambda sid: FakeSource(sid, fail=(sid == "mangadex")))
@@ -207,7 +207,7 @@ def test_browse_all_survives_a_dead_source(monkeypatch):
 
 
 def test_browse_all_passes_the_genre_through(monkeypatch):
-    from readerm.sources import browse_all
+    from mangasurf.sources import browse_all
 
     created = {}
 
@@ -221,7 +221,7 @@ def test_browse_all_passes_the_genre_through(monkeypatch):
 
 
 def test_browse_all_skips_sources_that_cannot_browse(monkeypatch):
-    from readerm.sources import SOURCES, browse_all
+    from mangasurf.sources import SOURCES, browse_all
 
     original = SOURCES["weebcentral"].supports_browse
     SOURCES["weebcentral"].supports_browse = False
@@ -233,7 +233,7 @@ def test_browse_all_skips_sources_that_cannot_browse(monkeypatch):
 
 
 def test_browse_results_are_cached(monkeypatch):
-    from readerm.sources import browse_all
+    from mangasurf.sources import browse_all
 
     counter = {"n": 0}
 
@@ -253,27 +253,27 @@ def test_browse_results_are_cached(monkeypatch):
 
 
 def test_genres_all_merges_across_sources(monkeypatch):
-    from readerm.sources import genres_all
+    from mangasurf.sources import genres_all
 
     monkeypatch.setattr(
-        "readerm.sources.get_source",
+        "mangasurf.sources.get_source",
         lambda sid, **kw: FakeSource(
             sid, genres=["Action", "Romance"] if sid == "mangadex"
             else ["action", "Horror"]))
     rows = genres_all()
     names = {r["name"].lower() for r in rows}
     assert "action" in names and "romance" in names and "horror" in names
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     action = next(r for r in rows if r["name"].lower() == "action")
     assert len(action["sources"]) == len(SOURCES)   # every source offers it
 
 
 def test_genres_all_sorts_widely_supported_first(monkeypatch):
-    from readerm.sources import genres_all
+    from mangasurf.sources import genres_all
 
     monkeypatch.setattr(
-        "readerm.sources.get_source",
+        "mangasurf.sources.get_source",
         lambda sid, **kw: FakeSource(
             sid, genres=["Action", "Rare"] if sid == "mangadex" else ["Action"]))
     rows = genres_all()
@@ -281,14 +281,14 @@ def test_genres_all_sorts_widely_supported_first(monkeypatch):
 
 
 def test_genres_all_survives_a_failing_source(monkeypatch):
-    from readerm.sources import genres_all
+    from mangasurf.sources import genres_all
 
     class Boom(FakeSource):
         def genres(self):
             raise RuntimeError("nope")
 
     monkeypatch.setattr(
-        "readerm.sources.get_source",
+        "mangasurf.sources.get_source",
         lambda sid, **kw: Boom(sid) if sid == "mangadex" else FakeSource(sid))
     assert genres_all()          # other sources still contribute
 
@@ -297,7 +297,7 @@ def test_genres_all_survives_a_failing_source(monkeypatch):
 
 
 def test_retry_eventually_succeeds():
-    from readerm.robust import retry
+    from mangasurf.robust import retry
 
     state = {"n": 0}
 
@@ -313,7 +313,7 @@ def test_retry_eventually_succeeds():
 
 
 def test_retry_gives_up_and_reraises():
-    from readerm.robust import retry
+    from mangasurf.robust import retry
 
     @retry(attempts=2, base=0.001)
     def always():
@@ -324,7 +324,7 @@ def test_retry_gives_up_and_reraises():
 
 
 def test_retry_if_can_skip_pointless_retries():
-    from readerm.robust import retry
+    from mangasurf.robust import retry
 
     state = {"n": 0}
 
@@ -339,14 +339,14 @@ def test_retry_if_can_skip_pointless_retries():
 
 
 def test_backoff_grows_and_stays_capped():
-    from readerm.robust import backoff_delay
+    from mangasurf.robust import backoff_delay
 
     assert backoff_delay(0, base=1, cap=30) < backoff_delay(4, base=1, cap=30)
     assert all(backoff_delay(i, base=1, cap=10) <= 12.1 for i in range(10))
 
 
 def test_circuit_opens_after_the_threshold():
-    from readerm.robust import CircuitBreaker, CircuitOpen
+    from mangasurf.robust import CircuitBreaker, CircuitOpen
 
     breaker = CircuitBreaker(threshold=3, cooldown=10)
 
@@ -362,7 +362,7 @@ def test_circuit_opens_after_the_threshold():
 
 
 def test_circuit_half_opens_then_closes_on_success():
-    from readerm.robust import CircuitBreaker
+    from mangasurf.robust import CircuitBreaker
 
     breaker = CircuitBreaker(threshold=2, cooldown=0.05)
 
@@ -379,7 +379,7 @@ def test_circuit_half_opens_then_closes_on_success():
 
 
 def test_circuit_success_resets_the_failure_count():
-    from readerm.robust import CircuitBreaker
+    from mangasurf.robust import CircuitBreaker
 
     breaker = CircuitBreaker(threshold=3, cooldown=10)
     with pytest.raises(RuntimeError):
@@ -389,7 +389,7 @@ def test_circuit_success_resets_the_failure_count():
 
 
 def test_circuit_cooldown_escalates():
-    from readerm.robust import CircuitBreaker
+    from mangasurf.robust import CircuitBreaker
 
     breaker = CircuitBreaker(threshold=1, cooldown=1.0, max_cooldown=100)
     entry = breaker._entry("s")
@@ -400,7 +400,7 @@ def test_circuit_cooldown_escalates():
 
 
 def test_ttl_cache_hits_then_expires():
-    from readerm.robust import TTLCache
+    from mangasurf.robust import TTLCache
 
     cache = TTLCache(ttl=0.05)
     state = {"n": 0}
@@ -416,7 +416,7 @@ def test_ttl_cache_hits_then_expires():
 
 
 def test_ttl_cache_evicts_when_full():
-    from readerm.robust import TTLCache
+    from mangasurf.robust import TTLCache
 
     cache = TTLCache(ttl=60, maxsize=3)
     for i in range(5):
@@ -425,7 +425,7 @@ def test_ttl_cache_evicts_when_full():
 
 
 def test_ttl_cache_invalidate():
-    from readerm.robust import TTLCache
+    from mangasurf.robust import TTLCache
 
     cache = TTLCache()
     cache.set("a", 1)
@@ -434,7 +434,7 @@ def test_ttl_cache_invalidate():
 
 
 def test_call_safely_returns_the_fallback():
-    from readerm.robust import call_safely
+    from mangasurf.robust import call_safely
 
     def boom():
         raise RuntimeError("x")
@@ -444,7 +444,7 @@ def test_call_safely_returns_the_fallback():
 
 
 def test_gather_keeps_partial_results():
-    from readerm.robust import gather
+    from mangasurf.robust import gather
 
     results, errors = gather({
         "a": lambda: 1,
@@ -456,13 +456,13 @@ def test_gather_keeps_partial_results():
 
 
 def test_gather_handles_no_tasks():
-    from readerm.robust import gather
+    from mangasurf.robust import gather
 
     assert gather({}) == ({}, {})
 
 
 def test_health_report_shape():
-    from readerm.robust import health_report
+    from mangasurf.robust import health_report
 
     report = health_report()
     assert {"breakers", "browse_cache", "genre_cache"} <= set(report)
@@ -473,7 +473,7 @@ def test_health_report_shape():
 
 def test_empty_query_triggers_browse(monkeypatch):
     """Pressing Search with an empty box must return trending, not an error."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     patch_sources(monkeypatch, lambda sid: FakeSource(sid))
     result = Api().search("", {"source": "all"})
@@ -483,7 +483,7 @@ def test_empty_query_triggers_browse(monkeypatch):
 
 
 def test_empty_query_with_genre_browses_that_genre(monkeypatch):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     patch_sources(monkeypatch, lambda sid: FakeSource(sid))
     result = Api().search("", {"source": "all", "genre": "Horror"})
@@ -492,7 +492,7 @@ def test_empty_query_with_genre_browses_that_genre(monkeypatch):
 
 
 def test_non_empty_query_still_searches(monkeypatch):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     patch_sources(monkeypatch, lambda sid: FakeSource(sid))
     result = Api().search("naruto", {"source": "all"})
@@ -500,8 +500,8 @@ def test_non_empty_query_still_searches(monkeypatch):
 
 
 def test_browse_reports_unsupported_sources(monkeypatch):
-    from readerm.gui import Api
-    from readerm.sources import SOURCES
+    from mangasurf.gui import Api
+    from mangasurf.sources import SOURCES
 
     original = SOURCES["weebcentral"].supports_browse
     SOURCES["weebcentral"].supports_browse = False
@@ -524,7 +524,7 @@ def test_browse_reports_unsupported_sources(monkeypatch):
 @pytest.mark.parametrize("source_id", ["mangadex", "mangakatana",
                                        "natomanga", "weebcentral"])
 def test_live_browse_returns_results(source_id):
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source(source_id)
     try:
@@ -539,7 +539,7 @@ def test_live_browse_returns_results(source_id):
 @pytest.mark.parametrize("source_id", ["mangadex", "mangakatana",
                                        "natomanga", "weebcentral"])
 def test_live_genres_are_listed(source_id):
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source(source_id)
     try:
@@ -553,7 +553,7 @@ def test_live_genres_are_listed(source_id):
 @NETWORK
 def test_live_genre_browse_actually_filters():
     """A genre listing must differ from the unfiltered one."""
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source("weebcentral")
     try:
@@ -566,7 +566,7 @@ def test_live_genre_browse_actually_filters():
 
 @NETWORK
 def test_live_browse_all_mixes_sources():
-    from readerm.sources import browse_all
+    from mangasurf.sources import browse_all
 
     rows = browse_all(limit=3, use_cache=False)
     assert len({r["source"] for r in rows}) >= 2

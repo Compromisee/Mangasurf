@@ -39,24 +39,24 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
 
-    import readerm.paths
-    import readerm.library
-    import readerm.passlock
-    import readerm.shelves
-    import readerm.reader.api
-    import readerm.reader.books
-    import readerm.gui
+    import mangasurf.paths
+    import mangasurf.library
+    import mangasurf.passlock
+    import mangasurf.shelves
+    import mangasurf.reader.api
+    import mangasurf.reader.books
+    import mangasurf.gui
 
-    for module in (readerm.paths, readerm.library, readerm.passlock,
-                   readerm.shelves, readerm.reader.books, readerm.reader.api,
-                   readerm.gui):
+    for module in (mangasurf.paths, mangasurf.library, mangasurf.passlock,
+                   mangasurf.shelves, mangasurf.reader.books, mangasurf.reader.api,
+                   mangasurf.gui):
         importlib.reload(module)
 
-    instance = readerm.gui.Api()
-    readerm.reader.api.ReaderApi._unlocked_shelves = set()
-    return {"api": instance, "library": readerm.library,
-            "shelves": readerm.shelves, "root": tmp_path / "books",
-            "mod": readerm.reader.api}
+    instance = mangasurf.gui.Api()
+    mangasurf.reader.api.ReaderApi._unlocked_shelves = set()
+    return {"api": instance, "library": mangasurf.library,
+            "shelves": mangasurf.shelves, "root": tmp_path / "books",
+            "mod": mangasurf.reader.api}
 
 
 def make_book(env, name, url):

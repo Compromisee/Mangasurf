@@ -4,10 +4,10 @@ import os
 import tempfile
 import zipfile
 import pytest
-from readerm.gui import Api
-from readerm.covers import existing_cover
-from readerm.reader.books import library_books, _resolve_entry_cover
-from readerm.sources import KuraMangaSource, KuraHentaiSource
+from mangasurf.gui import Api
+from mangasurf.covers import existing_cover
+from mangasurf.reader.books import library_books, _resolve_entry_cover
+from mangasurf.sources import KuraMangaSource, KuraHentaiSource
 
 
 def test_archive_cover_extraction_when_missing():

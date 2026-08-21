@@ -35,7 +35,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-READER = os.path.join(ROOT, "readerm", "reader")
+READER = os.path.join(ROOT, "mangasurf", "reader")
 
 PAGE_COUNT = 40
 

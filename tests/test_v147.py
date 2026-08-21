@@ -20,14 +20,14 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 @pytest.fixture(autouse=True)
 def isolated_home(monkeypatch):
     """Throwaway HOME per test.
 
-    Library, bookmarks and folders are JSON files under ~/.readerm, so
+    Library, bookmarks and folders are JSON files under ~/.mangasurf, so
     without this the state of one test leaks into the next and folder counts
     accumulate across the module.
     """
@@ -35,15 +35,15 @@ def isolated_home(monkeypatch):
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
 
-    import readerm.config as config
-    import readerm.features as features
-    import readerm.library as library
-    import readerm.passlock as passlock
+    import mangasurf.config as config
+    import mangasurf.features as features
+    import mangasurf.library as library
+    import mangasurf.passlock as passlock
 
     for module in (config, passlock, features, library):
         importlib.reload(module)
     # gui holds module-level references to the reloaded modules
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     yield home
 
@@ -62,7 +62,7 @@ def web(name):
 def test_bookmark_keeps_an_openable_url():
     """The bookmark stored the normalised key, which has no scheme, so the
     card linked nowhere."""
-    from readerm import library
+    from mangasurf import library
 
     library.toggle_bookmark({"url": "https://mangadex.org/title/abc",
                              "title": "B", "cover": "c", "source": "mangadex"})
@@ -72,7 +72,7 @@ def test_bookmark_keeps_an_openable_url():
 
 
 def test_bookmark_keeps_cover_mirrors():
-    from readerm import library
+    from mangasurf import library
 
     library.toggle_bookmark({"url": "https://x.test/1", "title": "T",
                              "cover": "https://a/1.jpg",
@@ -92,13 +92,13 @@ def test_bookmark_keeps_cover_mirrors():
     ("zh-hk", "Manhua"), ("en", None), (None, None), ("", None),
 ])
 def test_type_is_classified_from_origin_language(language, expected):
-    from readerm.sources.base import classify_type
+    from mangasurf.sources.base import classify_type
 
     assert classify_type(language) == expected
 
 
 def test_explicit_tags_beat_the_language():
-    from readerm.sources.base import classify_type
+    from mangasurf.sources.base import classify_type
 
     assert classify_type("ja", ["Webtoon"]) == "Manhwa"
     assert classify_type(None, ["Manhua"]) == "Manhua"
@@ -107,7 +107,7 @@ def test_explicit_tags_beat_the_language():
 def test_type_filter_drops_mismatches():
     """"One Piece" under Manhwa returned 62 results, all manga, because only
     one source implemented the type parameter and the rest ignored it."""
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [
         {"title": "One Piece", "series_type": "Manga", "source": "mangadex"},
@@ -119,14 +119,14 @@ def test_type_filter_drops_mismatches():
 
 def test_type_filter_keeps_unknown_types():
     """A source reporting no type must not vanish from every filtered search."""
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [{"title": "Mystery", "source": "nosuchsource"}]
     assert len(_narrow_by_type(rows, "Manhwa")) == 1
 
 
 def test_type_filter_is_a_noop_for_any():
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [{"title": "A", "series_type": "Manga", "source": "mangadex"}]
     assert _narrow_by_type(rows, "Any") == rows
@@ -136,7 +136,7 @@ def test_type_filter_is_a_noop_for_any():
 def test_source_level_type_fallback_is_used():
     """Sites whose search rows carry no metadata fall back to what the whole
     catalogue is."""
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [{"title": "Some Webtoon", "source": "webtoons"}]
     assert len(_narrow_by_type(rows, "Manhwa")) == 1
@@ -144,7 +144,7 @@ def test_source_level_type_fallback_is_used():
 
 
 def test_mangadex_emits_a_series_type():
-    src = read("mangadex.py", "readerm", "sources")
+    src = read("mangadex.py", "mangasurf", "sources")
     assert "series_type" in src
     assert "originalLanguage" in src
 
@@ -158,7 +158,7 @@ def test_mangadex_emits_a_series_type():
 def test_unknown_chapter_counts_are_kept_by_default():
     """MangaDex leaves lastChapter empty for every ongoing series, so a
     strict filter would erase whole sources."""
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "Long", "chapter_count": 900},
             {"title": "Short", "chapter_count": 5},
@@ -168,7 +168,7 @@ def test_unknown_chapter_counts_are_kept_by_default():
 
 
 def test_strict_chapter_range_drops_unknown_counts():
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "Long", "chapter_count": 900}, {"title": "Unknown"}]
     kept = features.apply_filters(
@@ -177,7 +177,7 @@ def test_strict_chapter_range_drops_unknown_counts():
 
 
 def test_strict_mode_does_nothing_without_limits():
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "A"}, {"title": "B", "chapter_count": 3}]
     kept = features.apply_filters(rows, {"strict_chapter_range": True})
@@ -191,7 +191,7 @@ def test_strict_mode_does_nothing_without_limits():
 
 
 def test_mangadex_info_exposes_the_advanced_fields():
-    src = read("mangadex.py", "readerm", "sources")
+    src = read("mangadex.py", "mangasurf", "sources")
     body = src[src.index("def get_manga_info"):src.index("def get_chapters")]
     for field in ("last_chapter", "last_volume", "series_type",
                   "original_language", "demographic"):
@@ -205,7 +205,7 @@ def test_mangadex_info_exposes_the_advanced_fields():
 
 
 def test_folder_crud():
-    from readerm import library
+    from mangasurf import library
 
     made = library.create_folder("Favourites")
     assert made["ok"] and made["folder"]["id"] == "favourites"
@@ -217,7 +217,7 @@ def test_folder_crud():
 
 
 def test_folder_ids_do_not_collide():
-    from readerm import library
+    from mangasurf import library
 
     library.create_folder("My Folder")
     library.update_folder("my-folder", name="renamed")
@@ -226,7 +226,7 @@ def test_folder_ids_do_not_collide():
 
 
 def test_bookmarks_can_be_filed_and_the_cover_is_the_first_item():
-    from readerm import library
+    from mangasurf import library
 
     library.create_folder("Reading")
     library.toggle_bookmark({"url": "https://a.test/1", "title": "First",
@@ -243,7 +243,7 @@ def test_bookmarks_can_be_filed_and_the_cover_is_the_first_item():
 
 
 def test_deleting_a_folder_keeps_its_bookmarks_by_default():
-    from readerm import library
+    from mangasurf import library
 
     library.create_folder("Temp")
     library.toggle_bookmark({"url": "https://a.test/1", "title": "Keep"})
@@ -256,7 +256,7 @@ def test_deleting_a_folder_keeps_its_bookmarks_by_default():
 
 
 def test_deleting_a_folder_can_also_drop_its_bookmarks():
-    from readerm import library
+    from mangasurf import library
 
     library.create_folder("Temp")
     library.toggle_bookmark({"url": "https://a.test/1", "title": "Gone"})
@@ -268,7 +268,7 @@ def test_deleting_a_folder_can_also_drop_its_bookmarks():
 
 def test_a_bookmark_in_a_missing_folder_falls_back_to_the_root():
     """It must never disappear from the UI just because the folder is gone."""
-    from readerm import library
+    from mangasurf import library
 
     library.toggle_bookmark({"url": "https://a.test/1", "title": "Orphan"})
     library.set_bookmark_folder("https://a.test/1", "ghost")
@@ -277,7 +277,7 @@ def test_a_bookmark_in_a_missing_folder_falls_back_to_the_root():
 
 
 def test_folders_support_lock_and_blur():
-    from readerm import library
+    from mangasurf import library
 
     library.create_folder("Private", locked=True, blurred=True)
     folder = library.load_folders()[0]
@@ -288,7 +288,7 @@ def test_folders_support_lock_and_blur():
 
 
 def test_folder_api_is_reachable_from_js():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     for method in ("get_bookmark_folders", "create_bookmark_folder",
                    "update_bookmark_folder", "delete_bookmark_folder",
@@ -297,8 +297,8 @@ def test_folder_api_is_reachable_from_js():
 
 
 def test_bookmark_into_files_in_one_step():
-    from readerm.gui import Api
-    from readerm import library
+    from mangasurf.gui import Api
+    from mangasurf import library
 
     api = Api()
     api.create_bookmark_folder("Later", {})

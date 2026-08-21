@@ -4,9 +4,9 @@ Two packaging bugs, both found by actually building rather than reading the
 spec:
 
 * ``server.py`` and ``landing.py`` were top-level scripts, so
-  ``collect_submodules("readerm")`` never saw them and the exe shipped
+  ``collect_submodules("mangasurf")`` never saw them and the exe shipped
   without the phone server or the launcher at all;
-* ``readerm/serverui.py`` and the GUI did ``import server``, which only
+* ``mangasurf/serverui.py`` and the GUI did ``import server``, which only
   resolves when the repo root is on ``sys.path`` -- true from a checkout,
   false inside a bundle.
 
@@ -36,16 +36,16 @@ def read(path):
 def test_server_and_landing_live_in_the_package():
     """A top-level script is invisible to collect_submodules."""
     for name in ("server.py", "landing.py"):
-        assert os.path.isfile(os.path.join(ROOT, "readerm", name)), name
+        assert os.path.isfile(os.path.join(ROOT, "mangasurf", name)), name
 
 
 def test_collect_submodules_sees_them():
     """The actual mechanism the spec relies on."""
     from PyInstaller.utils.hooks import collect_submodules
 
-    found = collect_submodules("readerm")
-    for module in ("readerm.server", "readerm.landing",
-                   "readerm.serverui", "readerm.servercfg"):
+    found = collect_submodules("mangasurf")
+    for module in ("mangasurf.server", "mangasurf.landing",
+                   "mangasurf.serverui", "mangasurf.servercfg"):
         assert module in found, f"{module} would not be bundled"
 
 
@@ -55,7 +55,7 @@ def test_the_root_wrappers_still_work():
         path = os.path.join(ROOT, name)
         assert os.path.isfile(path), name
         source = read(path)
-        assert "from readerm." in source, f"{name} is not a wrapper"
+        assert "from mangasurf." in source, f"{name} is not a wrapper"
         # Thin: the real code must not have been duplicated back.
         assert len(source.splitlines()) < 30, f"{name} is not thin"
 
@@ -63,7 +63,7 @@ def test_the_root_wrappers_still_work():
 def test_nothing_imports_the_old_top_level_module():
     """`import server` only resolves with the repo root on sys.path."""
     offenders = []
-    for folder in ("readerm",):
+    for folder in ("mangasurf",):
         for dirpath, _dirs, files in os.walk(os.path.join(ROOT, folder)):
             for name in files:
                 if not name.endswith(".py"):
@@ -83,7 +83,7 @@ def test_server_finds_its_web_assets_when_frozen():
     Since v3.0.0 server.py delegates to reader.assets.ASSET_ROOT, so the
     frozen-build handling lives there and is asserted there.
     """
-    source = read(os.path.join(ROOT, "readerm", "reader", "assets.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "reader", "assets.py"))
     block = source[source.index("def _asset_root()"):]
     block = block[:block.index("ASSET_ROOT = _asset_root()")]
     assert "_MEIPASS" in block
@@ -91,7 +91,7 @@ def test_server_finds_its_web_assets_when_frozen():
 
 
 def test_web_dir_points_at_real_assets():
-    from readerm.server import WEB_DIR
+    from mangasurf.server import WEB_DIR
 
     assert os.path.isfile(os.path.join(WEB_DIR, "index.html"))
     assert os.path.isfile(os.path.join(WEB_DIR, "app.js"))
@@ -101,7 +101,7 @@ def test_web_dir_points_at_real_assets():
 def test_both_moved_modules_can_be_run_directly():
     """The repo convention: relative imports need a __package__ guard."""
     for name in ("server.py", "landing.py"):
-        source = read(os.path.join(ROOT, "readerm", name))
+        source = read(os.path.join(ROOT, "mangasurf", name))
         if re.search(r"^from \.", source, re.M):
             assert '__package__ in (None, "")' in source, name
 
@@ -132,7 +132,7 @@ def test_the_launcher_routes_every_interface():
     for command in ("gui", "server", "launcher"):
         assert f'command == "{command}"' in source, command
     # menu/tui fall through to the CLI, which already handles them.
-    cli = read(os.path.join(ROOT, "readerm", "cli.py"))
+    cli = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     assert 'command == "tui"' in cli
     assert 'command in ("menu"' in cli
 
@@ -162,7 +162,7 @@ def test_the_launcher_actually_runs(args, expect, tmp_path):
 
 def test_landing_has_frozen_arguments_for_every_target():
     """A bundle has no .py files, so each tile must re-invoke the exe."""
-    from readerm.landing import Launcher
+    from mangasurf.landing import Launcher
 
     assert set(Launcher.TARGETS) == set(Launcher.FROZEN_ARGS), (
         "a target has no frozen equivalent, so it would fail in the exe")
@@ -170,10 +170,10 @@ def test_landing_has_frozen_arguments_for_every_target():
 
 def test_frozen_arguments_match_what_the_launcher_routes():
     """ReaderM.exe <arg> has to reach the interface the tile promises."""
-    from readerm.landing import Launcher
+    from mangasurf.landing import Launcher
 
     routed = read(os.path.join(ROOT, "launcher.py"))
-    cli = read(os.path.join(ROOT, "readerm", "cli.py"))
+    cli = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     for target, args in Launcher.FROZEN_ARGS.items():
         first = args[0]
         if first.startswith("-"):
@@ -191,7 +191,7 @@ def test_frozen_paths_resolve(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(tmp_path / "ReaderM"),
                         raising=False)
-    from readerm import landing
+    from mangasurf import landing
     importlib.reload(landing)
     try:
         assert landing.FROZEN is True
@@ -212,7 +212,7 @@ def test_a_frozen_launcher_does_not_warn_about_a_venv(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(tmp_path / "ReaderM"),
                         raising=False)
-    from readerm import landing
+    from mangasurf import landing
     importlib.reload(landing)
     try:
         text = " ".join(l["text"] for l in landing.Launcher().get_log()["lines"])
@@ -248,7 +248,7 @@ def test_direct_commands_differ_when_frozen(tmp_path, monkeypatch):
     """Telling someone to run `python gui.py` next to an exe is useless."""
     import importlib
 
-    from readerm import landing
+    from mangasurf import landing
     assert any("python" in c for c in landing._direct_commands())
 
     monkeypatch.setattr(sys, "frozen", True, raising=False)
@@ -269,16 +269,16 @@ def test_direct_commands_differ_when_frozen(tmp_path, monkeypatch):
 
 def test_the_spec_bundles_the_new_modules():
     spec = read(os.path.join(ROOT, "ReaderM.spec"))
-    for module in ("readerm.server", "readerm.landing", "readerm.serverui",
-                   "readerm.servercfg", "flask"):
+    for module in ("mangasurf.server", "mangasurf.landing", "mangasurf.serverui",
+                   "mangasurf.servercfg", "flask"):
         assert f'"{module}"' in spec, f"{module} missing from the spec"
 
 
 def test_the_spec_bundles_the_web_assets():
     """The GUI page and the phone server both need them."""
     spec = read(os.path.join(ROOT, "ReaderM.spec"))
-    assert '("readerm/reader/app", "readerm/reader/app")' in spec
-    assert '("readerm/reader/foliate", "readerm/reader/foliate")' in spec
+    assert '("mangasurf/reader/app", "mangasurf/reader/app")' in spec
+    assert '("mangasurf/reader/foliate", "mangasurf/reader/foliate")' in spec
 
 
 def test_the_spec_builds_from_the_launcher():
@@ -316,7 +316,7 @@ def test_scan_of_an_empty_root_is_empty():
     """os.path.abspath("") is the current directory, so scan("") used to
     walk wherever the process happened to be -- picking up build output
     from a checkout, or the user's home in a packaged build."""
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     assert scan("") == []
     assert scan("   ") == []
@@ -324,7 +324,7 @@ def test_scan_of_an_empty_root_is_empty():
 
 
 def test_scan_does_not_depend_on_the_working_directory(tmp_path, monkeypatch):
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     monkeypatch.chdir(ROOT)
     assert scan("") == []

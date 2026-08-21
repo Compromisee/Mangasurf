@@ -1,8 +1,8 @@
 """Comprehensive tests for Mangasurf v1.6.0 Add checklist features."""
 
 import pytest
-from readerm.gui import Api
-from readerm.sources import (
+from mangasurf.gui import Api
+from mangasurf.sources import (
     SOURCES,
     detect_source,
     get_source,
@@ -13,7 +13,7 @@ from readerm.sources import (
     MadaraDexSource,
     MangaKSource,
 )
-from readerm.database import search_database, get_search_suggestions
+from mangasurf.database import search_database, get_search_suggestions
 
 
 def test_32_sources_registered():

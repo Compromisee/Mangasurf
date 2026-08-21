@@ -19,7 +19,7 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -38,7 +38,7 @@ def test_unpadded_base64_decodes():
     the other eleven decoded fine. That is ~8% of chapters, which is why a
     single-chapter download usually worked and a bulk range reliably failed.
     """
-    from readerm.sources.manhwaread import ManhwaReadSource
+    from mangasurf.sources.manhwaread import ManhwaReadSource
 
     # Build a payload whose base64 genuinely carries "=" padding, i.e. the
     # raw byte length is not a multiple of three. The site emits exactly
@@ -56,7 +56,7 @@ def test_unpadded_base64_decodes():
 
 
 def test_padded_base64_still_decodes():
-    from readerm.sources.manhwaread import ManhwaReadSource
+    from mangasurf.sources.manhwaread import ManhwaReadSource
 
     payload = [{"src": "1/a.jpg"}]
     encoded = base64.b64encode(json.dumps(payload).encode()).decode()
@@ -66,7 +66,7 @@ def test_padded_base64_still_decodes():
 @pytest.mark.parametrize("length_mod", [0, 1, 2, 3])
 def test_every_padding_offset_decodes(length_mod):
     """Whatever the remainder, re-padding must produce valid output."""
-    from readerm.sources.manhwaread import ManhwaReadSource
+    from mangasurf.sources.manhwaread import ManhwaReadSource
 
     blob = b"x" * (30 + length_mod)
     encoded = base64.b64encode(blob).decode().rstrip("=")
@@ -75,7 +75,7 @@ def test_every_padding_offset_decodes(length_mod):
 
 
 def test_decoder_ignores_whitespace():
-    from readerm.sources.manhwaread import ManhwaReadSource
+    from mangasurf.sources.manhwaread import ManhwaReadSource
 
     encoded = base64.b64encode(b"hello world").decode()
     spaced = "  " + encoded[:4] + "\n" + encoded[4:] + " "
@@ -84,7 +84,7 @@ def test_decoder_ignores_whitespace():
 
 def test_source_uses_the_tolerant_decoder():
     """A raw b64decode here is what broke bulk downloads."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "manhwaread.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "manhwaread.py"))
     body = src[src.index("def get_chapter_images"):]
     assert "decode_payload" in body
     assert "base64.b64decode(payload" not in body
@@ -96,13 +96,13 @@ def test_source_uses_the_tolerant_decoder():
 def test_connection_pool_covers_every_worker():
     """urllib3 pools ten connections by default but the engine runs up to
     sixteen image threads, so connections were discarded and reopened."""
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     assert Source.POOL_SIZE >= 16
 
 
 def test_session_is_mounted_with_the_wider_pool():
-    from readerm.sources.mangadex import MangaDexSource
+    from mangasurf.sources.mangadex import MangaDexSource
 
     source = MangaDexSource()
     try:
@@ -123,7 +123,7 @@ def test_progress_is_keyed_on_job_and_chapter():
     The coalescing map used to be keyed on the chapter name alone, so the
     newest event silently replaced the other series' progress.
     """
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api.__new__(Api)
     api.window = object()          # not None, so _push does not bail out
@@ -145,7 +145,7 @@ def test_progress_is_keyed_on_job_and_chapter():
 
 def test_same_job_same_chapter_still_coalesces():
     """Only the newest progress for one chapter of one job is kept."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api.__new__(Api)
     api.window = object()
@@ -164,7 +164,7 @@ def test_same_job_same_chapter_still_coalesces():
 
 
 def test_events_are_stamped_with_their_job():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api.__new__(Api)
     api._jobs = {"job7": {"id": "job7", "title": "Berserk"}}
@@ -180,7 +180,7 @@ def test_events_are_stamped_with_their_job():
 
 
 def _fresh_api():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     return api
@@ -268,7 +268,7 @@ def test_clear_cart_empties_the_queue(monkeypatch):
 
 
 def test_concurrency_limit_is_clamped(monkeypatch):
-    from readerm import gui as guimod
+    from mangasurf import gui as guimod
 
     api = _fresh_api()
     # 0 and None are meaningless here and fall back to the default of 2
@@ -325,7 +325,7 @@ def test_stop_without_an_id_stops_everything():
 
 
 def test_a_stopped_job_is_not_reported_as_failed():
-    src = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = src[src.index("def _run_job"):src.index("def _spawn")]
     assert '"stopped"' in body
 
@@ -334,7 +334,7 @@ def test_a_stopped_job_is_not_reported_as_failed():
 
 
 def test_cart_api_is_reachable_from_js():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     for method in ("add_to_cart", "get_cart", "remove_from_cart",
                    "clear_cart", "max_concurrent_jobs"):
@@ -342,6 +342,6 @@ def test_cart_api_is_reachable_from_js():
 
 
 def test_max_concurrent_jobs_has_a_default():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert DEFAULT_SETTINGS["max_concurrent_jobs"] >= 1

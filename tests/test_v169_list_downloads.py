@@ -1,8 +1,8 @@
 """Unit tests for Mangasurf v1.6.9 list and bulk downloading."""
 
 import pytest
-from readerm.gui import Api
-from readerm.sources.chikari import ChikariSource
+from mangasurf.gui import Api
+from mangasurf.sources.chikari import ChikariSource
 
 
 def test_chikari_get_list_series():

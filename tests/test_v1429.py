@@ -20,7 +20,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -32,7 +32,7 @@ def home(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import config, servercfg
+    from mangasurf import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
     return servercfg
@@ -104,7 +104,7 @@ def test_the_token_survives_a_reload(home, tmp_path, monkeypatch):
     first = home.load_server_settings()["token"]
     import importlib
 
-    from readerm import config, servercfg
+    from mangasurf import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
     assert servercfg.load_server_settings()["token"] == first
@@ -127,7 +127,7 @@ def test_a_rejected_token_does_not_overwrite_the_good_one(home):
 
 def test_a_corrupt_stored_token_is_replaced(home):
     """Someone hand-editing config.json must not lock the server out."""
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
 
     update_settings({"server_token": "xx"})
     token = home.load_server_settings()["token"]
@@ -144,14 +144,14 @@ def test_port_bounds(home):
 
 
 def test_a_corrupt_port_falls_back(home):
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
 
     update_settings({"server_port": "banana"})
     assert home.load_server_settings()["port"] == 8577
 
 
 def test_the_settings_have_defaults():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert DEFAULT_SETTINGS["server_token"] == ""
     assert DEFAULT_SETTINGS["server_port"] == 8577
@@ -161,7 +161,7 @@ def test_the_settings_have_defaults():
 def test_no_randomised_token_at_launch():
     """The regression: a token regenerated per run meant re-pairing the
     phone every restart."""
-    source = read(os.path.join(ROOT, "readerm", "server.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "server.py"))
     assert "token_urlsafe" not in source, (
         "server.py still generates a throwaway token")
 
@@ -173,10 +173,10 @@ def test_the_api_exposes_the_server_config(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import config, servercfg
+    from mangasurf import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()
@@ -197,16 +197,16 @@ def test_the_gui_and_the_server_agree(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import config, servercfg
+    from mangasurf import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     gui.Api().set_server_config(token="SharedBetweenBoth1")
     assert servercfg.load_server_settings()["token"] == "SharedBetweenBoth1"
 
-    gui_source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    gui_source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = gui_source[gui_source.index("def set_server_config"):]
     body = body[:body.index("def generate_server_token")]
     assert "save_server_settings" in body, (
@@ -217,7 +217,7 @@ def test_the_gui_and_the_server_agree(tmp_path, monkeypatch):
 
 
 def test_the_server_window_module_imports():
-    from readerm import serverui
+    from mangasurf import serverui
 
     assert hasattr(serverui, "ServerController")
     assert hasattr(serverui, "run_server_window")
@@ -229,7 +229,7 @@ def test_the_controller_reports_state(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import config, servercfg, serverui
+    from mangasurf import config, servercfg, serverui
     importlib.reload(config)
     importlib.reload(servercfg)
     importlib.reload(serverui)
@@ -246,7 +246,7 @@ def test_the_controller_validates_like_everything_else(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import config, servercfg, serverui
+    from mangasurf import config, servercfg, serverui
     importlib.reload(config)
     importlib.reload(servercfg)
     importlib.reload(serverui)
@@ -260,7 +260,7 @@ def test_the_controller_validates_like_everything_else(tmp_path, monkeypatch):
 
 
 def test_the_window_page_is_valid_html():
-    from readerm import serverui
+    from mangasurf import serverui
 
     page = serverui.PAGE
     for node in ("id=\"token\"", "id=\"port\"", "id=\"log\"", "id=\"url\"",
@@ -275,7 +275,7 @@ def test_the_window_page_is_valid_html():
 def test_the_log_records_and_replays(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import server as server_module
+    from mangasurf import server as server_module
 
     log = server_module.ServerLog()
     log.add("info", "one")
@@ -290,7 +290,7 @@ def test_the_log_records_and_replays(tmp_path, monkeypatch):
 def test_verbose_only_lines_respect_the_setting(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import server as server_module
+    from mangasurf import server as server_module
 
     quiet = server_module.ServerLog(verbose=False)
     quiet.add("call", "chatty", verbose_only=True)
@@ -305,7 +305,7 @@ def test_verbose_only_lines_respect_the_setting(tmp_path, monkeypatch):
 def test_the_log_is_bounded(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import server as server_module
+    from mangasurf import server as server_module
 
     log = server_module.ServerLog()
     for i in range(log.LIMIT + 300):
@@ -319,7 +319,7 @@ def test_rejected_calls_are_always_logged(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
 
     log = server_module.ServerLog(verbose=False)
@@ -336,7 +336,7 @@ def test_the_log_endpoint_needs_the_token(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
 
     app = server_module.create_app(token="b" * 20)
@@ -353,12 +353,12 @@ def test_serve_uses_the_saved_token(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import config, servercfg
+    from mangasurf import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
     servercfg.save_server_settings(token="TheSavedTokenHere1")
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
     url = server_module.build_url("127.0.0.1", 8577,
                                   servercfg.load_server_settings()["token"])
@@ -370,7 +370,7 @@ def test_serve_uses_the_saved_token(tmp_path, monkeypatch):
 
 def test_landing_imports():
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     assert hasattr(landing, "Launcher")
     assert hasattr(landing, "find_python")
@@ -378,7 +378,7 @@ def test_landing_imports():
 
 def test_landing_offers_every_interface():
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     assert set(landing.Launcher.TARGETS) == {"gui", "menu", "tui", "cli",
                                              "server", "opds"}
@@ -387,7 +387,7 @@ def test_landing_offers_every_interface():
 def test_terminal_interfaces_get_a_terminal():
     """A TUI written to a pipe is useless."""
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     for key in ("menu", "tui", "cli"):
         assert landing.Launcher.TARGETS[key][2] is True, key
@@ -397,7 +397,7 @@ def test_terminal_interfaces_get_a_terminal():
 
 def test_venv_is_found_in_the_project_folder(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     fake = tmp_path / ".venv" / "bin"
     fake.mkdir(parents=True)
@@ -414,7 +414,7 @@ def test_venv_is_found_in_the_project_folder(tmp_path, monkeypatch):
 def test_venv_is_found_two_levels_up(tmp_path, monkeypatch):
     """A checkout is often one folder inside a workspace owning the venv."""
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     project = tmp_path / "workspace" / "checkout"
     project.mkdir(parents=True)
@@ -433,7 +433,7 @@ def test_venv_is_found_two_levels_up(tmp_path, monkeypatch):
 
 def test_no_venv_falls_back_and_says_so(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     monkeypatch.setattr(landing, "HERE", str(tmp_path))
     monkeypatch.setattr(sys, "prefix", sys.base_prefix)
@@ -447,7 +447,7 @@ def test_no_venv_falls_back_and_says_so(tmp_path, monkeypatch):
 def test_the_current_venv_wins(monkeypatch):
     """Running landing.py from an activated venv is the common case."""
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     monkeypatch.setattr(sys, "prefix", "/somewhere/venv")
     monkeypatch.setattr(sys, "base_prefix", "/usr")
@@ -459,7 +459,7 @@ def test_the_current_venv_wins(monkeypatch):
 def test_launching_an_unknown_target_is_refused(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     result = landing.Launcher().launch("nonsense")
     assert result["ok"] is False
@@ -470,7 +470,7 @@ def test_the_launcher_logs_the_command_it_ran(tmp_path, monkeypatch):
     """When a launch fails, the exact command is the useful thing."""
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     launcher = landing.Launcher()
     text = " ".join(l["text"] for l in launcher.get_log()["lines"])
@@ -483,7 +483,7 @@ def test_the_launcher_really_starts_a_process(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import urllib.request
 
-    from readerm import landing
+    from mangasurf import landing
 
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
@@ -516,7 +516,7 @@ def test_the_launcher_really_starts_a_process(tmp_path, monkeypatch):
 
 def test_the_landing_page_has_a_collapsible_log():
     sys.path.insert(0, ROOT)
-    from readerm import landing
+    from mangasurf import landing
 
     assert 'id="log"' in landing.PAGE
     assert "toggleLog" in landing.PAGE

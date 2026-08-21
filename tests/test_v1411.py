@@ -11,7 +11,7 @@ Settings used to live in their own ``settings.json``, written with a bare
   earlier one's change. Measured on the old code, four threads saving at once
   destroyed the theme, accent and output directory in **5 of 5** runs.
 
-Both are now handled by ``readerm.config``: one ``RLock`` and one atomic
+Both are now handled by ``mangasurf.config``: one ``RLock`` and one atomic
 tmp+replace write, shared with the per-source config.
 """
 
@@ -33,14 +33,14 @@ def isolated_home(monkeypatch):
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
 
-    import readerm.config as appconfig
-    import readerm.features as features
-    import readerm.library as library
-    import readerm.passlock as passlock
+    import mangasurf.config as appconfig
+    import mangasurf.features as features
+    import mangasurf.library as library
+    import mangasurf.passlock as passlock
 
     for module in (appconfig, passlock, features, library):
         importlib.reload(module)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     yield home
 
@@ -49,7 +49,7 @@ def isolated_home(monkeypatch):
 
 
 def test_settings_live_in_config_json():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(), "theme": "nord"})
     assert gui.SETTINGS_PATH.endswith("config.json")
@@ -60,8 +60,8 @@ def test_settings_live_in_config_json():
 
 def test_settings_and_sources_share_the_file():
     """Writing one section must never drop the other."""
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     appconfig.set_enabled("mangadex", False)
     gui.save_settings({**gui.load_settings(), "theme": "mocha"})
@@ -78,8 +78,8 @@ def test_settings_and_sources_share_the_file():
 
 def test_save_config_does_not_erase_settings():
     """save_config() callers build only the sources half."""
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(), "accent": "teal"})
     appconfig.save_config({"sources": {}})
@@ -90,8 +90,8 @@ def test_save_config_does_not_erase_settings():
 
 
 def test_write_is_atomic():
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(), "theme": "nord"})
     leftovers = [f for f in os.listdir(appconfig.DIR) if f.endswith(".tmp")]
@@ -100,7 +100,7 @@ def test_write_is_atomic():
 
 def test_a_truncated_temp_file_cannot_reset_settings():
     """The failure mode that wiped everything: a half-written file."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(),
                        "theme": "mocha", "accent": "teal",
@@ -118,7 +118,7 @@ def test_a_truncated_temp_file_cannot_reset_settings():
 
 def test_unreadable_config_still_yields_defaults():
     """Corruption must degrade to defaults, not raise."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     os.makedirs(os.path.dirname(gui.SETTINGS_PATH), exist_ok=True)
     with open(gui.SETTINGS_PATH, "w", encoding="utf-8") as f:
@@ -134,7 +134,7 @@ def test_unreadable_config_still_yields_defaults():
 def test_concurrent_saves_do_not_clobber_each_other():
     """Four threads saving at once destroyed theme/accent/output_dir in 5 of
     5 runs before the lock was added."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(),
                        "theme": "mocha", "accent": "teal",
@@ -157,7 +157,7 @@ def test_concurrent_saves_do_not_clobber_each_other():
 
 
 def test_concurrent_saves_keep_the_file_valid():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     def worker(n):
         for i in range(30):
@@ -175,7 +175,7 @@ def test_concurrent_saves_keep_the_file_valid():
 
 def test_set_settings_merges_under_the_lock():
     """A partial update must not drop the keys it did not mention."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     api = gui.Api()
     api.set_settings({"theme": "nord", "accent": "rose"})
@@ -190,7 +190,7 @@ def test_set_settings_merges_under_the_lock():
 def test_save_button_keys_do_not_wipe_appearance():
     """The Save button posts ~17 of the 35 keys. Those it omits -- theme,
     accent, corners, sources -- must survive it."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     api = gui.Api()
     api.set_settings({"theme": "mocha", "accent": "teal",
@@ -209,7 +209,7 @@ def test_save_button_keys_do_not_wipe_appearance():
 
 def test_choosing_a_download_folder_keeps_other_settings():
     """That auto-save used its own read-modify-write, racing the Save button."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(), "theme": "nord"})
     gui.update_settings({"output_dir": "/picked/here"})
@@ -223,8 +223,8 @@ def test_choosing_a_download_folder_keeps_other_settings():
 
 
 def test_legacy_settings_file_is_migrated():
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     os.makedirs(appconfig.DIR, exist_ok=True)
     with open(appconfig.LEGACY_SETTINGS_PATH, "w", encoding="utf-8") as f:
@@ -237,8 +237,8 @@ def test_legacy_settings_file_is_migrated():
 
 
 def test_migration_preserves_existing_source_config():
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     os.makedirs(appconfig.DIR, exist_ok=True)
     with open(appconfig.CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -252,8 +252,8 @@ def test_migration_preserves_existing_source_config():
 
 def test_migration_does_not_override_newer_settings():
     """Once config.json owns the settings, a stale settings.json is ignored."""
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     gui.save_settings({**gui.load_settings(), "theme": "mocha"})
     with open(appconfig.LEGACY_SETTINGS_PATH, "w", encoding="utf-8") as f:
@@ -263,8 +263,8 @@ def test_migration_does_not_override_newer_settings():
 
 
 def test_migration_survives_a_corrupt_legacy_file():
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
 
     os.makedirs(appconfig.DIR, exist_ok=True)
     with open(appconfig.LEGACY_SETTINGS_PATH, "w", encoding="utf-8") as f:
@@ -278,14 +278,14 @@ def test_migration_survives_a_corrupt_legacy_file():
 def test_tui_shares_the_same_store():
     """The TUI imports these directly, so it inherits the fix."""
     source = open(os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), "readerm", "tui.py"), encoding="utf-8").read()
+        os.path.abspath(__file__))), "mangasurf", "tui.py"), encoding="utf-8").read()
     assert "from .gui import load_settings, save_settings" in source
 
 
 def test_gui_no_longer_writes_settings_by_hand():
     """A bare open()/json.dump here is the bug, not the fix."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    source = open(os.path.join(root, "readerm", "gui", "__init__.py"),
+    source = open(os.path.join(root, "mangasurf", "gui", "__init__.py"),
                   encoding="utf-8").read()
     body = source[source.index("def save_settings"):]
     body = body[:body.index("\n\n\n")]

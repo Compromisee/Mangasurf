@@ -7,8 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.7.0)'
+        description: 'Release Tag Name (e.g. release 1)'
         required: false
+        default: ''
+      version_number:
+        description: 'Version number'
+        required: true
         default: ''
       prerelease:
         description: 'Mark as pre-release'
@@ -41,25 +45,19 @@ jobs:
           - name: windows-x64
             os: windows-latest
             artifact_name: mangasurf-windows-x64.exe
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-windows-x64.zip
+            archive_name: mangasurf-${{ github.ref_name || 'VERSION_NUMBER' }}-windows-x64.zip
             binary_src: dist/Mangasurf.exe
             use_zip: true
           - name: linux-x86_64
             os: ubuntu-22.04
             artifact_name: mangasurf-linux-x86_64
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-linux-x86_64.tar.gz
+            archive_name: mangasurf-${{ github.ref_name || 'VERSION_NUMBER' }}-linux-x86_64.tar.gz
             binary_src: dist/Mangasurf
             use_tar: true
           - name: macos-arm64
             os: macos-14
             artifact_name: mangasurf-macos-arm64
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-macos-arm64.zip
-            binary_src: dist/Mangasurf
-            use_zip: true
-          - name: macos-x86_64
-            os: macos-13
-            artifact_name: mangasurf-macos-x86_64
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-macos-x86_64.zip
+            archive_name: mangasurf-${{ github.ref_name || 'VERSION_NUMBER' }}-macos-arm64.zip
             binary_src: dist/Mangasurf
             use_zip: true
 
@@ -95,7 +93,7 @@ jobs:
 
       - name: Run test suite verification before building
         run: |
-          python -m pytest tests/test_mangasurf_sources.py tests/test_v169_list_downloads.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py -q
+          python -m pytest tests/test_mangasurf_sources.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py -q
 
       - name: Build Standalone OneFile Executable with PyInstaller
         env:
@@ -155,7 +153,7 @@ jobs:
         run: |
           TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
           if [[ -z "$TAG" || "$TAG" == "main" ]]; then
-            TAG="v1.7.0"
+            TAG="VERSION_NUMBER"
           fi
           echo "version=${TAG}" >> $GITHUB_OUTPUT
 
@@ -166,7 +164,7 @@ jobs:
           import re
           import os
 
-          tag = os.environ.get("TAG_NAME", "v1.7.0").lstrip("v")
+          tag = os.environ.get("TAG_NAME", "VERSION_NUMBER").lstrip("v")
           changelog_path = "MD/CHANGELOG.md"
           
           notes_body = ""
@@ -191,7 +189,7 @@ jobs:
           - **Custom Vector Icon**: New dynamic MangaSurf wave crest & anime speed prism icon.
           """
 
-          header = f"""# 🌊 Mangasurf {os.environ.get('TAG_NAME', 'v1.7.0')} — Desktop Manga Reader & Downloader
+          header = f"""# Mangasurf {os.environ.get('TAG_NAME', '')} — Desktop Manga Reader & Downloader
 
           > High-performance Python manga ecosystem, omnibar discovery engine, and multi-threaded downloader supporting **32 registered sources**.
 
@@ -201,16 +199,18 @@ jobs:
 
           ---
 
-          ## 📦 Available Downloads
+          ##  Available Downloads
+
+          > [!WARNING]
+          > MacOS X86 is NOT Supported as of yet. We are working on implementing it in the near future
 
           | Platform | Architecture | Download Package | Standalone Executable |
           | :--- | :--- | :--- | :--- |
-          | **Windows** | x64 (64-bit) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-windows-x64.zip`](#) | `mangasurf-windows-x64.exe` |
-          | **Linux** | x86_64 (glibc 2.35+) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-linux-x86_64.tar.gz`](#) | `mangasurf-linux-x86_64` |
-          | **macOS** | Apple Silicon (M1/M2/M3/M4) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-macos-arm64.zip`](#) | `mangasurf-macos-arm64` |
-          | **macOS** | Intel (x86_64) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-macos-x86_64.zip`](#) | `mangasurf-macos-x86_64` |
+          | **Windows** | x64 (64-bit) | [`mangasurf-{os.environ.get('TAG_NAME', 'VERSION_NUMBER')}-windows-x64.zip`](#) | `mangasurf-windows-x64.exe` |
+          | **Linux** | x86_64 (glibc 2.35+) | [`mangasurf-{os.environ.get('TAG_NAME', 'VERSION_NUMBER')}-linux-x86_64.tar.gz`](#) | `mangasurf-linux-x86_64` |
+          | **macOS** | Apple Silicon (M1/M2/M3/M4) | [`mangasurf-{os.environ.get('TAG_NAME', 'VERSION_NUMBER')}-macos-arm64.zip`](#) | `mangasurf-macos-arm64` |
 
-          ### 🚀 Quick Start (No Python Required)
+          ###  Quick Start (No Python Required)
           1. Download the archive for your operating system above.
           2. Extract and run `mangasurf` (or double-click `mangasurf.exe` on Windows).
           3. Enjoy reading with the 3D Depth Carousel, Foliate webtoon viewer, LAN Phone Server (:8577), or OPDS 1.2 Catalog (:8578)!

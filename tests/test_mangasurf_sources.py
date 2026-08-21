@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from readerm.sources import (
+from mangasurf.sources import (
     SOURCES,
     SOURCE_CLASSES,
     get_source,
@@ -17,19 +17,19 @@ from readerm.sources import (
     browse_all,
     genres_all,
 )
-from readerm.sources.base import filter_and_rank_query
-from readerm.sources.weebcentral import WeebCentralSource, natural_sort_key
-from readerm.sources.mangakatana import MangakatanaSource, GENRE_MAP
-from readerm.sources.kagane import KaganeSource
-from readerm.sources.comix import ComixSource
-from readerm.sources.vymanga import VymangaSource
-from readerm.sources.mangadotnet import MangaDotNetSource
-from readerm.sources.hitomi import HitomiSource
-from readerm.sources.mangadistrict import MangaDistrictSource
-from readerm.sources.omegascans import OmegaScansSource
-from readerm.features import suggest, add_history
-import readerm.config as appconfig
-from readerm.gui import Api
+from mangasurf.sources.base import filter_and_rank_query
+from mangasurf.sources.weebcentral import WeebCentralSource, natural_sort_key
+from mangasurf.sources.mangakatana import MangakatanaSource, GENRE_MAP
+from mangasurf.sources.kagane import KaganeSource
+from mangasurf.sources.comix import ComixSource
+from mangasurf.sources.vymanga import VymangaSource
+from mangasurf.sources.mangadotnet import MangaDotNetSource
+from mangasurf.sources.hitomi import HitomiSource
+from mangasurf.sources.mangadistrict import MangaDistrictSource
+from mangasurf.sources.omegascans import OmegaScansSource
+from mangasurf.features import suggest, add_history
+import mangasurf.config as appconfig
+from mangasurf.gui import Api
 
 
 def test_all_expected_sources_present():

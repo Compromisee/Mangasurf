@@ -4,8 +4,8 @@ import os
 import tempfile
 import zipfile
 import pytest
-from readerm.gui import Api
-from readerm.sources import (
+from mangasurf.gui import Api
+from mangasurf.sources import (
     get_source,
     ChikariSource,
     KuraMangaSource,
@@ -13,7 +13,7 @@ from readerm.sources import (
     HiperdexSource,
     MangaKSource,
 )
-from readerm.library import scan_library_folders, load_library
+from mangasurf.library import scan_library_folders, load_library
 
 
 def test_scan_external_series_folder_with_archives():
