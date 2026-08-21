@@ -34,7 +34,7 @@ mangasurf = "mangasurf.cli:main"
 mangasurf-gui = "mangasurf.gui:run_gui"
 
 [tool.setuptools.packages.find]
-include = ["mangasurf*", "mangasurf*"]
+include = ["mangasurf*"]
 
 [tool.setuptools.package-data]
 "mangasurf.reader" = [
