@@ -101,7 +101,7 @@
 
 ### 2. Clone & Install Dependencies
 ```bash
-git clone https://github.com/your-repo/Mangasurf.git
+git clone https://github.com/Compromisee/Mangasurf.git
 cd Mangasurf
 pip install -r requirements.txt
 ```
