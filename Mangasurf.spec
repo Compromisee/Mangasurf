@@ -18,8 +18,8 @@ ONEFILE = "--onefile" in sys.argv or os.environ.get("PYINSTALLER_ONEFILE", "").l
 APP_NAME = "Mangasurf"
 
 datas = [
-    ("readerm/reader/app", "readerm/reader/app"),
-    ("readerm/reader/foliate", "readerm/reader/foliate"),
+    ("mangasurf/reader/app", "mangasurf/reader/app"),
+    ("mangasurf/reader/foliate", "mangasurf/reader/foliate"),
     ("ui", "ui"),
 ]
 
@@ -60,24 +60,24 @@ hiddenimports = [
     "fpdf2",
     "ebooklib",
     "ebooklib.epub",
-    "readerm.database",
-    "readerm.devices",
-    "readerm.flaresolverr",
-    "readerm.server",
-    "readerm.serverui",
-    "readerm.servercfg",
-    "readerm.landing",
-    "readerm.opds",
-    "readerm.opdsserve",
-    "readerm.opdsui",
-    "readerm.shelves",
-    "readerm.localapi",
-    "readerm.sources",
+    "mangasurf.database",
+    "mangasurf.devices",
+    "mangasurf.flaresolverr",
+    "mangasurf.server",
+    "mangasurf.serverui",
+    "mangasurf.servercfg",
+    "mangasurf.landing",
+    "mangasurf.opds",
+    "mangasurf.opdsserve",
+    "mangasurf.opdsui",
+    "mangasurf.shelves",
+    "mangasurf.localapi",
+    "mangasurf.sources",
     "logging.handlers",
 ]
 
-hiddenimports += collect_submodules("readerm")
-hiddenimports += collect_submodules("readerm.sources")
+hiddenimports += collect_submodules("mangasurf")
+hiddenimports += collect_submodules("mangasurf.sources")
 hiddenimports += collect_submodules("textual.widgets")
 
 icon_file = None
