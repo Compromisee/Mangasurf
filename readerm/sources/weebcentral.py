@@ -129,6 +129,7 @@ class WeebCentralSource(Source):
         official: str = "Any",
         status: str = None,
         series_type: str = None,
+        page: int = 1,
         **_,
     ) -> list:
         query = (query or "").strip()
@@ -142,8 +143,11 @@ class WeebCentralSource(Source):
         if official not in ("Any", "True", "False"):
             official = "Any"
 
+        page_val = max(1, int(page or _.get("page", 1) or 1))
+        offset = (page_val - 1) * limit
+
         url = (
-            f"{SITE}/search/data?limit={limit}&offset=0&text={quote(query)}"
+            f"{SITE}/search/data?limit={limit}&offset={offset}&text={quote(query)}"
             f"&sort={quote(sort)}&order={quote(order)}&official={official}"
             f"&display_mode=Full%20Display"
         )

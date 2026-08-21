@@ -15,12 +15,14 @@ from .comix import ComixSource
 from .demonicscans import DemonicScansSource
 from .flamecomics import FlameComicsSource
 from .hentaiakane import HentaiAkaneSource
+from .hitomi import HitomiSource
 from .kagane import KaganeSource
 from .madaranet import MadaraNetSource
 from .madarascans import MadaraScansSource
 from .manga18club import Manga18ClubSource
 from .mangadass import MangadassSource
 from .mangadex import MangaDexSource
+from .mangadistrict import MangaDistrictSource
 from .mangadotnet import MangaDotNetSource
 from .mangakatana import MangakatanaSource
 from .manhwa18 import Manhwa18Source
@@ -28,11 +30,18 @@ from .manhwaread import ManhwaReadSource
 from .natomanga import NatomangaSource
 from .nhentai import NhentaiSource
 from .omegascans import OmegaScansSource
+from .simplyhentai import SimplyHentaiSource
 from .vymanga import VymangaSource
 from .webtoons import WebtoonsSource
 from .weebcentral import WeebCentralSource
-from .witchscans import WitchScansSource
+from .witchscans import WitchScansSource, WitchtoonsSource
 from .writerscans import WriterScansSource
+from .chikari import ChikariSource
+from .kuramanga import KuraMangaSource
+from .kurahentai import KuraHentaiSource
+from .hiperdex import HiperdexSource
+from .madaradex import MadaraDexSource
+from .mangak import MangaKSource
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +53,9 @@ SOURCE_CLASSES = [
     ComixSource,
     VymangaSource,
     MangaDotNetSource,
+    MangaDistrictSource,
+    HitomiSource,
+    SimplyHentaiSource,
     NatomangaSource,
     AsuraScansSource,
     FlameComicsSource,
@@ -60,6 +72,12 @@ SOURCE_CLASSES = [
     Manga18ClubSource,
     HentaiAkaneSource,
     NhentaiSource,
+    ChikariSource,
+    KuraMangaSource,
+    KuraHentaiSource,
+    HiperdexSource,
+    MadaraDexSource,
+    MangaKSource,
 ]
 
 SOURCES = {cls.id: cls for cls in SOURCE_CLASSES}
@@ -70,9 +88,9 @@ __all__ = [
     "BASE_HEADERS", "DEFAULT_SOURCE", "DEFAULT_UA", "SOURCES", "SOURCE_CLASSES",
     "ScrapeError", "Source", "MangaDexSource", "MangakatanaSource",
     "WeebCentralSource", "KaganeSource", "ComixSource", "VymangaSource",
-    "MangaDotNetSource", "NatomangaSource", "OmegaScansSource",
-    "ManhwaReadSource", "Manhwa18Source", "WebtoonsSource",
-    "MangadassSource", "Manga18ClubSource", "HentaiAkaneSource",
+    "MangaDotNetSource", "MangaDistrictSource", "HitomiSource", "SimplyHentaiSource",
+    "NatomangaSource", "OmegaScansSource", "ManhwaReadSource", "Manhwa18Source",
+    "WebtoonsSource", "MangadassSource", "Manga18ClubSource", "HentaiAkaneSource",
     "NhentaiSource", "AsuraScansSource", "FlameComicsSource",
     "DemonicScansSource", "MadaraScansSource", "MadaraNetSource",
     "WitchScansSource", "WriterScansSource",
@@ -200,10 +218,16 @@ def search_all(query: str, source_ids=None, limit: int = 20,
 
         return SOURCE_BREAKER.call(source_id, fetch)
 
+    try:
+        from ..config import load_settings
+        search_timeout = float(load_settings().get("search_timeout") or 30.0)
+    except Exception:
+        search_timeout = 30.0
+
     pool = ThreadPoolExecutor(max_workers=max(1, min(workers, len(ids))))
     try:
         futures = {pool.submit(run, sid): sid for sid in ids}
-        done, pending = concurrent.futures.wait(futures, timeout=5.0)
+        done, pending = concurrent.futures.wait(futures, timeout=search_timeout)
         for future in done:
             source_id = futures[future]
             try:
@@ -214,7 +238,7 @@ def search_all(query: str, source_ids=None, limit: int = 20,
 
         for future in pending:
             source_id = futures[future]
-            logger.debug("Search timed out on %s after 5s", source_id)
+            logger.debug("Search timed out on %s after %.1fs", source_id, search_timeout)
             buckets[source_id] = []
     finally:
         pool.shutdown(wait=False)
@@ -302,7 +326,7 @@ def browse_all(sort: str = "Trending", genre: str = None, page: int = 1,
     pool = ThreadPoolExecutor(max_workers=max(1, min(workers, len(ids))))
     try:
         futures = {pool.submit(run, sid): sid for sid in ids}
-        done, pending = concurrent.futures.wait(futures, timeout=5.0)
+        done, pending = concurrent.futures.wait(futures, timeout=12.0)
         for future in done:
             source_id = futures[future]
             try:

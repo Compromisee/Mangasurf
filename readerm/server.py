@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ReaderM as a LAN server — use the desktop UI from your phone.
+"""Mangasurf as a LAN server — use the desktop UI from your phone.
 
     python server.py                      # http://<this-pc>:8577
     python server.py --port 9000
@@ -73,10 +73,12 @@ if __package__ in (None, ""):
 try:
     from flask import Flask, Response, abort, jsonify, request, send_from_directory
 except ImportError:                                        # pragma: no cover
-    print("Flask is not installed. Run:\n\n    pip install flask\n"
-          "\nor install the server extra:\n\n    pip install -e \".[server]\"\n",
-          file=sys.stderr)
-    raise SystemExit(1)
+    Flask = None
+    Response = None
+    abort = None
+    jsonify = None
+    request = None
+    send_from_directory = None
 
 from . import logs as wclogs
 from .gui import Api
@@ -172,13 +174,29 @@ class ServerApi(Api):
     works here on the next release with no extra wiring.
     """
 
-    def __init__(self, buffer):
+    def __init__(self, buffer, token=None):
         super().__init__()
         self._buffer = buffer
+        self._token = token or ""
         # Api._push() returns early when self.window is None, which is how
         # it avoids talking to a window that does not exist. Give it a
         # truthy stand-in so the events reach _flush() instead.
         self.window = _NullWindow()
+
+    def cover_src(self, cover: str, directory: str = None) -> str:
+        from urllib.parse import quote as _q
+        cover = (cover or "").strip()
+        if not cover and directory and os.path.isdir(directory):
+            from . import covers
+            cover = covers.existing_cover(directory) or ""
+        if not cover:
+            return ""
+        if cover.startswith(("http://", "https://", "data:")):
+            return cover
+        if not os.path.isfile(cover):
+            return ""
+        token_param = f"&token={_q(self._token)}" if self._token else ""
+        return f"/stream/page?path={_q(cover)}{token_param}"
 
     def _flush(self):
         """Send everything queued into the buffer instead of a webview."""
@@ -219,10 +237,57 @@ def local_ip():
         sock.close()
 
 
+def _is_tailscale_ip(ip: str) -> bool:
+    """Check if an IPv4 address falls within Tailscale CGNAT range (100.64.0.0/10)."""
+    if not ip or not str(ip).startswith("100."):
+        return False
+    parts = str(ip).split(".")
+    if len(parts) == 4 and parts[0] == "100" and parts[1].isdigit():
+        return 64 <= int(parts[1]) <= 127
+    return False
+
+
+def tailscale_ip() -> str | None:
+    """Detect active Tailscale VPN IPv4 address if available."""
+    import shutil
+    import subprocess
+
+    # 1. Try tailscale command line tool
+    if shutil.which("tailscale"):
+        try:
+            res = subprocess.run(["tailscale", "ip", "-4"], capture_output=True, text=True, timeout=1.5)
+            if res.returncode == 0:
+                ip = res.stdout.strip().splitlines()[0].strip()
+                if _is_tailscale_ip(ip):
+                    return ip
+        except Exception:
+            pass
+
+    # 2. Check getaddrinfo on hostname
+    try:
+        hostname = socket.gethostname()
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            ip = info[4][0]
+            if _is_tailscale_ip(ip):
+                return ip
+    except Exception:
+        pass
+
+    # 3. Check gethostbyname_ex
+    try:
+        for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+            if _is_tailscale_ip(ip):
+                return ip
+    except Exception:
+        pass
+
+    return None
+
+
 class ServerLog:
     """A ring of human-readable lines for the server's own window.
 
-    Separate from ``readerm.logs``: that writes a rotating file for
+    Separate from ``mangasurf.logs``: that writes a rotating file for
     diagnosing a bug later, while this is a live view of what the phone is
     doing right now. Bounded, because a long session is thousands of API
     calls and nobody scrolls past the last hundred.
@@ -257,11 +322,28 @@ class ServerLog:
             self._lines = []
 
 
-def create_app(token=None, api=None, buffer=None, log=None):
+GLOBAL_SERVER_LOG = ServerLog()
+
+
+def _get_flask():
+    global Flask, Response, abort, jsonify, request, send_from_directory
+    if Flask is None:
+        try:
+            from flask import Flask as _F, Response as _R, abort as _A, jsonify as _J, request as _Req, send_from_directory as _S
+            Flask, Response, abort, jsonify, request, send_from_directory = _F, _R, _A, _J, _Req, _S
+        except ImportError:
+            pass
+    return Flask
+
+
+def create_app(token=None, api=None, buffer=None, log=None, no_auth=False):
     """Build the Flask app. Exposed separately so tests can drive it."""
+    _get_flask()
+    if Flask is None:
+        raise RuntimeError("Flask is required for the LAN server. Run: pip install flask")
     buffer = buffer if buffer is not None else EventBuffer()
-    api = api if api is not None else ServerApi(buffer)
-    log = log if log is not None else ServerLog()
+    api = api if api is not None else ServerApi(buffer, token=token)
+    log = log if log is not None else GLOBAL_SERVER_LOG
 
     app = Flask(__name__, static_folder=None)
     app.config["READERM_TOKEN"] = token
@@ -272,10 +354,14 @@ def create_app(token=None, api=None, buffer=None, log=None):
     # ----------------------------------------------------------- auth
 
     def authorised():
-        if not token:
+        if no_auth or not token:
             return True
-        supplied = (request.headers.get("X-ReaderM-Token")
+        supplied = (request.headers.get("X-Mangasurf-Token")
+                    or request.headers.get("X-ReaderM-Token")
                     or request.args.get("token")
+                    or request.args.get("t")
+                    or request.cookies.get("mangasurf_token")
+                    or request.cookies.get("readerm_token")
                     or (request.get_json(silent=True) or {}).get("_token"))
         # Constant-time: this is a shared secret in a query string, so the
         # comparison is the one part that costs nothing to get right.
@@ -287,11 +373,29 @@ def create_app(token=None, api=None, buffer=None, log=None):
 
     # -------------------------------------------------------- the page
 
+    @app.before_request
+    def record_client():
+        try:
+            from .devices import tracker
+            c_ip = client()
+            ua = request.headers.get("User-Agent", "")
+            tracker.record_request(
+                ip=c_ip,
+                user_agent=ua,
+                service="web",
+                endpoint=request.path,
+            )
+        except Exception:
+            pass
+
     @app.get("/")
     def index():
         if token and not authorised():
             return Response(_TOKEN_PAGE, mimetype="text/html", status=401)
-        return Response(_page_html(), mimetype="text/html")
+        resp = Response(_page_html(), mimetype="text/html")
+        if token:
+            resp.set_cookie("mangasurf_token", token, samesite="Lax", max_age=86400 * 30)
+        return resp
 
     @app.get("/<path:filename>")
     def asset(filename):
@@ -387,6 +491,10 @@ def create_app(token=None, api=None, buffer=None, log=None):
         if method in HOST_SIDE and isinstance(result, dict) and result.get("ok"):
             log.add("info", f"{method} ran on this computer, not the phone")
             result = dict(result, host_side=True)
+        if isinstance(result, dict):
+            payload = dict(_safe(result))
+            payload["result"] = _safe(result)
+            return jsonify(payload)
         return jsonify({"result": _safe(result)})
 
     @app.get("/api/_events")
@@ -429,9 +537,17 @@ def create_app(token=None, api=None, buffer=None, log=None):
         """
         try:
             server = api._asset_server()
+            if server.is_allowed(path):
+                return True
         except Exception:
-            return False
-        return bool(server.is_allowed(path))
+            pass
+        try:
+            locked_paths = api._locked_paths() if hasattr(api, "_locked_paths") else ()
+            if any(path.startswith(lp) for lp in locked_paths if lp):
+                return False
+        except Exception:
+            pass
+        return os.path.isfile(path) or os.path.isdir(path)
 
     def _send_range(path: str, ctype: str):
         """send_file with byte ranges, which is what makes a CBZ seekable."""
@@ -476,7 +592,9 @@ def create_app(token=None, api=None, buffer=None, log=None):
         ctype = content_type_for(path)
         if not ctype.startswith("image/"):
             abort(404)
-        return _send_range(path, ctype)
+        resp = _send_range(path, ctype)
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
 
     @app.get("/stream/book")
     def stream_book():
@@ -488,14 +606,16 @@ def create_app(token=None, api=None, buffer=None, log=None):
         if not path or not os.path.isfile(path) or not _allowed(path):
             abort(404)
         from .reader.assets import content_type_for
-        return _send_range(path, content_type_for(path))
+        resp = _send_range(path, content_type_for(path))
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
 
     # ------------------------------------------------ the local read API
     #
     # A separate, read-only surface for other programs on this machine: a
     # different reader, a sync script, an agent. It answers "where is
     # everything, and what has been read" without the caller importing
-    # ReaderM or parsing its private JSON.
+    # Mangasurf or parsing its private JSON.
     #
     # It is read only, so no call here can damage a library. Books on a
     # locked shelf are omitted -- a privacy screen any local script can walk
@@ -534,6 +654,18 @@ def create_app(token=None, api=None, buffer=None, log=None):
         return jsonify({"ok": True, "app": "readerm",
                         "auth": bool(token),
                         "authorised": authorised()})
+
+    @app.get("/api/_devices")
+    def api_devices():
+        if not authorised():
+            return jsonify({"ok": False, "error": "Bad or missing token"}), 401
+        from .devices import tracker
+        return jsonify({
+            "ok": True,
+            "devices": tracker.get_devices(service="web"),
+            "active_count": tracker.active_count(service="web"),
+            "total_count": tracker.total_count(service="web"),
+        })
 
     @app.get("/api/_log")
     def server_log():
@@ -594,7 +726,7 @@ def _safe(value):
 
 _TOKEN_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReaderM</title><style>
+<title>Mangasurf</title><style>
 body{background:#0b0a12;color:#f2f0ff;font:16px/1.6 system-ui,sans-serif;
      display:grid;place-items:center;height:100vh;margin:0;text-align:center}
 div{max-width:34ch;padding:24px}code{background:#1c1b28;padding:2px 6px;
@@ -610,7 +742,7 @@ carries the token.</p>
 #: Reimplements window.pywebview.api over fetch, so the desktop UI runs
 #: unmodified. Loaded before app.js by the injected tag in index.html.
 _BRIDGE_JS = r"""
-/* ReaderM remote bridge -- makes a browser look like pywebview to app.js. */
+/* Mangasurf remote bridge -- makes a browser look like pywebview to app.js. */
 (function () {
   "use strict";
   var TOKEN = "__TOKEN__";
@@ -620,7 +752,7 @@ _BRIDGE_JS = r"""
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-ReaderM-Token": TOKEN,
+        "X-Mangasurf-Token": TOKEN,
       },
       body: JSON.stringify({args: args, _token: TOKEN}),
     }).then(function (response) {
@@ -699,7 +831,8 @@ def build_url(host, port, token):
 
 
 def serve(host="0.0.0.0", port=None, token=None, no_auth=False,
-          verbose=None, log=None, on_ready=None, debug=False):
+          verbose=None, log=None, on_ready=None, debug=False,
+          server_instance_holder=None):
     """Run the server. Shared by the console entry point and the window.
 
     ``on_ready`` is called with the URL once the app is built but before the
@@ -736,26 +869,42 @@ def serve(host="0.0.0.0", port=None, token=None, no_auth=False,
         except Exception:
             logger.exception("on_ready callback failed")
 
-    try:
-        app.run(host=host, port=port, debug=debug,
-                threaded=True, use_reloader=False)
-    except OSError as exc:
-        # The most common real failure: the port is taken, usually by an
-        # older copy of this same server.
-        log.add("error", f"Could not bind port {port}: {exc}")
-        raise
-    finally:
+    if server_instance_holder is not None:
         try:
-            app.config["READERM_API"].shutdown()
-        except Exception:
-            pass
+            from werkzeug.serving import make_server
+            server = make_server(host, port, app, threaded=True)
+            server_instance_holder["server"] = server
+            server.serve_forever()
+            return app
+        except OSError as exc:
+            log.add("error", f"Could not bind port {port}: {exc}")
+            raise
+        finally:
+            try:
+                app.config["READERM_API"].shutdown()
+            except Exception:
+                pass
+    else:
+        try:
+            app.run(host=host, port=port, debug=debug,
+                    threaded=True, use_reloader=False)
+        except OSError as exc:
+            # The most common real failure: the port is taken, usually by an
+            # older copy of this same server.
+            log.add("error", f"Could not bind port {port}: {exc}")
+            raise
+        finally:
+            try:
+                app.config["READERM_API"].shutdown()
+            except Exception:
+                pass
     return app
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="readerm server",
-        description="Run ReaderM as a LAN server you can drive from a phone. "
+        description="Run Mangasurf as a LAN server you can drive from a phone. "
                     "All downloading happens on this computer.")
     parser.add_argument("--host", default="0.0.0.0",
                         help="interface to bind (default: every interface, "
@@ -789,13 +938,18 @@ def main(argv=None):
     token = None if args.no_auth else (args.token or stored["token"])
     url = build_url(args.host, port, token)
 
+    ts_ip = tailscale_ip()
+    ts_url = f"http://{ts_ip}:{port}" + (f"/?token={token}" if token else "/") if ts_ip else None
+
     line = "\u2500" * 62
     print(f"\n{line}")
-    print("  ReaderM server")
+    print("  Mangasurf server")
     print(f"{line}")
     print(f"  On this PC     http://localhost:{port}"
           + (f"/?token={token}" if token else "/"))
     print(f"  On your phone  {url}")
+    if ts_url:
+        print(f"  Tailscale VPN  {ts_url}")
     if token:
         print(f"\n  Access token   {token}")
         print("  Change it in the app: Settings -> Phone server")
@@ -811,7 +965,7 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     except OSError as exc:
-        print(f"\n[ReaderM] Could not start the server: {exc}\n",
+        print(f"\n[Mangasurf] Could not start the server: {exc}\n",
               file=sys.stderr)
         return 1
     return 0

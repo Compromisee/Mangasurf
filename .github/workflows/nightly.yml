@@ -1,0 +1,125 @@
+name: Nightly Bleeding-Edge Builds
+
+on:
+  schedule:
+    # Run every night at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-nightly:
+    name: Build Nightly (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: windows-x64
+            os: windows-latest
+            artifact: mangasurf-nightly-windows-x64.zip
+            binary_src: dist/Mangasurf.exe
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            artifact: mangasurf-nightly-linux-x86_64.tar.gz
+            binary_src: dist/Mangasurf
+          - name: macos-arm64
+            os: macos-14
+            artifact: mangasurf-nightly-macos-arm64.zip
+            binary_src: dist/Mangasurf
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libgl1-mesa-dev libglib2.0-0 libgtk-3-dev gir1.2-webkit2-4.1 libayatana-appindicator3-dev
+
+      - name: Install Python dependencies & PyInstaller
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build OneFile Binary
+        env:
+          PYINSTALLER_ONEFILE: "1"
+        run: |
+          pyinstaller Mangasurf.spec --clean --noconfirm -- --onefile
+
+      - name: Package Nightly Artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "${{ matrix.platform.binary_src }}" -Destination "mangasurf-nightly.exe"
+          Compress-Archive -Path "mangasurf-nightly.exe", "README.md", "LICENSE" -DestinationPath "${{ matrix.platform.artifact }}"
+
+      - name: Package Nightly Artifact (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x "${{ matrix.platform.binary_src }}"
+          cp "${{ matrix.platform.binary_src }}" mangasurf-nightly
+          if [[ "${{ matrix.platform.artifact }}" == *".tar.gz" ]]; then
+            tar -czf "${{ matrix.platform.artifact }}" mangasurf-nightly README.md LICENSE
+          else
+            zip -r "${{ matrix.platform.artifact }}" mangasurf-nightly README.md LICENSE
+          fi
+
+      - name: Upload Nightly Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.name }}
+          path: ${{ matrix.platform.artifact }}
+
+  publish-nightly:
+    name: Publish Nightly Pre-Release
+    needs: build-nightly
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: nightly-assets
+
+      - name: Consolidate Nightly Files
+        run: |
+          mkdir -p release-files
+          find nightly-assets -type f \( -name "*.zip" -o -name "*.tar.gz" \) -exec cp {} release-files/ \;
+          cd release-files
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Update Nightly Pre-Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: "Mangasurf Bleeding-Edge Nightly Build"
+          body: |
+            ## 🌙 Mangasurf Nightly Build
+            * **Build Commit**: `${{ github.sha }}`
+            * **Build Timestamp**: `${{ github.event.head_commit.timestamp || 'Latest' }}`
+            
+            > ⚠️ **Nightly builds contain bleeding-edge changes and may be unstable. For daily use, prefer official tagged releases.**
+            
+            ### 📦 Binaries
+            - `mangasurf-nightly-windows-x64.zip`
+            - `mangasurf-nightly-linux-x86_64.tar.gz`
+            - `mangasurf-nightly-macos-arm64.zip`
+          prerelease: true
+          files: release-files/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

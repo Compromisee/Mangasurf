@@ -35,6 +35,7 @@ class OpdsController:
         self.log = opdsserve.OpdsLog(
             verbose=stored["verbose"] if verbose is None else bool(verbose))
         self._thread = None
+        self._server_holder = {}
         self._running = False
         self._url = ""
         self.window = None
@@ -45,21 +46,26 @@ class OpdsController:
 
     def get_state(self):
         from . import opds
+        from .server import local_ip, tailscale_ip
 
         stored = self._cfg.load_server_settings()
         rows = opds.library_rows()
+        ts = tailscale_ip()
+        port = int(self._override_port or self._serve.opds_port())
         return {
             "ok": True,
             "running": self._running,
             "url": self._url,
             "token": "" if self.no_auth else (self._override_token
                                               or stored["token"]),
-            "port": int(self._override_port or self._serve.opds_port()),
+            "port": port,
             "verbose": self.log.verbose,
             "no_auth": self.no_auth,
             "titles": len(rows),
             "with_covers": sum(1 for r in rows if r["cover"]),
-            "host_ip": self._host_ip(),
+            "host_ip": local_ip(),
+            "tailscale_ip": ts,
+            "tailscale_url": f"http://{ts}:{port}/opds" if ts else "",
         }
 
     @staticmethod
@@ -121,7 +127,8 @@ class OpdsController:
                                   token=self._override_token,
                                   no_auth=self.no_auth,
                                   verbose=self.log.verbose, log=self.log,
-                                  on_ready=on_ready)
+                                  on_ready=on_ready,
+                                  server_instance_holder=self._server_holder)
             except Exception as exc:
                 self.log.add("error", f"Server stopped: {exc}")
             finally:
@@ -139,13 +146,21 @@ class OpdsController:
         return {"ok": True, "state": self.get_state()}
 
     def stop(self):
-        """Werkzeug has no clean cross-thread shutdown once inside
-        serve_forever, so say so rather than pretending."""
+        """Stop serving."""
         if not self._running:
             return {"ok": False, "error": "Not running"}
-        self.log.add("warn", "Close this window to stop the catalog.")
-        return {"ok": False, "error": "Close this window to stop the catalog.",
-                "state": self.get_state()}
+        try:
+            if self._server_holder and self._server_holder.get("server"):
+                srv = self._server_holder["server"]
+                srv.shutdown()
+                if hasattr(srv, "server_close"):
+                    srv.server_close()
+            self._running = False
+            self.log.add("info", "OPDS catalog stopped.")
+            return {"ok": True, "state": self.get_state()}
+        except Exception as exc:
+            self.log.add("error", f"Could not stop OPDS catalog: {exc}")
+            return {"ok": False, "error": str(exc), "state": self.get_state()}
 
     def get_log(self, since=0):
         try:
@@ -177,6 +192,121 @@ class OpdsController:
             return {"ok": True}
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
+
+    # -------------------------------------------------------- file & folder import
+
+    def choose_file(self):
+        """Open a native file picker dialog."""
+        if not self.window:
+            return None
+        import webview
+        paths = self.window.create_file_dialog(
+            webview.OPEN_DIALOG,
+            file_types=("Comic & Book Files (*.cbz;*.epub;*.pdf;*.zip;*.cbr)", "All Files (*.*)")
+        )
+        return paths[0] if paths else None
+
+    def choose_folder(self):
+        """Open a native directory picker dialog."""
+        if not self.window:
+            return None
+        import webview
+        dirs = self.window.create_file_dialog(webview.FOLDER_DIALOG)
+        return dirs[0] if dirs else None
+
+    def import_file(self, file_path=None):
+        """Import a CBZ, EPUB, PDF, or ZIP file into the OPDS catalog library."""
+        from . import library
+        import shutil
+        file_path = file_path or self.choose_file()
+        if not file_path:
+            return {"ok": False, "cancelled": True}
+        if not os.path.isfile(file_path):
+            return {"ok": False, "error": f"File not found: {file_path}"}
+
+        out_dir = self.default_library_root()
+        name = os.path.basename(file_path)
+        title = os.path.splitext(name)[0].strip()
+        series_dir = os.path.join(out_dir, title)
+        os.makedirs(series_dir, exist_ok=True)
+        dest = os.path.join(series_dir, name)
+
+        try:
+            if os.path.abspath(file_path) != os.path.abspath(dest):
+                shutil.copy2(file_path, dest)
+            library.scan_library_folders([out_dir])
+            self.log.add("info", f"Imported '{name}' to OPDS catalog.")
+            return {"ok": True, "file": dest, "state": self.get_state()}
+        except Exception as e:
+            self.log.add("error", f"Failed importing file: {e}")
+            return {"ok": False, "error": str(e), "state": self.get_state()}
+
+    def rescan_library(self):
+        """Rescan all library directories and update OPDS catalog immediately."""
+        from . import library
+        out_dir = self.default_library_root()
+        res = library.scan_library_folders([out_dir] if out_dir else None)
+        self.log.add("info", f"Rescanned library: {res.get('total_series', 0)} series indexed ({res.get('discovered', 0)} new).")
+        return {"ok": True, "state": self.get_state()}
+
+    # -------------------------------------------------------- folder organizer
+
+    def get_folders(self):
+        from . import opds
+        return {"ok": True, "folders": opds.load_opds_folders()}
+
+    def add_folder(self, name, filter_spec="", folder_type="shelf"):
+        from . import opds
+        import re
+        name = str(name or "").strip()
+        if not name:
+            return {"ok": False, "error": "Folder name cannot be empty"}
+        folder_id = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "folder"
+        folders = opds.load_opds_folders()
+        base_id = folder_id
+        idx = 2
+        while any(f.get("id") == folder_id for f in folders):
+            folder_id = f"{base_id}-{idx}"
+            idx += 1
+        new_entry = {
+            "id": folder_id,
+            "name": name,
+            "type": folder_type,
+            "enabled": True,
+            "filter": filter_spec or f"shelf:{name}",
+        }
+        folders.append(new_entry)
+        opds.save_opds_folders(folders)
+        self.log.add("info", f"Added OPDS section '{name}'.")
+        return {"ok": True, "folders": folders}
+
+    def toggle_folder(self, folder_id, enabled):
+        from . import opds
+        folders = opds.load_opds_folders()
+        for f in folders:
+            if f.get("id") == folder_id:
+                f["enabled"] = bool(enabled)
+        opds.save_opds_folders(folders)
+        return {"ok": True, "folders": folders}
+
+    def remove_folder(self, folder_id):
+        from . import opds
+        folders = opds.load_opds_folders()
+        folders = [f for f in folders if f.get("id") != folder_id]
+        opds.save_opds_folders(folders)
+        self.log.add("info", f"Removed OPDS section '{folder_id}'.")
+        return {"ok": True, "folders": folders}
+
+    def reorder_folders(self, folder_ids):
+        from . import opds
+        current = {f.get("id"): f for f in opds.load_opds_folders()}
+        reordered = []
+        for fid in folder_ids:
+            if fid in current:
+                reordered.append(current.pop(fid))
+        reordered.extend(current.values())
+        opds.save_opds_folders(reordered)
+        return {"ok": True, "folders": reordered}
 
     # ---------------------------------------------------------- covers
 
@@ -238,7 +368,7 @@ def run_opds_window(host="0.0.0.0", port=None, token=None, no_auth=False,
     logging.getLogger("pywebview").setLevel(logging.CRITICAL)
 
     window = webview.create_window(
-        "ReaderM OPDS catalog", html=PAGE, js_api=controller,
+        "Mangasurf OPDS catalog", html=PAGE, js_api=controller,
         width=780, height=720, min_size=(580, 540),
         background_color="#0b0a12")
     controller.window = window
@@ -271,7 +401,7 @@ PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ReaderM OPDS</title>
+<title>Mangasurf OPDS</title>
 <style>
 :root{
   --bg:#0b0a12; --panel:#16151f; --panel-2:#1c1b28; --line:#26243a;
@@ -328,7 +458,7 @@ button:disabled{opacity:.45;cursor:default}
 </head>
 <body>
 
-<h1><span class="dot" id="dot"></span> ReaderM OPDS catalog</h1>
+<h1><span class="dot" id="dot"></span> Mangasurf OPDS catalog</h1>
 
 <div class="card">
   <label>Add this in Readest</label>
@@ -346,6 +476,15 @@ button:disabled{opacity:.45;cursor:default}
 </div>
 
 <div class="card">
+  <label>Catalog File & Manga Import</label>
+  <div class="row">
+    <button id="importFileBtn" class="primary" style="flex:1">📁 Import CBZ / EPUB / File</button>
+    <button id="rescanLibBtn" style="flex:1">🔄 Rescan Library Folders</button>
+  </div>
+  <div class="hint">Copies any chosen CBZ or manga file directly into the OPDS catalog library.</div>
+</div>
+
+<div class="card">
   <div class="row">
     <div style="flex:0 0 110px">
       <label for="port">Port</label>
@@ -360,6 +499,25 @@ button:disabled{opacity:.45;cursor:default}
   </div>
   <div class="hint">The password is the access token from
     Settings &rarr; Phone server.</div>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <label style="margin-bottom:0">Organise Catalog Shelves & Folders</label>
+    <button class="primary" id="addFolderBtn" style="padding:4px 10px;font-size:12px">+ Add Section</button>
+  </div>
+  <div id="foldersList" style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;padding-right:4px">
+    <!-- Populated by JS -->
+  </div>
+  <div id="addFolderForm" style="display:none;margin-top:10px;padding:10px;background:var(--panel-2);border-radius:8px;border:1px solid var(--line)">
+    <label>New Section Name</label>
+    <div class="row">
+      <input type="text" id="newFolderName" placeholder="e.g. Action Favorites, Manhwa Vault">
+      <button id="saveFolderBtn" class="primary">Add</button>
+      <button id="cancelFolderBtn">Cancel</button>
+    </div>
+  </div>
+  <div class="hint">Sections appear as top-level subsections in Readest, Panels, and Moon+ Reader.</div>
 </div>
 
 <div class="card">
@@ -424,11 +582,61 @@ function pump(){
     setTimeout(pump,800);
   }).catch(function(){setTimeout(pump,2200);});
 }
+function renderFolders(folders){
+  var box = el('foldersList');
+  if(!box) return;
+  box.innerHTML = (folders||[]).map(function(f, idx){
+    return '<div class="row" style="background:var(--panel-2);padding:6px 10px;border-radius:6px;font-size:12px;justify-content:space-between">'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<input type="checkbox" '+(f.enabled?'checked':'')+' data-id="'+f.id+'" class="folder-chk">'
+      + '<strong>'+(f.name||f.id)+'</strong>'
+      + '<span style="font-size:10px;color:var(--ink-3);background:var(--panel);padding:1px 6px;border-radius:4px">'+(f.type||'shelf')+'</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px">'
+      + '<button class="folder-del-btn" data-id="'+f.id+'" style="padding:2px 6px;font-size:11px;color:var(--err)">✕</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  box.querySelectorAll('.folder-chk').forEach(function(chk){
+    chk.addEventListener('change', function(e){
+      api.toggle_folder(e.target.dataset.id, e.target.checked).then(function(r){
+        if(r&&r.ok) renderFolders(r.folders);
+      });
+    });
+  });
+  box.querySelectorAll('.folder-del-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      api.remove_folder(e.target.dataset.id).then(function(r){
+        if(r&&r.ok) renderFolders(r.folders);
+      });
+    });
+  });
+}
 ready(function(){
   api=window.pywebview.api;
   api.get_state().then(paint);
+  api.get_folders().then(function(r){ if(r&&r.ok) renderFolders(r.folders); });
   api.default_library_root().then(function(p){ if(p) el('root').value=p; });
   pump();
+
+  el('addFolderBtn').addEventListener('click', function(){
+    el('addFolderForm').style.display = 'block';
+    el('newFolderName').focus();
+  });
+  el('cancelFolderBtn').addEventListener('click', function(){
+    el('addFolderForm').style.display = 'none';
+  });
+  el('saveFolderBtn').addEventListener('click', function(){
+    var name = el('newFolderName').value.trim();
+    if(!name) return;
+    api.add_folder(name).then(function(r){
+      if(r&&r.ok){
+        renderFolders(r.folders);
+        el('newFolderName').value = '';
+        el('addFolderForm').style.display = 'none';
+      }
+    });
+  });
 
   el('portBtn').addEventListener('click',function(){
     api.save_port(el('port').value).then(function(r){
@@ -456,6 +664,22 @@ ready(function(){
             function(){msg('urlMsg','Link copied.','good');},fail);
         }else{fail();}
       }catch(e){fail();}
+    });
+  });
+  el('importFileBtn').addEventListener('click', function(){
+    api.import_file().then(function(r){
+      if(r&&r.ok){
+        msg('urlMsg','File imported to catalog.','good');
+        paint(r.state);
+      }
+    });
+  });
+  el('rescanLibBtn').addEventListener('click', function(){
+    api.rescan_library().then(function(r){
+      if(r&&r.ok){
+        msg('urlMsg','Catalog library rescanned.','good');
+        paint(r.state);
+      }
     });
   });
   el('openBtn').addEventListener('click',function(){api.open_in_browser();});

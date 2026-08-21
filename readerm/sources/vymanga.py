@@ -17,14 +17,15 @@ from .base import Source, ScrapeError
 
 logger = logging.getLogger(__name__)
 
-SITE = "https://vymanga.co"
+SITE = "https://mangavyvy.net"
+ALT_SITES = ("https://mangavyvy.net", "https://mangavyvy.com", "https://vymanga.net", "https://vymanga.com")
 
 
 class VymangaSource(Source):
     id = "vymanga"
     name = "VyManga"
     base_url = SITE
-    domains = ("vymanga.co", "www.vymanga.co")
+    domains = ("mangavyvy.net", "mangavyvy.com", "vymanga.net", "vymanga.com", "vymanga.co")
 
     supports_search = True
     supports_browse = True
@@ -44,7 +45,7 @@ class VymangaSource(Source):
     def headers(self) -> dict:
         h = super().headers()
         h.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Referer": f"{SITE}/",
             "Cookie": "warning=1; adult=1; over18=1",
@@ -56,61 +57,65 @@ class VymangaSource(Source):
 
     def browse(self, sort: str = "Trending", genre: str = None, page: int = 1, limit: int = 32, **_) -> list:
         page = max(1, int(page or 1))
-        if genre:
-            slug = genre.lower().replace(" ", "-")
-            url = f"{SITE}/genre/{slug}?page={page}"
-        else:
-            url = f"{SITE}/manga-list?page={page}"
+        for site_url in ALT_SITES:
+            try:
+                if genre:
+                    slug = genre.lower().replace(" ", "-")
+                    url = f"{site_url}/genre/{slug}?page={page}"
+                else:
+                    url = f"{site_url}/?page={page}" if page > 1 else f"{site_url}/"
 
-        try:
-            response = self.fetch(url, max_retries=1, timeout=4)
-            return self._parse_listing(response, limit)
-        except Exception as e:
-            logger.warning("VyManga browse failed: %s", e)
-            return []
+                response = self.fetch(url, max_retries=1, timeout=5)
+                res = self._parse_listing(response, limit, base_site=site_url)
+                if res:
+                    return res
+            except Exception as e:
+                logger.debug("VyManga browse on %s failed: %s", site_url, e)
+        return []
 
-    def search(self, query: str, limit: int = 32, **_) -> list:
+    def search(self, query: str, limit: int = 32, page: int = 1, **_) -> list:
         query_str = (query or "").strip()
         if not query_str:
             return []
 
-        url = f"{SITE}/search?q={quote(query_str)}"
-        try:
-            response = self.fetch(url, max_retries=1, timeout=4)
-            results = self._parse_listing(response, limit=max(limit, 30))
-            if query_str and results:
-                results = self.filter_and_rank(results, query_str)
-            return results[:limit]
-        except Exception as e:
-            logger.warning("VyManga search failed: %s", e)
-            return []
+        page_val = max(1, int(page or _.get("page", 1) or 1))
+        for site_url in ALT_SITES:
+            try:
+                url = f"{site_url}/search?q={quote(query_str)}&page={page_val}" if page_val > 1 else f"{site_url}/search?q={quote(query_str)}"
+                response = self.fetch(url, max_retries=1, timeout=5)
+                results = self._parse_listing(response, limit=max(limit, 30), base_site=site_url)
+                if results:
+                    if query_str:
+                        results = self.filter_and_rank(results, query_str)
+                    return results[:limit]
+            except Exception as e:
+                logger.debug("VyManga search on %s failed: %s", site_url, e)
+        return []
 
-    def _parse_listing(self, response, limit=32):
+    def _parse_listing(self, response, limit=32, base_site=SITE):
         soup = BeautifulSoup(response.content, "html.parser")
         results, seen = [], set()
 
-        items = soup.select("div.item, div.comic-item, div.row > div.col-md-6, div.col-sm-6")
-        if not items:
-            items = soup.select("a[href*='/manga/']")
+        items = soup.select("div.comic-item, div.item, div.row > div.col-md-6, a[href*='/manga/']")
 
         for item in items:
             link = item if item.name == "a" else item.select_one("a[href*='/manga/']")
             if not link or not link.get("href"):
                 continue
-            href = urljoin(SITE, link["href"])
+            href = urljoin(base_site, link["href"])
             if href in seen or "/chapter" in href:
                 continue
             seen.add(href)
 
-            title_el = item.select_one("h3, h4, .title, strong") or link
-            title = title_el.get_text(strip=True) if title_el else "Unknown"
+            title_el = item.select_one(".comic-title, h3, h4, .title, strong")
+            title = title_el.get_text(strip=True) if title_el else link.get("title", "Unknown")
 
             img = item.select_one("img")
             cover = None
             if img:
                 cover = img.get("data-src") or img.get("src")
-                if cover:
-                    cover = urljoin(SITE, cover)
+                if cover and cover.startswith("/"):
+                    cover = urljoin(base_site, cover)
 
             results.append(self._result(title, href, cover=cover))
             if len(results) >= limit:

@@ -1,6 +1,6 @@
 # Features
 
-Everything ReaderM does, grouped by what you are trying to achieve.
+Everything Mangasurf does, grouped by what you are trying to achieve.
 
 For command syntax see **[SYNTAX.md](SYNTAX.md)**. For what changed in each
 release, see **[CHANGELOG.md](CHANGELOG.md)**.
@@ -38,7 +38,7 @@ release, see **[CHANGELOG.md](CHANGELOG.md)**.
 
 | | |
 |---|---|
-| **Sources** | 19 registered, covering 28 sites |
+| **Sources** | 32 registered, covering 45+ sites |
 | **Interfaces** | desktop app, terminal menu, TUI, CLI, phone server, OPDS catalog |
 | **Output** | CBZ, PDF, EPUB, raw images — several at once |
 | **Concurrency** | multiple series in parallel, each with parallel chapters and pages |
@@ -203,7 +203,7 @@ name filter. Bookmark and watch buttons live on the series page.
 
 - **Crash-safe resume.** Page-count-verified checkpoints, atomic `.part`
   writes, and one journal file per job. Resume from the app banner or
-  `readerm resume`; finished chapters are skipped and a partial chapter
+  `mangasurf resume`; finished chapters are skipped and a partial chapter
   continues from the exact page it stopped at. Concurrent jobs each get
   their own journal, so one finishing cannot erase another's.
 - **Fail fast on dead ends.** 404 and 410 are not retried — a wrong genre
@@ -218,7 +218,7 @@ name filter. Bookmark and watch buttons live on the series page.
 
 ## The reader
 
-ReaderM reads what it downloads. The engine is a fork of
+Mangasurf reads what it downloads. The engine is a fork of
 [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT) — the engine
 behind [Foliate](https://github.com/johnfactotum/foliate), and the one Readest
 forked when it went cross-platform.
@@ -249,7 +249,7 @@ change.
 **Rebindable shortcuts.** Every action is in one list, so the settings page,
 the help sheet and the dispatcher cannot disagree. 26 actions, each
 rebindable by clicking its key and pressing a new one, with conflicts
-flagged rather than silently accepted. Four presets ship — ReaderM, Vim
+flagged rather than silently accepted. Four presets ship — Mangasurf, Vim
 (hjkl), WASD and one-hand — and only your changes are saved, so a later
 release can improve a default without pinning you to the old one.
 
@@ -361,7 +361,7 @@ the last few things you opened, each resumable in one click.
 
 ## Library shelves
 
-Folders for the books you have on disk, stored in `~/.readerm/shelves.json`.
+Folders for the books you have on disk, stored in `~/.mangasurf/shelves.json`.
 They are kept separate from bookmark folders on purpose: those group remote
 series you may not have downloaded, and one record trying to describe both
 would end up half empty either way.
@@ -395,12 +395,12 @@ glancing at your library; it is not a vault.
 
 ## Library and bookmarks
 
-- `~/.readerm/library.json` records every downloaded chapter per series:
+- `~/.mangasurf/library.json` records every downloaded chapter per series:
   name, page count, date, output files, title and folder.
 - Multi-part downloads are tracked part by part, with file sizes.
 - Missing output files are detected and flagged, and moved files can be
   found again and relinked.
-- Bookmarks live in `~/.readerm/bookmarks.json`, organised into folders.
+- Bookmarks live in `~/.mangasurf/bookmarks.json`, organised into folders.
 - Export the library as JSON, CSV or Markdown; import merges rather than
   overwrites.
 - Notes, 0–5 star ratings, custom tags and named collections per series.
@@ -420,10 +420,10 @@ glancing at your library; it is not a vault.
 ## Cover rebuilder
 
 Rebuild or replace the cover inside existing CBZ files — including ones
-ReaderM did not create.
+Mangasurf did not create.
 
 - Point it at any folder; it works recursively.
-- Understands ReaderM's own names (`Chapters 001-050`) and third-party ones
+- Understands Mangasurf's own names (`Chapters 001-050`) and third-party ones
   (`[Group] Title (2024) v03`, `Ch.001-036`, `Cap. 12`, `Episode 200`).
 - Titles that happen to contain marker words survive intact — Chainsaw Man,
   Case Closed, Cells at Work, Eden's Zero.
@@ -437,7 +437,7 @@ ReaderM did not create.
 
 ## Background mode
 
-- **One app at a time.** Launching ReaderM while it is already running
+- **One app at a time.** Launching Mangasurf while it is already running
   raises the existing window instead of starting a second copy — which used
   to leave two tray icons and two download engines on the same library.
 - Optional **system tray** mode: closing the window hides it and downloads
@@ -472,23 +472,23 @@ Requires the `tray` extra (`pip install -e ".[tray]"`).
 ## The command line
 
 ```
-readerm <url>                    every chapter as one CBZ
-readerm --url <url> -c 1-50 -f pdf --also epub
-readerm --url <url> --per 10     one file per ten chapters
-readerm resume                   continue an interrupted run
+mangasurf <url>                    every chapter as one CBZ
+mangasurf --url <url> -c 1-50 -f pdf --also epub
+mangasurf --url <url> --per 10     one file per ten chapters
+mangasurf resume                   continue an interrupted run
 
-readerm search "query"           every enabled source at once
-readerm search "query" --json    machine readable
-readerm search "query" --urls    one URL per line, for pipes
-readerm search "query" --open N  details for result N
-readerm search "query" --download N
+mangasurf search "query"           every enabled source at once
+mangasurf search "query" --json    machine readable
+mangasurf search "query" --urls    one URL per line, for pipes
+mangasurf search "query" --open N  details for result N
+mangasurf search "query" --download N
 
-readerm library [--check]        what you have, and what moved
-readerm covers <folder>          rebuild CBZ covers
-readerm updates                  new chapters for watched series
-readerm config --list|--set k=v
-readerm sources [--enable|--disable|--rank]
-readerm lock status|set|change|off
+mangasurf library [--check]        what you have, and what moved
+mangasurf covers <folder>          rebuild CBZ covers
+mangasurf updates                  new chapters for watched series
+mangasurf config --list|--set k=v
+mangasurf sources [--enable|--disable|--rank]
+mangasurf lock status|set|change|off
 ```
 
 - Colour output with progress bars, percentages and ETA, degrading to plain
@@ -502,7 +502,7 @@ Full reference in **[SYNTAX.md](SYNTAX.md)**.
 
 ## Picking an interface
 
-`python landing.py` — or double-clicking the packaged `ReaderM.exe` —
+`python landing.py` — or double-clicking the packaged `Mangasurf.exe` —
 opens a small window listing all five interfaces, and starts whichever
 you choose:
 
@@ -519,7 +519,7 @@ a TUI written to a pipe is useless.
 
 It also solves the venv problem. Launching `tui.py` from a file manager does
 not inherit your virtual environment, so the child gets the *system* Python,
-which has none of ReaderM's dependencies and dies with `ImportError` — a
+which has none of Mangasurf's dependencies and dies with `ImportError` — a
 failure that looks like a bug in the app. The launcher looks for a venv in
 the interpreter it is already running under, `$VIRTUAL_ENV`, and then
 `.venv`/`venv`/`env` in the project folder and up to two directories above
@@ -584,7 +584,7 @@ A folder of loose page images — an unpacked chapter, an imported scan, a
 blank tile.
 
 **Settings → Phone server → Covers for image folders**, the OPDS window, or
-`readerm covers`, will give every such folder its own cover:
+`mangasurf covers`, will give every such folder its own cover:
 
 - the **first page** is used, sorted naturally so page 2 comes before
   page 10;
@@ -603,10 +603,9 @@ disagree about which one wins.
 
 ---
 
-## Using it from your phone
+## Using it from your phone & GUI Server Hub
 
-`python server.py` serves the desktop interface over your local network, so
-you can browse and start downloads from a phone or tablet.
+You can launch and manage the LAN server directly from the **GUI Settings › Servers & OPDS Hub** or via CLI:
 
 ```
 python server.py                  # http://<this-pc>:8577
@@ -615,16 +614,24 @@ python server.py --host 127.0.0.1 # this machine only
 python server.py --no-auth        # skip the access token
 ```
 
+### GUI Server & OPDS Hub Features:
+- **Direct Start / Stop / Restart Controls**: Toggle the LAN Web Server and OPDS Catalog on the fly with live status badges.
+- **Live Device Tracking & Active Sessions**: Real-time monitor displaying all connected mobile phones, tablets, e-readers, and desktop clients (device name, IP address, connection type, active requests, bandwidth, and last seen time).
+- **QR Code Pairing**: Instant scan-to-connect QR codes for phone camera pairing.
+- **Tailscale VPN Support**: Automatic detection of Tailscale mesh IPs for secure remote reading.
+- **Autostart Options**: Configure LAN Server and/or OPDS Catalog to launch automatically with Mangasurf.
+- **Real-Time Traffic Console**: Live log streaming with filtering for easy diagnostics.
+
 **Everything runs on the host computer.** The phone sends the request; this
 machine executes it. So:
 
 - the phone never contacts a manga site — every scrape leaves the host's IP;
 - files are written to the host's disk, in the host's output folder;
-- the library, settings and job journals stay in the host's `~/.readerm/`;
+- the library, settings and job journals stay in the host's `~/.mangasurf/`;
 - closing the browser, or leaving Wi-Fi range, does not interrupt a download.
 
 It is the same UI, not a cut-down one: the page is served straight from
-`readerm/gui/web`, with a small shim that makes `fetch` look like the
+`mangasurf/gui/web`, with a small shim that makes `fetch` look like the
 pywebview bridge it normally talks to. Layout adapts below 820px — the side
 rail becomes a bottom bar and the cover grid reflows.
 
@@ -662,11 +669,11 @@ Requires the `server` extra (`pip install -e ".[server]"`).
 
 ## The terminal menu and TUI
 
-**`readerm menu`** — a numbered menu needing no extra dependencies. Answer
+**`mangasurf menu`** — a numbered menu needing no extra dependencies. Answer
 with a number, `b` goes back, `q` quits. Covers search, download, library,
 bookmarks, updates and settings.
 
-**`readerm-tui`** — a full-screen Textual interface for working over SSH:
+**`mangasurf-tui`** — a full-screen Textual interface for working over SSH:
 tabs for Search / Manga / Downloads / Settings, chapter multi-select, format
 and bundling pickers, live progress and a colour log. Requires the `tui`
 extra.
@@ -675,7 +682,7 @@ extra.
 
 ## Configuration
 
-Everything lives in `~/.readerm/`:
+Everything lives in `~/.mangasurf/`:
 
 | File | Contents |
 |---|---|
@@ -702,9 +709,9 @@ clobber each other.
 
 ## Packaging
 
-`ReaderM.spec` plus `launcher.py` build a standalone executable with
+`Mangasurf.spec` plus `launcher.py` build a standalone executable with
 PyInstaller. Double-clicking it opens the **launcher window**; every
-interface is also reachable as a subcommand (`ReaderM.exe gui`,
+interface is also reachable as a subcommand (`Mangasurf.exe gui`,
 `… menu`, `… tui`, `… server`).
 
 Both one-folder and one-file modes are supported and verified to build and
@@ -717,7 +724,7 @@ phone server works from inside the bundle: its web assets resolve through
 ## Python API
 
 ```python
-from readerm.downloader import DownloadEngine, DownloadOptions
+from mangasurf.downloader import DownloadEngine, DownloadOptions
 
 result = DownloadEngine(DownloadOptions(url="...", bundle=10)).run()
 ```
@@ -725,7 +732,7 @@ result = DownloadEngine(DownloadOptions(url="...", bundle=10)).run()
 Sources can be used directly too:
 
 ```python
-from readerm.sources import get_source, search_all
+from mangasurf.sources import get_source, search_all
 
 results = search_all("solo leveling")        # every enabled source
 source = get_source("mangadex")

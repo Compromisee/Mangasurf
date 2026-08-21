@@ -144,11 +144,29 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
 
     function render() {
         const body = $('#tree-body')
-        if (!body) return
         const shelves = state.tree.shelves || []
-        body.innerHTML = branch(shelves)
-        const empty = $('#tree-empty')
-        if (empty) empty.hidden = shelves.length > 0
+        if (body) {
+            body.innerHTML = branch(shelves)
+            const empty = $('#tree-empty')
+            if (empty) empty.hidden = shelves.length > 0
+        }
+
+        const hList = $('#h-shelves-list')
+        const hCount = $('#h-shelves-count')
+        if (hCount) hCount.textContent = shelves.length
+        if (hList) {
+            hList.innerHTML = shelves.map(s => {
+                const isSelected = state.selected === s.id
+                const isLocked = !!s.locked
+                const colour = s.colour ? `style="border-color:${esc(s.colour)}"` : ''
+                return `
+                <button class="h-shelf-pill ${isSelected ? 'on' : ''}" data-shelf-id="${esc(s.id)}" ${colour} type="button">
+                    <span class="mi">${isLocked ? 'lock' : 'folder'}</span>
+                    <span>${esc(s.name)}</span>
+                    <span class="h-badge">${s.book_count ?? 0}</span>
+                </button>`
+            }).join('')
+        }
 
         const bar = $('#shelf-tagbar')
         if (bar) {
@@ -299,6 +317,19 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
     function wire() {
         const body = $('#tree-body')
         if (!body) return
+
+        // Horizontal shelves bar wiring
+        $('#horizontal-shelves-bar')?.addEventListener('click', e => {
+            const btn = e.target.closest('.h-shelf-pill')
+            if (!btn) return
+            const shelfId = btn.dataset.shelfId || ''
+            if (shelfId) {
+                const node = findNode(shelfId)
+                if (node && node.locked && node.pin_to_open) return askUnlock(node)
+            }
+            state.selected = state.selected === shelfId ? '' : shelfId
+            render()
+        })
 
         body.addEventListener('click', async e => {
             const bookBtn = e.target.closest('[data-book]')

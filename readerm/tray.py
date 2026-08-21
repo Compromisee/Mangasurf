@@ -51,30 +51,37 @@ def tray_available():
 
 
 def _build_icon_image(active=False):
-    """Draw the tray icon: a book glyph, tinted when downloads are running."""
+    """Draw the Mangasurf tray icon, tinted/badged when downloads are running."""
     try:
         from PIL import Image, ImageDraw
     except Exception:
         return None
 
     size = ICON_SIZE
+    
+    # Try loading high-res custom icon if available
+    icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs", "icon.png")
+    if os.path.isfile(icon_path):
+        try:
+            base = Image.open(icon_path).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
+            if active:
+                draw = ImageDraw.Draw(base)
+                draw.ellipse((size - 20, size - 20, size - 4, size - 4), fill=(255, 107, 122, 255), outline=(255, 255, 255, 255), width=1)
+            return base
+        except Exception:
+            pass
+
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
 
     # Rounded plate so the glyph reads on both light and dark trays.
     plate = (18, 18, 28, 255)
-    accent = (94, 230, 181, 255) if active else (140, 146, 170, 255)
+    accent = (56, 189, 248, 255) if active else (140, 146, 170, 255)
     draw.rounded_rectangle((2, 2, size - 3, size - 3), radius=14, fill=plate)
 
-    # Two facing pages.
-    margin, top, bottom = 12, 16, size - 16
-    middle = size // 2
-    draw.polygon([(margin, top + 4), (middle - 2, top),
-                  (middle - 2, bottom), (margin, bottom - 2)], fill=accent)
-    draw.polygon([(size - margin, top + 4), (middle + 2, top),
-                  (middle + 2, bottom), (size - margin, bottom - 2)],
-                 fill=accent)
-    draw.line([(middle, top), (middle, bottom)], fill=plate, width=3)
+    # Stylized wave / surf curves
+    draw.arc([8, 8, size - 8, size - 8], start=45, end=270, fill=accent, width=4)
+    draw.line([(size // 2 - 4, size // 2), (size // 2 + 12, size // 2 - 10)], fill=(244, 63, 94, 255), width=3)
 
     if active:
         # A dot in the corner marks "work in progress" at a glance.
@@ -99,7 +106,7 @@ class TrayController:
     #: Do not repeat the same notification text inside this many seconds.
     DEDUPE_SECONDS = 30.0
 
-    def __init__(self, callbacks=None, title="ReaderM"):
+    def __init__(self, callbacks=None, title="Mangasurf"):
         self.callbacks = callbacks or {}
         self.title = title
         self.icon = None
@@ -196,7 +203,7 @@ class TrayController:
             for line in self._menu_lines():
                 yield MenuItem(line, None, enabled=False)
             yield Menu.SEPARATOR
-            yield MenuItem("Open ReaderM", self._on_open, default=True)
+            yield MenuItem("Open Mangasurf", self._on_open, default=True)
             yield MenuItem(
                 "Resume queue" if self._is_paused() else "Pause queue",
                 self._on_pause)

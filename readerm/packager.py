@@ -105,7 +105,7 @@ def create_epub(chapter_dirs, out_path, title):
     book.set_identifier(re.sub(r"\W+", "-", title.lower()))
     book.set_title(title)
     book.set_language("en")
-    book.add_author("ReaderM")
+    book.add_author("Mangasurf")
 
     spine, toc, page_no = ["nav"], [], 0
     media_types = {

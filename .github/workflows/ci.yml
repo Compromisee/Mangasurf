@@ -1,0 +1,101 @@
+name: CI Test Suite & Code Quality
+
+on:
+  push:
+    branches: [ "main", "master", "dev", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. Multi-OS, Multi-Python Test Matrix
+  # ──────────────────────────────────────────────────────────────────────────
+  test:
+    name: Test (${{ matrix.os }} - Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            libgl1-mesa-dev \
+            libglib2.0-0 \
+            libgtk-3-dev \
+            gir1.2-webkit2-4.1 \
+            libayatana-appindicator3-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8
+
+      - name: Run Core Test Suite
+        env:
+          PYTHONPATH: "."
+        run: |
+          python -m pytest tests/test_mangasurf_sources.py tests/test_v169_list_downloads.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py tests/test_server_gui.py tests/test_sources.py -v --tb=short
+
+      - name: Validate Python Package Installation
+        run: |
+          pip install -e .
+          mangasurf --help
+          python -c "import readerm; print('Mangasurf version:', readerm.__version__)"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. Code Linting & Syntax Sanity Check
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Code Style
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install flake8 & syntax checkers
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Check for Python syntax errors and undefined names
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Verify Web Asset JSON and JS Syntax
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: |
+          node -c readerm/reader/app/app.js
+          node -c readerm/reader/app/themes.js
+          node -c readerm/reader/app/shelves.js
+          node -c readerm/reader/app/keys.js
+          node -c readerm/reader/app/manga-view.js

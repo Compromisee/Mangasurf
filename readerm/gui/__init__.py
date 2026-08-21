@@ -1,4 +1,4 @@
-"""pywebview GUI for ReaderM.
+"""pywebview GUI for Mangasurf.
 
 A minimalist Material-style web UI served locally. The Python side exposes a
 small JSON API to JavaScript; download progress is pushed back with
@@ -157,6 +157,26 @@ def _dialog_types():
     return webview.FOLDER_DIALOG, webview.OPEN_DIALOG, webview.SAVE_DIALOG
 
 
+def _format_uptime(seconds: float) -> str:
+    """Format seconds into human-readable uptime string."""
+    if seconds <= 0:
+        return "0s"
+    secs = int(seconds)
+    if secs < 60:
+        return f"{secs}s"
+    mins = secs // 60
+    rem_secs = secs % 60
+    if mins < 60:
+        return f"{mins}m {rem_secs}s"
+    hrs = mins // 60
+    rem_mins = mins % 60
+    if hrs < 24:
+        return f"{hrs}h {rem_mins}m"
+    days = hrs // 24
+    rem_hrs = hrs % 24
+    return f"{days}d {rem_hrs}h"
+
+
 def _narrow_by_type(results, wanted):
     """Keep only results whose series type matches.
 
@@ -206,10 +226,10 @@ def _narrow_by_genres(results, extra_genres, match="all"):
     kept = []
     for item in results:
         tags = {str(t).strip().lower() for t in (item.get("tags") or [])}
-        if not tags:
-            kept.append(item)          # unknown, not disqualified
+        if not tags or tags == {"adult"}:
+            kept.append(item)          # unknown or default tag, not disqualified
             continue
-        hits = [g for g in wanted if g in tags]
+        hits = [g for g in wanted if g in tags or any(g in t for t in tags)]
         if (len(hits) == len(wanted)) if need_all else bool(hits):
             kept.append(item)
     return kept
@@ -286,6 +306,17 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         self._tray = None           # TrayController, when one is running
         self._job_seq = 0
         self._cart = []             # queued jobs waiting for a free slot
+        # ---- server & opds controllers -----------------------------------
+        self._server_thread = None
+        self._server_instance = None
+        self._server_port = None
+        self._server_start_time = 0.0
+        self._server_log = None
+        self._opds_thread = None
+        self._opds_instance = None
+        self._opds_port = None
+        self._opds_start_time = 0.0
+        self._opds_log = None
 
     # ----------------------------------------------------------- sources
 
@@ -342,7 +373,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             "ok": True,
             "available": True,
             "maximized": "maximize" in state.lower(),
-            "title": getattr(window, "title", "ReaderM"),
+            "title": getattr(window, "title", "Mangasurf"),
             "custom_titlebar": bool(load_settings().get("custom_titlebar", True)),
         }
 
@@ -475,7 +506,23 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         return {"ok": True, "items": features.get_history(limit)}
 
     def suggest_query(self, prefix: str):
-        return {"ok": True, "items": features.suggest(prefix)}
+        from ..database import get_search_suggestions
+        from ..config import load_settings
+        s = load_settings()
+        include_sfw = s.get("db_sfw_enabled", True)
+        include_nsfw = not s.get("safe_mode", False) and s.get("db_nsfw_enabled", True)
+        suggestions = get_search_suggestions(prefix, include_sfw=include_sfw, include_nsfw=include_nsfw, limit=8)
+        history_items = features.suggest(prefix)
+        return {"ok": True, "items": history_items, "suggestions": suggestions}
+
+    def search_database(self, query: str, limit: int = 25):
+        from ..database import search_database as db_search
+        from ..config import load_settings
+        s = load_settings()
+        include_sfw = s.get("db_sfw_enabled", True)
+        include_nsfw = not s.get("safe_mode", False) and s.get("db_nsfw_enabled", True)
+        results = db_search(query, include_sfw=include_sfw, include_nsfw=include_nsfw, limit=limit)
+        return {"ok": True, "results": results}
 
     def clear_history(self):
         features.clear_history()
@@ -560,19 +607,72 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         return {"ok": True, "collections": features.delete_collection(name)}
 
     def get_queue(self):
-        return {"ok": True, "items": features.queue_list()}
+        """Everything currently downloading, queued, or in the job cart."""
+        with self._jobs_lock:
+            items = []
+            for j in self._jobs.values():
+                status = j.get("status", "running")
+                if status == "done":
+                    continue
+                eng = j.get("engine")
+                prog = getattr(eng, "progress", None)
+                snap = prog.snapshot(sample=True) if prog else {}
+                fraction = getattr(prog, "fraction", 0.0) if prog else 0.0
+                chapter_text = str(getattr(prog, "chapter", "")) if prog else ""
 
-    def queue_add(self, job: dict):
-        return {"ok": True, "job": features.queue_add(job or {})}
+                items.append({
+                    "id": j.get("id"),
+                    "title": j.get("title") or j.get("url"),
+                    "url": j.get("url"),
+                    "source": j.get("source", ""),
+                    "cover": j.get("cover", ""),
+                    "status": status,
+                    "progress": fraction,
+                    "chapter": chapter_text,
+                    "speed_text": snap.get("speed_text", "0 KB/s"),
+                    "eta_text": snap.get("eta_text", "--"),
+                    "downloaded_text": snap.get("downloaded_text", "0 B"),
+                    "history": snap.get("history", []),
+                    "chapters_done": snap.get("chapters_done", 0),
+                    "chapters_total": snap.get("chapters_total", 0),
+                    "pages_done": snap.get("pages_done", 0),
+                    "pages_total": snap.get("pages_total", 0),
+                })
+            for q in self._cart:
+                items.append({
+                    "title": q.get("title") or q.get("options", {}).get("url") or "Queued Manga",
+                    "url": q.get("options", {}).get("url", ""),
+                    "cover": q.get("cover", ""),
+                    "status": "queued",
+                    "progress": 0.0,
+                    "chapter": "Waiting in queue…",
+                    "speed_text": "0 KB/s",
+                    "eta_text": "--",
+                    "downloaded_text": "0 B",
+                    "history": [],
+                })
+        return {"ok": True, "items": items, "queue": items}
+
+    def queue_add(self, options: dict):
+        return self.add_to_cart(options or {})
 
     def queue_remove(self, job_id: str):
-        return {"ok": True, "items": features.queue_remove(job_id)}
+        with self._jobs_lock:
+            if job_id in self._jobs:
+                self.stop_download(job_id)
+            self._cart = [q for q in self._cart if q.get("id") != job_id]
+        return self.get_queue()
 
     def queue_move(self, job_id: str, delta: int):
-        return {"ok": True, "items": features.queue_move(job_id, int(delta))}
+        return {"ok": True, "items": self.get_queue().get("items", [])}
 
     def queue_clear(self, status: str = None):
-        return {"ok": True, "items": features.queue_clear(status)}
+        with self._jobs_lock:
+            self._cart = []
+            self.stop_download()
+            features.queue_clear(status)
+        self._flush()
+        return {"ok": True, "items": [], "queue": []}
 
     def export_library(self, fmt: str = "json"):
         try:
@@ -999,15 +1099,36 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             return {"ok": True, "data": cached, "cached": True}
 
         try:
-            source = self._source(source_id) if source_id else source_for_url(url)
+            source = None
+            if source_id:
+                source = self._source(source_id)
             if source is None:
-                return {"ok": False, "error": "unknown source"}
-            response = source.fetch(url, max_retries=2)
-            blob = response.content
+                try:
+                    source = source_for_url(url)
+                except Exception:
+                    source = None
+
+            if source is not None:
+                response = source.fetch(url, max_retries=2)
+                blob = response.content
+                mime = (response.headers.get("Content-Type") or "").split(";")[0].strip()
+            else:
+                import requests
+                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+                if "shadowabyss" in url:
+                    headers["Referer"] = "https://kuramanga.com/"
+                elif "r2d2storage" in url or "hiperdex" in url:
+                    headers["Referer"] = "https://hiperdex.com/"
+                    headers["x-cfg-auth"] = "yceqt7qgu004"
+                elif "resmk" in url or "qvzre" in url or "mangak" in url:
+                    headers["Referer"] = "https://mangak.io/"
+                response = requests.get(url, headers=headers, timeout=8)
+                blob = response.content if response.status_code == 200 else b""
+                mime = (response.headers.get("Content-Type") or "").split(";")[0].strip()
+
             if not blob:
                 return {"ok": False, "error": "empty response"}
 
-            mime = (response.headers.get("Content-Type") or "").split(";")[0].strip()
             if not mime.startswith("image/"):
                 mime = "image/jpeg"
             data = f"data:{mime};base64," + base64.b64encode(blob).decode("ascii")
@@ -1119,6 +1240,23 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                             genres.append(tag_clean)
                     query = re.sub(r"#[a-zA-Z0-9_-]+", "", query).strip()
 
+            # Check for curated list / collection URLs (e.g. https://chikari.moe/lists/461-my-manhwa-list)
+            if query and ("chikari.moe/list" in query or "/lists/" in query):
+                try:
+                    src = self._source("chikari")
+                    if hasattr(src, "get_list_series"):
+                        list_data = src.get_list_series(query)
+                        if list_data and list_data.get("series"):
+                            return {
+                                "ok": True,
+                                "is_list": True,
+                                "list": list_data,
+                                "results": list_data["series"],
+                                "source": "chikari",
+                            }
+                except Exception as e:
+                    logger.debug("Chikari list parsing failed: %s", e)
+
             # Pasting a URL jumps straight to that manga
             if query and (query.startswith(("http://", "https://")) or "/" in query):
                 detected = detect_source(query)
@@ -1142,17 +1280,19 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                 order=f.get("order", "Ascending"),
                 official=f.get("official", "Any"),
                 genre=genre or None,
+                page=max(1, int(f.get("page", 1) or 1)),
             )
             kwargs = {k: v for k, v in kwargs.items() if v not in (None, "", "Any")}
 
             settings = load_settings()
+            limit = max(12, int(f.get("limit", 24) or 24))
             if source_id in ("", "all"):
                 results = search_all(
-                    query, limit=20,
+                    query, limit=limit,
                     interleave=bool(settings.get("interleave_results")),
                     **kwargs)
             else:
-                results = self._source(source_id).search(query, **kwargs)
+                results = self._source(source_id).search(query, limit=limit, **kwargs)
 
             if len(genres) > 1:
                 results = _narrow_by_genres(results, genres[1:], match)
@@ -1591,11 +1731,20 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
     def _build_options(self, options: dict):
         """Turn a raw options dict from JS into validated DownloadOptions."""
         settings = load_settings()
+        selection = options.get("selection")
+        if not selection and options.get("chapters"):
+            selection = options.get("chapters")
+        if not selection:
+            selection = "all"
+
+        fmt = options.get("format") or settings.get("format", "cbz")
+        output_dir = options.get("output_dir") or settings.get("output_dir") or DEFAULT_SETTINGS["output_dir"]
+
         opt = DownloadOptions(
             url=options.get("url", ""),
-            selection=options.get("selection", "all"),
-            output_dir=options.get("output_dir") or DEFAULT_SETTINGS["output_dir"],
-            format=options.get("format", "cbz"),
+            selection=selection,
+            output_dir=output_dir,
+            format=fmt,
             bundle=self._as_int(options.get("bundle"), 0, 0),
             chapter_workers=self._as_int(options.get("chapter_workers"), 3, 1, 8),
             image_workers=self._as_int(options.get("image_workers"), 6, 1, 10),
@@ -1774,7 +1923,8 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
     def add_to_cart(self, options: dict):
         """Queue a manga for download. Starts at once if a slot is free."""
         options = options or {}
-        if not (options.get("url") or "").strip():
+        url = (options.get("url") or "").strip()
+        if not url:
             return {"ok": False, "error": "No manga URL"}
 
         entry = {
@@ -1784,16 +1934,12 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         }
         with self._jobs_lock:
             # Refuse an exact duplicate that is already queued or running.
-            url = options["url"]
-            selection = options.get("selection", "all")
             for job in self._jobs.values():
-                if (job["url"] == url and job["selection"] == selection
-                        and job["status"] == "running"):
+                if job.get("url") == url and job.get("status") in ("running", "queued"):
                     return {"ok": False, "error": "Already downloading",
-                            "job": job["id"]}
+                            "job": job.get("id")}
             for queued in self._cart:
-                if (queued["options"].get("url") == url
-                        and queued["options"].get("selection", "all") == selection):
+                if (queued.get("options", {}).get("url") or "").strip() == url:
                     return {"ok": False, "error": "Already in the cart"}
             self._cart.append(entry)
 
@@ -1829,28 +1975,100 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             self._start_queued()
         return {"ok": True, "paused": self._queue_paused}
 
-    # ------------------------------------------------- phone server
+    # ------------------------------------------------- FlareSolverr
+
+    def flaresolverr_test(self, url: str = None):
+        """Test connection to FlareSolverr server."""
+        import requests
+        from ..config import load_settings
+        target_url = (url or load_settings().get("flaresolverr_url") or "http://localhost:8191/v1").strip()
+        try:
+            resp = requests.post(target_url, json={"cmd": "sessions.list"}, timeout=4.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                return {"ok": True, "status": "connected", "url": target_url, "version": data.get("version", "v3"), "message": "Connected to FlareSolverr successfully."}
+            return {"ok": False, "status": "error", "message": f"FlareSolverr returned status {resp.status_code}"}
+        except Exception as e:
+            return {"ok": False, "status": "offline", "message": f"Could not connect to FlareSolverr: {e}"}
+
+    def flaresolverr_status(self):
+        """Get FlareSolverr configuration and connectivity state."""
+        from ..config import load_settings
+        url = load_settings().get("flaresolverr_url") or "http://localhost:8191/v1"
+        test_res = self.flaresolverr_test(url)
+        return {"ok": True, "url": url, "connected": bool(test_res.get("ok")), "status": test_res.get("status", "offline"), "message": test_res.get("message", "")}
+
+    def set_flaresolverr_config(self, url: str = None, enabled: bool = None):
+        """Save FlareSolverr settings."""
+        from ..config import update_settings
+        changes = {}
+        if url is not None:
+            changes["flaresolverr_url"] = str(url).strip()
+        if enabled is not None:
+            changes["flaresolverr_enabled"] = bool(enabled)
+        if changes:
+            update_settings(changes)
+        return self.flaresolverr_status()
+
+    # ------------------------------------------------- LAN Web Server
 
     def get_server_config(self):
-        """Token, port and the link, for the Settings panel."""
+        """Token, port, link, status, and connected devices for LAN Web Server."""
         from ..servercfg import MIN_TOKEN_LENGTH, load_server_settings
 
         cfg = load_server_settings()
+        settings = load_settings()
+        port = int(self._server_port or cfg['port'])
         try:
             from .. import server as server_module
             host_ip = server_module.local_ip()
+            ts_ip = server_module.tailscale_ip()
         except Exception:
-            host_ip = "your-pc"
-        return {"ok": True, "min_length": MIN_TOKEN_LENGTH,
-                "url": f"http://{host_ip}:{cfg['port']}/?token={cfg['token']}",
-                "host_ip": host_ip, **cfg}
+            host_ip = "127.0.0.1"
+            ts_ip = None
 
-    def set_server_config(self, token: str = None, port=None, verbose=None):
+        url = f"http://{host_ip}:{port}/?token={cfg['token']}"
+        local_url = f"http://localhost:{port}/?token={cfg['token']}"
+        ts_url = f"http://{ts_ip}:{port}/?token={cfg['token']}" if ts_ip else ""
+
+        is_running = bool(self._server_thread and self._server_thread.is_alive())
+        now = time.time()
+        uptime_sec = int(now - self._server_start_time) if (is_running and self._server_start_time > 0) else 0
+
+        from ..devices import tracker
+        active_devs = tracker.active_count(service="web")
+        total_devs = tracker.total_count(service="web")
+        dev_list = tracker.get_devices(service="web")
+
+        return {
+            "ok": True,
+            "min_length": MIN_TOKEN_LENGTH,
+            "running": is_running,
+            "port": port,
+            "url": url,
+            "local_url": local_url,
+            "tailscale_ip": ts_ip or "",
+            "tailscale_url": ts_url,
+            "host_ip": host_ip,
+            "uptime": _format_uptime(uptime_sec),
+            "uptime_seconds": uptime_sec,
+            "started_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._server_start_time)) if self._server_start_time > 0 else "",
+            "autostart": bool(settings.get("server_autostart")),
+            "active_devices_count": active_devs,
+            "total_devices_count": total_devs,
+            "devices": dev_list,
+            "token": cfg.get("token", ""),
+            "verbose": cfg.get("verbose", False),
+        }
+
+    def set_server_config(self, token: str = None, port=None, verbose=None, autostart=None):
         """Validated through the same helper the server window uses."""
         from ..servercfg import save_server_settings
 
         ok, message, cfg = save_server_settings(token=token, port=port,
                                                 verbose=verbose)
+        if autostart is not None:
+            update_settings({"server_autostart": bool(autostart)})
         result = self.get_server_config() if ok else {}
         return {"ok": ok, "message": message, **(result or {})}
 
@@ -1861,6 +2079,82 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         save_server_settings(token=token)
         return {"ok": True, "token": token, **self.get_server_config()}
 
+    def start_server(self, port=None, token=None, no_auth=False):
+        """Start the LAN Web Server on a background thread."""
+        if self._server_thread and self._server_thread.is_alive():
+            return {"ok": True, "already": True, **self.get_server_config()}
+
+        from .. import server as server_module
+        from ..servercfg import load_server_settings
+
+        cfg = load_server_settings()
+        p = int(port or cfg["port"])
+        t = (token or cfg["token"]) if not no_auth else None
+
+        self._server_port = p
+        self._server_log = server_module.ServerLog(verbose=bool(cfg.get("verbose")))
+        self._server_instance = {}
+        self._server_start_time = time.time()
+
+        def run():
+            try:
+                server_module.serve(
+                    host="0.0.0.0",
+                    port=p,
+                    token=t,
+                    no_auth=no_auth,
+                    log=self._server_log,
+                    server_instance_holder=self._server_instance,
+                )
+            except Exception:
+                logger.exception("LAN server stopped unexpectedly")
+            finally:
+                self._server_thread = None
+                self._server_instance = None
+                self._server_port = None
+                self._server_start_time = 0.0
+
+        thread = threading.Thread(target=run, name="readerm-lan-server", daemon=True)
+        self._server_thread = thread
+        thread.start()
+        logger.info("LAN server starting on port %s", p)
+        time.sleep(0.15)
+        return {"ok": True, **self.get_server_config()}
+
+    def stop_server(self):
+        """Stop the LAN Web Server gracefully."""
+        if not (self._server_thread and self._server_thread.is_alive()):
+            self._server_thread = None
+            self._server_instance = None
+            self._server_port = None
+            self._server_start_time = 0.0
+            return {"ok": True, "stopped": True, **self.get_server_config()}
+
+        try:
+            if self._server_instance and self._server_instance.get("server"):
+                srv = self._server_instance["server"]
+                srv.shutdown()
+                if hasattr(srv, "server_close"):
+                    srv.server_close()
+        except Exception:
+            logger.exception("Error during LAN server shutdown")
+
+        if self._server_thread:
+            self._server_thread.join(timeout=1.5)
+            self._server_thread = None
+
+        self._server_instance = None
+        self._server_port = None
+        self._server_start_time = 0.0
+        logger.info("LAN server stopped")
+        return {"ok": True, "stopped": True, **self.get_server_config()}
+
+    def restart_server(self, port=None, token=None, no_auth=False):
+        """Restart the LAN Web Server."""
+        self.stop_server()
+        time.sleep(0.2)
+        return self.start_server(port=port, token=token, no_auth=no_auth)
+
     # ------------------------------------------------- OPDS catalog
 
     def get_opds_config(self):
@@ -1870,13 +2164,55 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
 
         settings = load_settings()
         cfg = load_server_settings()
-        port = opds_port()
-        return {"ok": True, "port": port,
-                "autostart": bool(settings.get("opds_autostart")),
-                "cover_root": settings.get("opds_cover_root") or "",
-                "token": cfg["token"],
-                "running": bool(getattr(self, "_opds_thread", None)),
-                "url": build_url("0.0.0.0", port)}
+        port = int(self._opds_port or opds_port())
+
+        try:
+            from .. import server as server_module
+            host_ip = server_module.local_ip()
+            ts_ip = server_module.tailscale_ip()
+        except Exception:
+            host_ip = "127.0.0.1"
+            ts_ip = None
+
+        is_running = bool(self._opds_thread and self._opds_thread.is_alive())
+        now = time.time()
+        uptime_sec = int(now - self._opds_start_time) if (is_running and self._opds_start_time > 0) else 0
+
+        from .. import opds
+        try:
+            titles_count = len(opds.library_rows())
+        except Exception:
+            titles_count = 0
+
+        from ..devices import tracker
+        active_devs = tracker.active_count(service="opds")
+        total_devs = tracker.total_count(service="opds")
+        dev_list = tracker.get_devices(service="opds")
+
+        url = build_url(host_ip, port)
+        local_url = f"http://localhost:{port}/opds"
+        ts_url = f"http://{ts_ip}:{port}/opds" if ts_ip else ""
+
+        return {
+            "ok": True,
+            "port": port,
+            "autostart": bool(settings.get("opds_autostart")),
+            "cover_root": settings.get("opds_cover_root") or "",
+            "token": cfg["token"],
+            "running": is_running,
+            "url": url,
+            "local_url": local_url,
+            "tailscale_ip": ts_ip or "",
+            "tailscale_url": ts_url,
+            "host_ip": host_ip,
+            "titles_count": titles_count,
+            "uptime": _format_uptime(uptime_sec),
+            "uptime_seconds": uptime_sec,
+            "started_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._opds_start_time)) if self._opds_start_time > 0 else "",
+            "active_devices_count": active_devs,
+            "total_devices_count": total_devs,
+            "devices": dev_list,
+        }
 
     def set_opds_config(self, port=None, autostart=None, cover_root=None):
         changes = {}
@@ -1898,16 +2234,170 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             update_settings(changes)
         return {"ok": True, "message": "Saved.", **self.get_opds_config()}
 
-    def start_opds(self):
-        """Start the catalog in the background of this process."""
-        if getattr(self, "_opds_thread", None):
+    def start_opds(self, port=None):
+        """Start the OPDS catalog on a background thread."""
+        if self._opds_thread and self._opds_thread.is_alive():
             return {"ok": True, "already": True, **self.get_opds_config()}
+
+        from ..opdsserve import OpdsLog, opds_port, serve
+        from ..servercfg import load_server_settings
+
+        p = int(port or opds_port())
+        log = OpdsLog(verbose=bool(load_settings().get("server_verbose")))
+        self._opds_log = log
+        self._opds_port = p
+        token = load_server_settings()["token"]
+        self._opds_instance = {}
+        self._opds_start_time = time.time()
+
+        def run():
+            try:
+                serve(
+                    host="0.0.0.0",
+                    port=p,
+                    token=token,
+                    log=log,
+                    server_instance_holder=self._opds_instance,
+                )
+            except Exception:
+                logger.exception("OPDS catalog stopped unexpectedly")
+            finally:
+                self._opds_thread = None
+                self._opds_instance = None
+                self._opds_port = None
+                self._opds_start_time = 0.0
+
+        thread = threading.Thread(target=run, name="readerm-opds", daemon=True)
+        self._opds_thread = thread
+        thread.start()
+        logger.info("OPDS catalog starting on port %s", p)
+        time.sleep(0.15)
+        return {"ok": True, **self.get_opds_config()}
+
+    def stop_opds(self):
+        """Stop the OPDS catalog gracefully."""
+        if not (self._opds_thread and self._opds_thread.is_alive()):
+            self._opds_thread = None
+            self._opds_instance = None
+            self._opds_port = None
+            self._opds_start_time = 0.0
+            return {"ok": True, "stopped": True, **self.get_opds_config()}
+
         try:
-            started = _start_opds_server(self)
-        except Exception as e:
-            logger.exception("could not start the OPDS catalog")
-            return {"ok": False, "error": str(e)}
-        return {"ok": bool(started), **self.get_opds_config()}
+            if self._opds_instance and self._opds_instance.get("server"):
+                srv = self._opds_instance["server"]
+                srv.shutdown()
+                if hasattr(srv, "server_close"):
+                    srv.server_close()
+        except Exception:
+            logger.exception("Error during OPDS catalog shutdown")
+
+        if self._opds_thread:
+            self._opds_thread.join(timeout=1.5)
+            self._opds_thread = None
+
+        self._opds_instance = None
+        self._opds_port = None
+        self._opds_start_time = 0.0
+        logger.info("OPDS catalog stopped")
+        return {"ok": True, "stopped": True, **self.get_opds_config()}
+
+    def restart_opds(self, port=None):
+        """Restart the OPDS catalog."""
+        self.stop_opds()
+        time.sleep(0.2)
+        return self.start_opds(port=port)
+
+    # ------------------------------------------------- Combined Server & Device APIs
+
+    def get_servers_status(self):
+        """Get comprehensive live status of both LAN Server and OPDS Catalog,
+
+        including connected devices, uptime, URLs, and active reader counts.
+        """
+        from ..devices import tracker
+        from .. import server as server_module
+        try:
+            host_ip = server_module.local_ip()
+            ts_ip = server_module.tailscale_ip()
+        except Exception:
+            host_ip = "127.0.0.1"
+            ts_ip = None
+
+        server_status = self.get_server_config()
+        opds_status = self.get_opds_config()
+        all_devices = tracker.get_devices()
+        active_count = tracker.active_count()
+        total_count = tracker.total_count()
+
+        return {
+            "ok": True,
+            "host_ip": host_ip,
+            "tailscale_ip": ts_ip or "",
+            "server": server_status,
+            "opds": opds_status,
+            "any_running": bool(server_status.get("running") or opds_status.get("running")),
+            "both_running": bool(server_status.get("running") and opds_status.get("running")),
+            "devices": all_devices,
+            "total_active_devices": active_count,
+            "total_devices": total_count,
+        }
+
+    def get_server_devices(self, service: str = None, active_only: bool = False):
+        """Return list of registered client devices accessing LAN server or OPDS."""
+        from ..devices import tracker
+        devs = tracker.get_devices(service=service, active_only=bool(active_only))
+        return {
+            "ok": True,
+            "devices": devs,
+            "active_count": tracker.active_count(service=service),
+            "total_count": tracker.total_count(service=service),
+        }
+
+    def clear_server_devices(self, inactive_only: bool = True):
+        """Clear disconnected or all client devices from tracker registry."""
+        from ..devices import tracker
+        if inactive_only:
+            removed = tracker.clear_inactive(max_idle=180.0)
+        else:
+            tracker.clear_all()
+            removed = 0
+        return {"ok": True, "removed": removed, **self.get_server_devices()}
+
+    def get_server_logs(self, service: str = "all", since: int = 0):
+        """Retrieve recent server and OPDS log lines for GUI display."""
+        try:
+            since = int(since)
+        except (TypeError, ValueError):
+            since = 0
+
+        lines = []
+        s_cursor = 0
+        o_cursor = 0
+
+        if service in ("all", "server"):
+            s_log = getattr(self, "_server_log", None)
+            if not s_log:
+                from ..server import GLOBAL_SERVER_LOG
+                s_log = GLOBAL_SERVER_LOG
+            if s_log:
+                s_cursor, s_lines = s_log.since(since)
+                for l in s_lines:
+                    lines.append({**l, "service": "Web Server"})
+
+        if service in ("all", "opds"):
+            o_log = getattr(self, "_opds_log", None)
+            if not o_log:
+                from ..opdsserve import GLOBAL_OPDS_LOG
+                o_log = GLOBAL_OPDS_LOG
+            if o_log:
+                o_cursor, o_lines = o_log.since(since)
+                for l in o_lines:
+                    lines.append({**l, "service": "OPDS"})
+
+        lines.sort(key=lambda x: x.get("seq", 0))
+        max_cursor = max(s_cursor, o_cursor, since)
+        return {"ok": True, "cursor": max_cursor, "lines": lines}
 
     def preview_opds_covers(self, root: str = None, overwrite: bool = False):
         from .. import covers as covers_mod
@@ -1981,6 +2471,46 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             self._cart = []
         return {"ok": True, "removed": count}
 
+    def download_list(self, list_url: str, format: str = None, output_dir: str = None):
+        """Bulk enqueue and download all chapters from every manga in a curated list."""
+        if not list_url:
+            return {"ok": False, "error": "No list URL provided"}
+
+        src = self._source("chikari")
+        if not hasattr(src, "get_list_series"):
+            return {"ok": False, "error": "List downloading not supported for this source"}
+
+        list_data = src.get_list_series(list_url)
+        series_items = list_data.get("series") or []
+        if not series_items:
+            return {"ok": False, "error": "No series found in list"}
+
+        enqueued = 0
+        settings = load_settings()
+        chosen_format = format or settings.get("format") or "cbz"
+        out = output_dir or settings.get("output_dir")
+
+        for s in series_items:
+            res = self.add_to_cart({
+                "url": s["url"],
+                "title": s["title"],
+                "cover": s.get("cover") or "",
+                "source": s.get("source") or "chikari",
+                "format": chosen_format,
+                "output_dir": out,
+                "selection": "all",
+            })
+            if res.get("ok"):
+                enqueued += 1
+
+        self.set_queue_paused(False)
+        return {
+            "ok": True,
+            "title": list_data.get("title"),
+            "total_series": len(series_items),
+            "enqueued": enqueued,
+        }
+
     # --------------------------------------------------------- download
 
     def start_download(self, options: dict):
@@ -1991,10 +2521,21 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         returns the job id so the caller can track this one specifically.
         """
         options = options or {}
-        if not (options.get("url") or "").strip():
+        url = (options.get("url") or "").strip()
+        if not url:
             return {"ok": False, "error": "No manga URL"}
 
         with self._jobs_lock:
+            # Check if this URL is already actively running or queued to prevent duplicate downloads
+            for job in self._jobs.values():
+                if job.get("url") == url and job.get("status") in ("running", "queued"):
+                    logger.info("Download for %s is already running (%s)", url, job.get("id"))
+                    return {"ok": False, "error": "Already downloading", "job": job.get("id")}
+            for q in self._cart:
+                if (q.get("options", {}).get("url") or "").strip() == url:
+                    logger.info("Download for %s is already in queue", url)
+                    return {"ok": False, "error": "Already in the queue"}
+
             if len(self._active_jobs()) >= self.max_concurrent_jobs():
                 self._cart.append({
                     "options": options,
@@ -2058,7 +2599,7 @@ def _web_asset_path():
 
 def _show_fatal(message: str):
     """Last-resort error reporting: console + native message box on Windows."""
-    print("\n[ReaderM] GUI failed to start:\n" + message, file=sys.stderr)
+    print("\n[Mangasurf] GUI failed to start:\n" + message, file=sys.stderr)
     print(f"\nLog file: {wclogs.LOG_FILE}\nCrash dumps: {wclogs.CRASH_FILE}",
           file=sys.stderr)
     if sys.platform == "win32":
@@ -2067,7 +2608,7 @@ def _show_fatal(message: str):
             ctypes.windll.user32.MessageBoxW(
                 None,
                 message + f"\n\nDetails were written to:\n{wclogs.LOG_FILE}",
-                "ReaderM - startup error",
+                "Mangasurf - startup error",
                 0x10,  # MB_ICONERROR
             )
         except Exception:
@@ -2075,38 +2616,23 @@ def _show_fatal(message: str):
 
 
 def _start_opds_server(api):
-    """Run the OPDS catalog on a daemon thread inside the GUI process.
-
-    Sharing the process is deliberate: the catalog reads the same library
-    the app is writing, so a separate process would serve a stale view
-    until it happened to re-read the file.
-    """
-    import threading
-
-    from ..opdsserve import OpdsLog, opds_port, serve
-    from ..servercfg import load_server_settings
-
-    if getattr(api, "_opds_thread", None):
+    """Run the OPDS catalog on a daemon thread inside the GUI process."""
+    try:
+        api.start_opds()
         return True
+    except Exception:
+        logger.exception("OPDS server start failed")
+        return False
 
-    log = OpdsLog(verbose=bool(load_settings().get("server_verbose")))
-    api._opds_log = log
-    token = load_server_settings()["token"]
-    port = opds_port()
 
-    def run():
-        try:
-            serve(host="0.0.0.0", port=port, token=token, log=log)
-        except Exception:
-            logger.exception("OPDS catalog stopped")
-        finally:
-            api._opds_thread = None
-
-    thread = threading.Thread(target=run, name="readerm-opds", daemon=True)
-    api._opds_thread = thread
-    thread.start()
-    logger.info("OPDS catalog starting on port %s", port)
-    return True
+def _start_lan_server(api):
+    """Run the LAN Web Server on a daemon thread inside the GUI process."""
+    try:
+        api.start_server()
+        return True
+    except Exception:
+        logger.exception("LAN server start failed")
+        return False
 
 
 def _install_tray(api, window):
@@ -2130,8 +2656,13 @@ def _install_tray(api, window):
 
     def show_window():
         try:
-            window.show()
-            window.restore()
+            if hasattr(window, "show"):
+                window.show()
+        except Exception:
+            logger.debug("could not show the window", exc_info=True)
+        try:
+            if hasattr(window, "restore") and getattr(window, "minimized", False):
+                window.restore()
         except Exception:
             logger.debug("could not restore the window", exc_info=True)
         # The window is back, so hiding it again is worth announcing once
@@ -2217,7 +2748,7 @@ def _install_tray(api, window):
         except Exception:
             busy = 0
         message = ("Still downloading in the background."
-                   if busy else "ReaderM is still running in the tray.")
+                   if busy else "Mangasurf is still running in the tray.")
         # once=True: this is only news the first time the window is hidden.
         controller.notify(message, once=True)
         return False                         # veto the close
@@ -2268,7 +2799,7 @@ def _hold_for_tray(api, tray):
         invisible process. That conflated two different things -- "no
         downloads running" is not "nobody wants this app". Reproduced:
         closing to the tray with an empty queue tore the process down 0.74s
-        later, and clicking *Open ReaderM* showed the window for about a
+        later, and clicking *Open Mangasurf* showed the window for about a
         second before the shutdown that was already in flight killed it.
         That is the reported "opens for a quick second then disappears".
 
@@ -2279,7 +2810,7 @@ def _hold_for_tray(api, tray):
         """
         return not getattr(api, "_really_quitting", False)
 
-    logger.info("Window closed; ReaderM is still running in the system tray.")
+    logger.info("Window closed; Mangasurf is still running in the system tray.")
     try:
         tray.wait_for_quit(still_working=keep_holding)
     except KeyboardInterrupt:
@@ -2315,9 +2846,9 @@ def run_gui():
 
     instance = InstanceServer()
     if not instance.start():
-        # Another ReaderM answered; it has raised its own window.
-        logger.info("ReaderM is already running; asked it to come forward.")
-        print("[ReaderM] Already running - bringing the existing window to "
+        # Another Mangasurf answered; it has raised its own window.
+        logger.info("Mangasurf is already running; asked it to come forward.")
+        print("[Mangasurf] Already running - bringing the existing window to "
               "the front.")
         return 0
 
@@ -2333,7 +2864,7 @@ def run_gui():
         instance.stop()
         _show_fatal(f"Reader assets not found at:\n{html_path}\n\n"
                     "If this is a packaged exe, rebuild it with the provided "
-                    "ReaderM.spec so the reader is bundled.")
+                    "Mangasurf.spec so the reader is bundled.")
         return 1
 
     api = Api()
@@ -2362,7 +2893,7 @@ def run_gui():
     chrome = bool(load_settings().get("custom_titlebar", True))
     try:
         window = webview.create_window(
-            "ReaderM",
+            "Mangasurf",
             target,
             js_api=api,
             width=1180,
@@ -2428,19 +2959,22 @@ def run_gui():
         api._tray_attempted = True
         tray = _install_tray(api, window)
 
-    def _maybe_start_opds():
-        """Start the catalog with the app, if the user asked for that."""
+    def _maybe_start_servers():
+        """Start servers with the app if the user enabled autostart."""
         try:
-            if load_settings().get("opds_autostart"):
+            settings = load_settings()
+            if settings.get("server_autostart"):
+                _start_lan_server(api)
+            if settings.get("opds_autostart"):
                 _start_opds_server(api)
         except Exception:
-            logger.debug("OPDS autostart failed", exc_info=True)
+            logger.debug("Server autostart failed", exc_info=True)
 
     try:
         # "shown" fires once the native window exists, which on Windows is
         # after the CLR is fully loaded.
         window.events.shown += _start_tray_once
-        window.events.shown += _maybe_start_opds
+        window.events.shown += _maybe_start_servers
     except Exception:
         logger.debug("shown event unavailable", exc_info=True)
 
@@ -2476,15 +3010,20 @@ def run_gui():
         logger.debug("closing event unavailable for the late tray install",
                      exc_info=True)
 
-    # Launching ReaderM again is the natural way to "reopen" a window that
+    # Launching Mangasurf again is the natural way to "reopen" a window that
     # is hidden in the tray, so make that gesture do exactly that instead of
     # starting a second copy.
     def _surface():
         try:
-            window.show()
-            window.restore()
+            if hasattr(window, "show"):
+                window.show()
         except Exception:
             logger.debug("could not surface the window", exc_info=True)
+        try:
+            if hasattr(window, "restore") and getattr(window, "minimized", False):
+                window.restore()
+        except Exception:
+            pass
         api._hidden_to_tray = False
         if tray is not None:
             try:

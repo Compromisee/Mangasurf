@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Launch the Mangasurf GUI."""
+"""Launch the Mangasurf GUI or CLI."""
 
 import multiprocessing
 import sys
 
-from readerm.gui import run_gui
-
 
 def main():
     multiprocessing.freeze_support()
-    sys.exit(run_gui())
+    args = sys.argv[1:]
+    if not args or args[0] in ("gui", "--gui"):
+        from readerm.gui import run_gui
+        sys.exit(run_gui())
+
+    from launcher import main as launcher_main
+    launcher_main()
 
 
 if __name__ == "__main__":

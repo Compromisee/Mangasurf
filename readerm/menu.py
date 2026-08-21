@@ -1,4 +1,4 @@
-"""Progressive interactive menu: ``readerm menu``.
+"""Progressive interactive menu: ``mangasurf menu``.
 
 A numbered, step-by-step interface driven entirely by typing a number and
 pressing Enter. It needs nothing beyond ``rich``, which is already a hard
@@ -23,15 +23,15 @@ Design notes
 import os
 import sys
 
-# Allow running this file directly (python readerm/menu.py, or PyCharm's
+# Allow running this file directly (python mangasurf/menu.py, or PyCharm's
 # "Run file"). Without this the relative imports below have no parent
 # package and raise ImportError before anything else can happen.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
-# Rich is optional -- see readerm/console.py. menu.py had the same hard
+# Rich is optional -- see mangasurf/console.py. menu.py had the same hard
 # import as cli.py, so a clone without dependencies installed could not run
 # `py menu.py` either: it failed at import, before printing anything.
 from .console import (ACCENT, DIM, ERR, HEAD, OK, RICH, WARN, Panel, Table,
@@ -133,7 +133,7 @@ def pause():
 def header():
     console.print()
     console.print(Panel.fit(
-        "[bold]ReaderM[/]  [grey58]interactive menu[/]",
+        "[bold]Mangasurf[/]  [grey58]interactive menu[/]",
         border_style=ACCENT, box=box.ROUNDED))
 
 
@@ -581,13 +581,13 @@ MAIN_MENU = [
 
 
 def run_menu(argv=None):
-    """Entry point for ``readerm menu``."""
+    """Entry point for ``mangasurf menu``."""
     from .logs import setup_logging
     setup_logging()
 
     if not sys.stdin.isatty():
         console.print("[yellow]The interactive menu needs a terminal.[/]")
-        console.print(f"[{DIM}]Try: readerm search \"one piece\"[/]")
+        console.print(f"[{DIM}]Try: mangasurf search \"one piece\"[/]")
         return 1
 
     header()

@@ -206,7 +206,7 @@ class ReaderApi:
 
     # ------------------------------------------------------------------ library
 
-    def cover_src(self, cover: str) -> str:
+    def cover_src(self, cover: str, directory: str = None) -> str:
         """A cover the browser can actually load.
 
         The library stores whatever the source gave it, which is usually an
@@ -217,6 +217,16 @@ class ReaderApi:
         through untouched.
         """
         cover = (cover or "").strip()
+        if not cover and directory and os.path.isdir(directory):
+            from .. import covers
+            cover = covers.existing_cover(directory) or ""
+            if not cover:
+                try:
+                    imgs = covers.images_in(directory)
+                    if imgs:
+                        cover = os.path.join(directory, imgs[0])
+                except Exception:
+                    pass
         if not cover:
             return ""
         if cover.startswith(("http://", "https://", "data:")):
@@ -238,7 +248,7 @@ class ReaderApi:
         items = books.library_books()
         positions = load_positions()
         for book in items:
-            book["cover"] = self.cover_src(book.get("cover"))
+            book["cover"] = self.cover_src(book.get("cover"), book.get("directory"))
             # Shelves file books by this key, so it has to travel with them.
             book["key"] = library._key(book.get("url") or "") or book.get("directory") or ""
             for item in book["items"]:
@@ -254,6 +264,153 @@ class ReaderApi:
                 hidden = len(items) - len(kept)
                 items = kept
         return {"ok": True, "books": items, "count": len(items), "hidden": hidden}
+
+    def scan_library_folders(self, roots: list = None):
+        """Explicitly recheck and index all configured library folders and output dir."""
+        result = library.scan_library_folders(roots)
+        return result
+
+    def rebuild_library_metadata(self, roots: list = None):
+        """Generate and sync manga.json metadata files for every series on disk."""
+        return library.rebuild_library_metadata(roots)
+
+    def delete_library_entry(self, key: str, delete_files: bool = False):
+        """Remove a series from library.json, and optionally delete files on disk without deleting root folders."""
+        from ..config import load_settings
+        s = load_settings()
+        out_dir = os.path.abspath(os.path.expanduser(s.get("output_dir") or ""))
+        extra_roots = [os.path.abspath(os.path.expanduser(f)) for f in (s.get("library_folders") or []) if f]
+        home_dir = os.path.abspath(os.path.expanduser("~"))
+        protected_roots = {out_dir, home_dir, os.path.abspath("/"), *extra_roots}
+
+        lib = library.load_library()
+        entry = library._find_entry(lib, key)
+        if not entry:
+            entry = lib.get(library._key(key)) or lib.get(key)
+        if not entry:
+            for k, v in lib.items():
+                if v.get("directory") == key or v.get("title") == key or v.get("id") == key:
+                    entry = v
+                    break
+
+        deleted_files_count = 0
+        directory = entry.get("directory") if entry else None
+        if not directory and os.path.isdir(key):
+            directory = key
+
+        # Normalize directory path
+        norm_dir = os.path.abspath(os.path.expanduser(directory)) if directory else None
+        is_protected_dir = (norm_dir in protected_roots) or (norm_dir and norm_dir == home_dir)
+
+        # 1. Delete specific file outputs and items first
+        if delete_files and entry:
+            for out in (entry.get("outputs") or []):
+                if out and os.path.isfile(out):
+                    try:
+                        os.remove(out)
+                        deleted_files_count += 1
+                    except Exception:
+                        pass
+            for it in (entry.get("items") or []):
+                p = it.get("path") if isinstance(it, dict) else it
+                if p and os.path.isfile(p):
+                    try:
+                        os.remove(p)
+                        deleted_files_count += 1
+                    except Exception:
+                        pass
+            for f in (entry.get("files") or []):
+                if f and os.path.isfile(f):
+                    try:
+                        os.remove(f)
+                        deleted_files_count += 1
+                    except Exception:
+                        pass
+
+        if delete_files and os.path.isfile(key):
+            try:
+                os.remove(key)
+                deleted_files_count += 1
+            except Exception:
+                pass
+
+        # 2. Only rmtree directory if it is a dedicated series sub-folder, NEVER a root or protected folder
+        if delete_files and norm_dir and os.path.isdir(norm_dir) and not is_protected_dir:
+            import shutil
+            try:
+                # Check if directory has remaining unassociated files or if it's a dedicated series folder
+                shutil.rmtree(norm_dir, ignore_errors=True)
+                deleted_files_count += 1
+            except Exception as e:
+                logger.warning("Failed deleting directory %s: %s", norm_dir, e)
+
+        url = entry.get("url") if entry else key
+        library.remove_entry(url)
+        if entry and entry.get("url") != key:
+            library.remove_entry(key)
+        if directory:
+            library.remove_entry(directory)
+        if entry and entry.get("title"):
+            library.remove_entry(entry.get("title"))
+        return {"ok": True, "deleted_files": delete_files, "removed_count": deleted_files_count}
+
+    def set_book_color(self, key: str, color: str = ""):
+        """Assign a custom tag/color highlight to a manga card."""
+        with library._lock:
+            lib = library._load(library.LIBRARY_PATH, {})
+            entry = library._find_entry(lib, key) or lib.get(library._key(key))
+            if entry:
+                entry["color"] = str(color or "").strip()
+                library._save(library.LIBRARY_PATH, lib)
+                return {"ok": True, "color": entry["color"]}
+        return {"ok": False, "error": "Series not found"}
+
+    def get_library_folders(self):
+        """Get the primary output directory and all monitored library folders."""
+        from ..config import load_settings
+        s = load_settings()
+        out_dir = s.get("output_dir") or ""
+        folders = s.get("library_folders") or []
+        return {
+            "ok": True,
+            "output_dir": out_dir,
+            "folders": [f for f in folders if f],
+        }
+
+    def add_library_folder(self, folder_path: str):
+        """Add an external library folder to be monitored and indexed for CBZ / manga."""
+        if not folder_path or not isinstance(folder_path, str):
+            return {"ok": False, "error": "Invalid folder path"}
+        folder_path = os.path.abspath(os.path.expanduser(folder_path.strip()))
+        if not os.path.isdir(folder_path):
+            return {"ok": False, "error": f"Folder not found: {folder_path}"}
+
+        from ..config import load_settings, update_settings
+        s = load_settings()
+        folders = list(s.get("library_folders") or [])
+        if folder_path not in folders:
+            folders.append(folder_path)
+            update_settings({"library_folders": folders})
+
+        scan_res = library.scan_library_folders([folder_path])
+        return {
+            "ok": True,
+            "folder": folder_path,
+            "folders": folders,
+            "discovered": scan_res.get("discovered", 0),
+        }
+
+    def remove_library_folder(self, folder_path: str):
+        """Remove a monitored library folder from settings."""
+        if not folder_path or not isinstance(folder_path, str):
+            return {"ok": False, "error": "Invalid folder path"}
+        folder_path = os.path.abspath(os.path.expanduser(folder_path.strip()))
+
+        from ..config import load_settings, update_settings
+        s = load_settings()
+        folders = [f for f in (s.get("library_folders") or []) if os.path.abspath(os.path.expanduser(f)) != folder_path]
+        update_settings({"library_folders": folders})
+        return {"ok": True, "folders": folders}
 
     def _locked_book_keys(self) -> set:
         """Book keys sitting on a shelf that is locked and not yet opened."""
@@ -431,10 +588,19 @@ class ReaderApi:
         folders = [path if os.path.isdir(path) else os.path.dirname(path)]
         folders.append(os.path.dirname(folders[0]))
         for folder in folders:
+            if not folder or not os.path.isdir(folder):
+                continue
             for name in COVER_NAMES:
                 candidate = os.path.join(folder, name)
-                if os.path.isfile(candidate):
+                if os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
                     return self.cover_src(candidate)
+            try:
+                from .. import covers
+                imgs = covers.images_in(folder)
+                if imgs:
+                    return self.cover_src(os.path.join(folder, imgs[0]))
+            except Exception:
+                pass
         return ""
 
     def reader_open(self, path: str):

@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ReaderM</title>
+<title>Mangasurf</title>
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="alternate icon" href="./favicon.ico">
 
 <!-- Fonts are loaded non-blocking. v1.4.24 measured the old head stalling for
      >45s when the font CDN was slow, and a desktop app must not wait on the
@@ -28,8 +30,8 @@
      hidden rather than drawing buttons that would do nothing. -->
 <div id="titlebar" hidden>
   <div class="tb-drag">
-    <span class="mi tb-logo">auto_stories</span>
-    <span class="tb-title">ReaderM</span>
+    <img src="./icon.svg" class="tb-logo" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;border-radius:4px" alt="Mangasurf">
+    <span class="tb-title">Mangasurf</span>
   </div>
   <div class="tb-controls">
     <button class="tb-btn" id="tb-min" title="Minimise" aria-label="Minimise">
@@ -97,69 +99,177 @@
           <span class="search-wrap"><span class="mi">search</span>
             <input type="search" id="lib-filter" placeholder="Filter titles…" aria-label="Filter library">
           </span>
+          <button class="btn" id="lib-scan-header-btn" title="Recheck library folders for CBZ and manga"><span class="mi">sync</span>Scan Folders</button>
           <button class="btn" id="lib-refresh"><span class="mi">refresh</span>Refresh</button>
         </div>
       </header>
 
-      <div class="lib-split">
-        <!-- Shelf tree. Folders arrive collapsed on purpose; a locked shelf
-             never has its contents sent to the page at all. -->
-        <aside id="shelf-tree" class="shelf-tree" aria-label="Shelves">
-          <div class="tree-head">
-            <span class="tree-title">Shelves</span>
-            <div class="tree-acts">
-              <button class="btn icon sm" id="shelf-new" title="New shelf">
-                <span class="mi">create_new_folder</span>
-              </button>
-              <button class="btn icon sm" id="shelf-lock-all" title="Lock every shelf">
-                <span class="mi">lock</span>
+      <div class="lib-main-full">
+        <!-- Prominent 3D Depth Cover Carousel -->
+        <div id="lib-carousel-wrap" class="lib-carousel-wrap" hidden>
+          <div class="carousel-top-bar">
+            <div class="carousel-badge-title"><span class="mi">auto_stories</span>Featured Library Carousel</div>
+            <div class="carousel-top-tools">
+              <select id="carousel-sort" class="carousel-sort-select" aria-label="Sort Carousel">
+                <option value="downloaded">Sort: Recent Downloads</option>
+                <option value="progress">Sort: Reading Progress</option>
+                <option value="size">Sort: Chapter Count / Size</option>
+                <option value="source">Sort: Source Provider</option>
+                <option value="title">Sort: Alphanumeric (A-Z)</option>
+              </select>
+              <button class="btn icon sm" id="carousel-immersive-toggle" title="Toggle Immersive Split View" type="button">
+                <span class="mi" id="carousel-immersive-icon">fullscreen</span>
               </button>
             </div>
           </div>
-          <div class="tree-tagbar" id="shelf-tagbar" hidden></div>
-          <nav id="tree-body" class="tree-body" role="tree" aria-label="Shelf tree"></nav>
-          <p class="tree-empty" id="tree-empty">
-            No shelves yet. Use <span class="mi">create_new_folder</span> to group
-            what you have downloaded.
-          </p>
-        </aside>
 
-        <div class="lib-main">
-          <div id="stats-strip" class="stats-strip" hidden></div>
+          <div class="carousel-split-layout">
+            <!-- Left Column: 3D Cover Carousel Viewport & Navigation -->
+            <div class="carousel-display-col">
+              <div class="carousel-container">
+                <button class="carousel-nav-btn prev" id="carousel-prev" title="Previous (Left Arrow)" type="button">
+                  <span class="mi">chevron_left</span>
+                </button>
+                <div class="carousel-viewport" id="carousel-viewport">
+                  <div class="carousel-track" id="carousel-track"></div>
+                </div>
+                <button class="carousel-nav-btn next" id="carousel-next" title="Next (Right Arrow)" type="button">
+                  <span class="mi">chevron_right</span>
+                </button>
+              </div>
 
-          <div id="continue-wrap" hidden>
-            <h2 class="shelf-title">Continue reading</h2>
-            <div id="continue" class="rowlist"></div>
+              <!-- Carousel Dots / Counter -->
+              <div class="carousel-dots-wrap" id="carousel-dots-wrap">
+                <div class="carousel-dots" id="carousel-dots"></div>
+                <span class="carousel-counter-pill" id="carousel-counter-pill" hidden>01 / 10</span>
+              </div>
+            </div>
+
+            <!-- Right Column: Active Manga Info Panel -->
+            <div class="carousel-info-panel" id="carousel-info-panel">
+              <div class="carousel-info-top">
+                <div style="flex:1">
+                  <h2 class="carousel-title" id="carousel-title">Manga Title</h2>
+                  <div class="carousel-meta-row">
+                    <span class="carousel-badge" id="carousel-source-badge">Source</span>
+                    <span class="carousel-chapters-text" id="carousel-chapters-text">Chapters 01 - 50</span>
+                    <span class="carousel-status-badge" id="carousel-status-badge">Completed</span>
+                  </div>
+                </div>
+                <div class="carousel-actions">
+                  <button class="btn primary" id="carousel-read-btn" type="button">
+                    <span class="mi">menu_book</span>Read Now
+                  </button>
+                  <button class="btn" id="carousel-detail-btn" title="Series Details" type="button">
+                    <span class="mi">info</span>Details
+                  </button>
+                  <button class="btn icon" id="carousel-folder-btn" title="Show in Folder" type="button">
+                    <span class="mi">folder_open</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="carousel-progress-section">
+                <div class="carousel-progress-header">
+                  <span class="carousel-progress-label">Reading Progress</span>
+                  <span class="carousel-progress-pct" id="carousel-progress-pct">0%</span>
+                </div>
+                <div class="carousel-progress-bar-bg">
+                  <div class="carousel-progress-bar-fill" id="carousel-progress-bar-fill" style="width:0%"></div>
+                </div>
+              </div>
+
+              <!-- Description & Details -->
+              <div class="carousel-desc-section">
+                <div class="carousel-desc-header">
+                  <span class="lbl">Description</span>
+                  <button class="btn ghost xs" id="carousel-edit-desc-btn" type="button">
+                    <span class="mi">edit</span>Edit Description
+                  </button>
+                </div>
+                <p class="carousel-description" id="carousel-description">No description available for this series.</p>
+                <div class="carousel-edit-desc-wrap" id="carousel-edit-desc-wrap" hidden>
+                  <textarea id="carousel-desc-input" rows="3" placeholder="Enter custom series description…"></textarea>
+                  <div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end">
+                    <button class="btn sm ghost" id="carousel-cancel-desc-btn" type="button">Cancel</button>
+                    <button class="btn sm primary" id="carousel-save-desc-btn" type="button">Save</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="carousel-footer-tags" id="carousel-footer-tags"></div>
+            </div>
           </div>
+        </div>
 
-          <h2 class="shelf-title" id="all-title">All downloads</h2>
-          <div id="library-grid" class="grid"></div>
-          <p class="empty" id="library-empty" hidden>
-            <span class="mi">library_books</span>
-            Nothing downloaded yet. Use <strong>Search</strong> to find a series —
-            it will appear here, readable offline.
-          </p>
+        <div id="continue-wrap" hidden>
+          <h2 class="shelf-title">Continue reading</h2>
+          <div id="continue" class="rowlist"></div>
+        </div>
+
+        <h2 class="shelf-title" id="all-title">All downloads</h2>
+        <div id="library-grid" class="grid"></div>
+
+        <!-- Library Pagination Bar -->
+        <div id="lib-pagination" class="lib-pagination" hidden>
+          <button class="btn sm" id="lib-page-prev" type="button"><span class="mi">chevron_left</span>Previous</button>
+          <div class="lib-page-numbers" id="lib-page-numbers"></div>
+          <button class="btn sm" id="lib-page-next" type="button">Next<span class="mi">chevron_right</span></button>
+        </div>
+
+        <p class="empty" id="library-empty" hidden>
+          <span class="mi">library_books</span>
+          Nothing downloaded yet. Use <strong>Search</strong> to find a series —
+          it will appear here, readable offline.
+        </p>
+
+        <!-- Animated Horizontal Shelves / Folders Bar at bottom of Library -->
+        <div id="horizontal-shelves-bar" class="horizontal-shelves-bar">
+          <div class="h-shelves-header">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="mi" style="color:var(--accent)">folder_special</span>
+              <span style="font-weight:var(--fw-bold);font-size:var(--fs-sm)">Library Shelves</span>
+              <span class="badge primary" id="h-shelves-count">0</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button class="btn sm" id="shelf-new" title="New Shelf"><span class="mi">create_new_folder</span>New Shelf</button>
+              <button class="btn sm icon" id="shelf-lock-all" title="Lock all private shelves"><span class="mi">lock</span></button>
+            </div>
+          </div>
+          <div class="h-shelves-scroll" id="h-shelves-scroll">
+            <button class="h-shelf-pill on" data-shelf-id=""><span class="mi">all_inclusive</span>All Downloads</button>
+            <div id="h-shelves-list" class="h-shelves-list"></div>
+          </div>
+          <!-- Keep hidden tree container for back-compat with shelves.js -->
+          <nav id="tree-body" class="tree-body" role="tree" aria-label="Shelf tree" hidden></nav>
+          <div id="shelf-tagbar" hidden></div>
         </div>
       </div>
     </section>
 
     <!-- ── search ──────────────────────────────────────────────────── -->
-    <section class="view" data-view="search">
-      <header class="view-head">
-        <div>
+    <section class="view search-centered" data-view="search" id="search-view">
+      <div class="search-grid-wave-bg" id="search-grid-wave-bg">
+        <canvas id="search-wave-canvas" class="search-wave-canvas"></canvas>
+      </div>
+      <div class="search-hero-container" id="search-hero">
+        <div class="search-hero-title">
           <h1>Search</h1>
-          <p class="sub">Every enabled source at once</p>
+          <p class="sub">Search 32 sources concurrently, route with @source, #tag, or paste direct URL</p>
         </div>
-        <div class="head-tools">
-          <span class="search-wrap"><span class="mi">search</span>
-            <input type="search" id="search-input" placeholder="Search manga, manhwa, manhua…" aria-label="Search">
+        <div class="head-tools search-tools-box">
+          <span class="search-wrap" style="flex:1;position:relative"><span class="mi">search</span>
+            <input type="search" id="search-input" placeholder="Search manga, @source, #genre, or paste direct URL…" aria-label="Search" autocomplete="off">
+            <div id="search-suggestions" class="search-suggestions" hidden></div>
           </span>
-          <select id="search-source" aria-label="Source"><option value="">All sources</option></select>
-          <button class="btn primary" id="search-go"><span class="mi">search</span>Search</button>
-          <button class="btn" id="search-more" title="Sort, status and genres">
-            <span class="mi">tune</span>Refine</button>
+          <button class="btn primary icon" id="search-go" title="Search"><span class="mi">search</span></button>
+          <button class="btn icon" id="search-more" title="Sort, status, genres and sources"><span class="mi">tune</span></button>
+          <button class="btn icon" id="search-layout-btn" title="Toggle Grid / List layout" type="button">
+            <span class="mi" id="search-layout-icon">view_list</span>
+          </button>
         </div>
-      </header>
+      </div>
       <div id="refine" class="refine" hidden>
         <div class="refine-row">
           <label class="mini">Sort
@@ -203,63 +313,88 @@
             </select>
           </label>
         </div>
+
+        <!-- Custom genre enter & chips -->
         <div class="genre-head">
-          <span class="shelf-title" style="margin:0">Genres</span>
+          <span class="shelf-title" style="margin:0">Genres &amp; Custom Tags</span>
           <span class="glead" id="genre-count"></span>
           <button class="btn sm ghost" id="genre-clear">Clear</button>
         </div>
+        <div class="custom-genre-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <span class="search-wrap" style="flex:1">
+            <span class="mi">label</span>
+            <input type="text" id="custom-genre-input" placeholder="Type custom tag (e.g. Cultivation, Otome, Cyberpunk) and press Enter…">
+          </span>
+          <button class="btn sm" id="custom-genre-add-btn" type="button"><span class="mi">add</span>Add Tag</button>
+        </div>
         <div id="genre-chips" class="chips"></div>
-      </div>
 
-      <details class="set-group" id="filter-group">
-        <summary>
-          <span class="mi">filter_alt</span>Filters
-          <span class="glead" id="filter-summary">Off</span>
-          <span class="mi chev">expand_more</span>
-        </summary>
-        <div class="set-body">
-          <div class="row-2">
-            <div class="field">
-              <label for="flt-min">Minimum chapters</label>
-              <input type="number" id="flt-min" min="0" max="9999" step="1" value="0">
-            </div>
-            <div class="field">
-              <label for="flt-max">Maximum chapters</label>
-              <input type="number" id="flt-max" min="0" max="9999" step="1" value="0">
-              <p class="hint">0 means no limit.</p>
-            </div>
+        <!-- Sources toggle bar -->
+        <div class="genre-head" style="margin-top:14px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="shelf-title" style="margin:0">Active Sources</span>
+            <span class="glead" id="src-active-count"></span>
           </div>
-          <label class="check"><input type="checkbox" id="flt-strict">
-            <span class="cl">Strict chapter range
-              <small>Many sources never report a chapter count — MangaDex leaves it
-                     empty for every ongoing series. By default those are kept;
-                     turn this on to drop them too.</small></span></label>
-          <div class="field">
-            <label for="flt-titles">Blocked titles</label>
-            <input type="text" id="flt-titles" placeholder="one per line, or comma separated">
-            <p class="hint">Substring match, case-insensitive.</p>
-          </div>
-          <div class="field">
-            <label for="flt-tags">Blocked tags</label>
-            <input type="text" id="flt-tags" placeholder="e.g. isekai, harem">
-          </div>
-          <div class="field">
-            <label for="flt-authors">Blocked authors</label>
-            <input type="text" id="flt-authors" placeholder="comma separated">
-          </div>
-          <label class="check"><input type="checkbox" id="flt-nocover">
-            <span class="cl">Hide results with no cover</span></label>
-          <label class="check"><input type="checkbox" id="flt-safe">
-            <span class="cl">Safe mode
-              <small>Drop adult ratings where the source reports them</small></span></label>
-          <div class="with-btn">
-            <button class="btn" id="flt-clear"><span class="mi">filter_alt_off</span>Clear filters</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn sm ghost" id="src-enable-all" type="button">Enable all</button>
+            <button class="btn sm ghost" id="src-disable-all" type="button">Disable all</button>
           </div>
         </div>
-      </details>
+        <div id="quick-sources-chips" class="chips"></div>
+
+        <!-- Content filters nested inside refine -->
+        <details class="set-group" id="filter-group" style="margin-top:14px">
+          <summary>
+            <span class="mi">filter_alt</span>Content Filters &amp; Exclusions
+            <span class="glead" id="filter-summary">Off</span>
+            <span class="mi chev">expand_more</span>
+          </summary>
+          <div class="set-body">
+            <div class="row-2">
+              <div class="field">
+                <label for="flt-min">Minimum chapters</label>
+                <input type="number" id="flt-min" min="0" max="9999" step="1" value="0">
+              </div>
+              <div class="field">
+                <label for="flt-max">Maximum chapters</label>
+                <input type="number" id="flt-max" min="0" max="9999" step="1" value="0">
+                <p class="hint">0 means no limit.</p>
+              </div>
+            </div>
+            <label class="check"><input type="checkbox" id="flt-strict">
+              <span class="cl">Strict chapter range
+                <small>Drop series with unknown chapter counts</small></span></label>
+            <div class="field">
+              <label for="flt-titles">Blocked titles</label>
+              <input type="text" id="flt-titles" placeholder="one per line, or comma separated">
+            </div>
+            <div class="field">
+              <label for="flt-tags">Blocked tags</label>
+              <input type="text" id="flt-tags" placeholder="e.g. isekai, harem">
+            </div>
+            <div class="field">
+              <label for="flt-authors">Blocked authors</label>
+              <input type="text" id="flt-authors" placeholder="comma separated">
+            </div>
+            <label class="check"><input type="checkbox" id="flt-nocover">
+              <span class="cl">Hide results with no cover</span></label>
+            <label class="check"><input type="checkbox" id="flt-safe">
+              <span class="cl">Safe mode
+                <small>Drop adult ratings where the source reports them</small></span></label>
+            <div class="with-btn">
+              <button class="btn" id="flt-clear"><span class="mi">filter_alt_off</span>Clear filters</button>
+            </div>
+          </div>
+        </details>
+      </div>
 
       <div id="search-status" class="status" hidden></div>
       <div id="search-grid" class="grid"></div>
+      <div id="search-more-wrap" style="display:flex;justify-content:center;padding:24px 0;width:100%" hidden>
+        <button class="btn primary" id="search-load-more" style="min-width:220px;justify-content:center">
+          <span class="mi">expand_circle_down</span>Load More Results
+        </button>
+      </div>
     </section>
 
     <!-- ── queue ───────────────────────────────────────────────────── -->
@@ -267,15 +402,48 @@
       <header class="view-head">
         <div>
           <h1>Queue</h1>
-          <p class="sub">Downloads in progress</p>
+          <p class="sub">Downloads in progress &amp; active workers</p>
         </div>
         <div class="head-tools">
           <button class="btn" id="queue-pause"><span class="mi">pause</span>Pause</button>
           <button class="btn danger" id="queue-clear"><span class="mi">delete_sweep</span>Clear</button>
         </div>
       </header>
+
+      <!-- Bulk Download Cart Bar -->
+      <div id="cart-bar" class="cart-bar" style="margin-bottom:14px;padding:12px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:space-between;gap:12px" hidden>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="mi" style="color:var(--accent);font-size:22px">shopping_cart</span>
+          <div>
+            <div style="font-weight:var(--fw-semi);font-size:var(--fs-sm)" id="cart-bar-title">Bulk Download Cart</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-2)" id="cart-bar-sub">0 items ready to download</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn primary sm" id="btn-cart-download-all" type="button"><span class="mi">download</span>Download All Cart Items</button>
+          <button class="btn ghost sm" id="btn-cart-clear-all" type="button"><span class="mi">remove_shopping_cart</span>Clear Cart</button>
+        </div>
+      </div>
       <div id="queue-list" class="rowlist"></div>
-      <p class="empty" id="queue-empty"><span class="mi">inbox</span>Queue is empty.</p>
+      <div class="queue-empty-card" id="queue-empty">
+        <div class="queue-radar-wrap">
+          <div class="queue-radar-glow"></div>
+          <div class="queue-radar-ring ring-1"></div>
+          <div class="queue-radar-ring ring-2"></div>
+          <div class="queue-radar-icon">
+            <span class="mi">cloud_done</span>
+          </div>
+        </div>
+        <h2>Download Queue is Clear</h2>
+        <p>No active downloads in progress. All chapters are synchronized and packaged.</p>
+        <div class="queue-empty-actions">
+          <button class="btn primary" id="q-explore-btn" type="button"><span class="mi">search</span>Explore & Download Manga</button>
+          <button class="btn" id="q-lib-btn" type="button"><span class="mi">auto_stories</span>Open Library</button>
+        </div>
+        <div class="queue-tip-pill">
+          <span class="mi">lightbulb</span> Tip: Paste any series URL or use Omnibar to queue chapters instantly.
+        </div>
+      </div>
     </section>
 
 
@@ -343,13 +511,55 @@
             <span>More</span>
           </div>
         </div>
+        <h2 class="shelf-title">Milestones & Achievements</h2>
+        <div class="achievements-ribbon" id="stats-achievements">
+          <div class="achieve-card">
+            <div class="achieve-icon" style="color:var(--accent);background:color-mix(in srgb, var(--accent) 15%, transparent)">
+              <span class="mi">bolt</span>
+            </div>
+            <div class="achieve-info">
+              <div class="achieve-title">Speed Demon</div>
+              <div class="achieve-sub">16+ concurrent image workers active</div>
+            </div>
+          </div>
+          <div class="achieve-card">
+            <div class="achieve-icon" style="color:#10b981;background:rgba(16,185,129,0.15)">
+              <span class="mi">lan</span>
+            </div>
+            <div class="achieve-info">
+              <div class="achieve-title">Omnibar Master</div>
+              <div class="achieve-sub">25 scrapers connected & verified</div>
+            </div>
+          </div>
+          <div class="achieve-card">
+            <div class="achieve-icon" style="color:#a855f7;background:rgba(168,85,247,0.15)">
+              <span class="mi">auto_stories</span>
+            </div>
+            <div class="achieve-info">
+              <div class="achieve-title">Marathon Reader</div>
+              <div class="achieve-sub">Continuous Foliate reading streak</div>
+            </div>
+          </div>
+          <div class="achieve-card">
+            <div class="achieve-icon" style="color:#fbbf24;background:rgba(251,191,36,0.15)">
+              <span class="mi">lock</span>
+            </div>
+            <div class="achieve-info">
+              <div class="achieve-title">Vault Keeper</div>
+              <div class="achieve-sub">Private shelves PIN protected</div>
+            </div>
+          </div>
+        </div>
+
         <h2 class="shelf-title">Streaks</h2>
         <div id="stats-streaks" class="stats-strip"></div>
       </div>
 
       <div class="tabpane" data-tab="sources" hidden>
-        <h2 class="shelf-title">Chapters by source</h2>
-        <div class="bars-list" id="stats-sources"></div>
+        <div id="stats-sources-strip" class="stats-strip"></div>
+        <h2 class="shelf-title">Chapters &amp; Bandwidth by Source</h2>
+        <div class="stats-sources-grid" id="stats-sources-grid"></div>
+        <div class="bars-list" id="stats-sources" style="margin-top:18px"></div>
       </div>
 
       <div class="tabpane" data-tab="library" hidden>
@@ -372,12 +582,95 @@
           <h1>Settings</h1>
           <p class="sub">Saved as you change them</p>
         </div>
+        <div class="head-tools">
+          <button class="btn sm" id="settings-collapse-toggle" type="button">
+            <span class="mi">unfold_less</span>Collapse all
+          </button>
+        </div>
       </header>
 
       <div class="settings">
 
+        <!-- settings quick navigation tabs -->
+        <div class="tabs compact settings-nav-tabs" id="settings-nav-tabs" style="margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;padding-bottom:4px">
+          <button class="tab on" data-set-target="all" type="button"><span class="mi">apps</span>All</button>
+          <button class="tab" data-set-target="library-group" type="button"><span class="mi">folder_special</span>Library &amp; Folders</button>
+          <button class="tab" data-set-target="appearance-group" type="button"><span class="mi">palette</span>Appearance</button>
+          <button class="tab" data-set-target="downloads-group" type="button"><span class="mi">download</span>Downloads</button>
+          <button class="tab" data-set-target="reading-group" type="button"><span class="mi">menu_book</span>Reading</button>
+          <button class="tab" data-set-target="sources-group" type="button"><span class="mi">lan</span>Sources</button>
+          <button class="tab" data-set-target="keys-group" type="button"><span class="mi">keyboard</span>Shortcuts</button>
+          <button class="tab" data-set-target="performance-group" type="button"><span class="mi">speed</span>Performance</button>
+          <button class="tab" data-set-target="servers-group" type="button"><span class="mi">router</span>Servers &amp; OPDS</button>
+          <button class="tab" data-set-target="privacy-group" type="button"><span class="mi">lock</span>Privacy</button>
+        </div>
+
+        <!-- library & folders -->
+        <details class="set-group" id="library-group" open>
+          <summary><span class="mi">folder_special</span>Library &amp; Folders<span class="glead" id="lib-folders-summary"></span><span class="mi chev">expand_more</span></summary>
+          <div class="set-body">
+            <div class="field" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:12px">
+              <div>
+                <div style="font-weight:var(--fw-semi);display:flex;align-items:center;gap:6px">
+                  <span class="mi" style="color:var(--accent)">sync</span>Recheck &amp; Index Library
+                </div>
+                <p class="hint" style="margin:2px 0 0 0" id="lib-scan-status">Scans download folder and extra paths for CBZ, EPUB, PDF &amp; manga archives</p>
+              </div>
+              <button class="btn primary sm" id="lib-scan-now-btn" type="button"><span class="mi">sync</span>Scan Folders Now</button>
+            </div>
+
+            <div class="field">
+              <label for="lib-add-folder-input">Monitored Manga &amp; CBZ Folders</label>
+              <p class="hint">Add any local folders containing manga chapters, `.cbz`, `.epub`, `.pdf`, or `.zip` archives. They will automatically be indexed for reading and served via OPDS.</p>
+              <div class="with-btn">
+                <input type="text" id="lib-add-folder-input" placeholder="Enter or browse folder path (e.g. /home/user/Manga)…">
+                <button class="btn" id="lib-add-folder-browse" type="button"><span class="mi">folder_open</span>Browse</button>
+                <button class="btn primary" id="lib-add-folder-btn" type="button"><span class="mi">add</span>Add Folder</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Indexed Library Paths</label>
+              <ul class="folders-list" id="lib-folders-list"></ul>
+            </div>
+
+            <label class="check"><input type="checkbox" id="set-lib-autoscan" checked>
+              <span class="cl">Auto-scan library folders on startup and library reload</span></label>
+            <label class="check"><input type="checkbox" id="set-lib-autodiscover" checked>
+              <span class="cl">Auto-discover loose CBZ and zip archives inside series directories</span></label>
+
+            <div class="field" style="margin-top:12px">
+              <label for="set-lib-display-mode">Library Display Mode</label>
+              <select id="set-lib-display-mode">
+                <option value="carousel" selected>3D Depth Cover Carousel + Grid</option>
+                <option value="carousel-only">Carousel Only (Immersive Mode)</option>
+                <option value="grid">Grid Only</option>
+                <option value="list">List Rows</option>
+              </select>
+              <p class="hint">Show a prominent 3D interactive cover carousel with reading progress and descriptions at the top of your library.</p>
+            </div>
+
+            <div class="row-2" style="margin-top:12px">
+              <div class="field">
+                <label for="set-lib-paginate">Library Pagination</label>
+                <label class="check" style="margin-top:8px"><input type="checkbox" id="set-lib-paginate">
+                  <span class="cl">Paginate library items into pages</span></label>
+              </div>
+              <div class="field">
+                <label for="set-lib-page-size">Items per Page</label>
+                <select id="set-lib-page-size">
+                  <option value="12">12 items / page</option>
+                  <option value="24" selected>24 items / page</option>
+                  <option value="36">36 items / page</option>
+                  <option value="48">48 items / page</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
+
         <!-- appearance -->
-        <details class="set-group" open>
+        <details class="set-group" id="appearance-group" open>
           <summary><span class="mi">palette</span>Appearance<span class="mi chev">expand_more</span></summary>
           <div class="set-body">
             <div class="field">
@@ -401,7 +694,7 @@
                 <p class="hint">Draw the window controls in the app's own colours instead of
                    the operating system's. Turn this off if the window will not move or
                    resize — a few Linux window managers handle frameless windows badly.
-                   Takes effect next time ReaderM starts.</p>
+                   Takes effect next time Mangasurf starts.</p>
               </div>
               <label class="switch"><input type="checkbox" id="set-titlebar" checked><span></span></label>
             </div>
@@ -422,11 +715,39 @@
               <label class="switch"><input type="checkbox" id="set-animations" checked><span></span></label>
             </div>
             <div class="slider">
-            <label for="set-columns">Grid columns</label>
-            <em class="val" id="set-columns-out"></em>
-            <input type="range" id="set-columns" min="0" max="8" step="1" value="0">
-          <p class="hint">0 fits as many covers as the window allows.</p>
-          </div>
+              <label for="set-columns">Grid columns</label>
+              <em class="val" id="set-columns-out"></em>
+              <input type="range" id="set-columns" min="0" max="8" step="1" value="0">
+              <p class="hint">0 fits as many covers as the window allows.</p>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label for="set-layout-padding">Screen side margins &amp; padding</label>
+                <select id="set-layout-padding">
+                  <option value="compact">Compact (14px)</option>
+                  <option value="normal" selected>Normal (20px)</option>
+                  <option value="spacious">Spacious (32px)</option>
+                  <option value="wide">Wide (48px)</option>
+                </select>
+                <p class="hint">Adjust screen side margins and spacing across all views.</p>
+              </div>
+              <div class="field">
+                <label for="set-layout-density">Card spacing &amp; density</label>
+                <select id="set-layout-density">
+                  <option value="comfortable" selected>Comfortable</option>
+                  <option value="compact">Compact</option>
+                  <option value="dense">Dense</option>
+                </select>
+                <p class="hint">Density of covers and lists throughout the library.</p>
+              </div>
+            </div>
+            <div class="field inline">
+              <div>
+                <label for="set-search-wave">3D Perspective Wave on Search</label>
+                <p class="hint">Full-screen undulating mathematical grid wave behind centered search hero.</p>
+              </div>
+              <label class="switch"><input type="checkbox" id="set-search-wave" checked><span></span></label>
+            </div>
           </div>
         </details>
 
@@ -554,6 +875,45 @@
               <span class="cl">Interleave when browsing<small>Mix sources on browse pages as well as search</small></span></label>
             <label class="check"><input type="checkbox" id="set-data-saver">
               <span class="cl">Data saver<small>Ask sources for smaller images where they offer them</small></span></label>
+
+            <!-- Offline Database Integration Options -->
+            <div class="field" style="margin-top:14px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md)">
+              <div style="font-weight:var(--fw-semi);display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <span class="mi" style="color:var(--accent)">storage</span>Database Integration &amp; Instant Search Index
+              </div>
+              <p class="hint" style="margin:0 0 10px 0">Enables offline indexed searching, instant autocomplete suggestions, and rich metadata across thousands of titles.</p>
+              
+              <label class="check"><input type="checkbox" id="set-db-enabled" checked>
+                <span class="cl">Enable Offline Database Integration<small>Provides instant search autocomplete and offline recommendations</small></span></label>
+              
+              <label class="check" style="margin-top:6px"><input type="checkbox" id="set-db-sfw-enabled" checked>
+                <span class="cl">Include SFW Manga &amp; Manhwa Database<small>Search index for Shounen, Seinen, Shoujo, and Webtoons</small></span></label>
+
+              <label class="check" style="margin-top:6px"><input type="checkbox" id="set-db-nsfw-enabled" checked>
+                <span class="cl">Include Hentai &amp; Adult Manga/Manhwa Database<small>Search index for Doujinshi, Smut, and 18+ Webtoons (respects Safe Mode)</small></span></label>
+            </div>
+
+            <!-- FlareSolverr Service Starter & Cloudflare Solver -->
+            <div class="field" style="margin-top:14px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+                <div style="font-weight:var(--fw-semi);display:flex;align-items:center;gap:6px">
+                  <span class="mi" style="color:var(--accent)">shield</span>FlareSolverr Cloudflare Solver
+                </div>
+                <span class="srv-pill offline" id="flaresolverr-status-badge">
+                  <span class="pulse-dot"></span><span class="status-txt">Offline</span>
+                </span>
+              </div>
+              <p class="hint" style="margin:0 0 10px 0">Automates Cloudflare Turnstile &amp; bot protection challenge resolution for protected manga scrapers.</p>
+
+              <div class="field">
+                <label for="set-flaresolverr-url">FlareSolverr Service Endpoint URL</label>
+                <div class="with-btn">
+                  <input type="text" id="set-flaresolverr-url" value="http://localhost:8191/v1" placeholder="http://localhost:8191/v1">
+                  <button class="btn sm" id="btn-flaresolverr-test" type="button"><span class="mi">network_check</span>Test Ping</button>
+                  <button class="btn sm primary" id="btn-flaresolverr-toggle" type="button"><span class="mi">sync</span>Check Status</button>
+                </div>
+              </div>
+            </div>
             <div class="field">
               <label for="set-downloaded">Titles you already have</label>
               <select id="set-downloaded">
@@ -710,39 +1070,229 @@
           </div>
         </details>
 
-        <!-- servers -->
-        <details class="set-group">
-          <summary><span class="mi">router</span>Phone &amp; OPDS servers<span class="mi chev">expand_more</span></summary>
+        <!-- servers & opds hub -->
+        <details class="set-group" id="servers-group" open>
+          <summary><span class="mi">router</span>Servers &amp; OPDS Hub<span class="glead" id="servers-summary-badge"></span><span class="mi chev">expand_more</span></summary>
           <div class="set-body">
-            <div class="field">
-              <label for="set-server-token">Access token</label>
-              <div class="with-btn">
-                <input type="text" id="set-server-token" placeholder="At least 16 characters">
-                <button class="btn" id="server-token-gen"><span class="mi">casino</span>Generate</button>
+            
+            <!-- Quick Server Control Cards Grid -->
+            <div class="srv-cards-grid">
+              
+              <!-- LAN Web Server Card -->
+              <div class="srv-card" id="srv-card-web">
+                <div class="srv-card-header">
+                  <div class="srv-card-title-group">
+                    <span class="mi srv-card-icon">smartphone</span>
+                    <div>
+                      <div class="srv-card-title">LAN Web Reader</div>
+                      <div class="srv-card-subtitle">Phone &amp; mobile browser reader</div>
+                    </div>
+                  </div>
+                  <span class="srv-pill offline" id="srv-web-pill">
+                    <span class="pulse-dot"></span><span class="pill-text">Offline</span>
+                  </span>
+                </div>
+
+                <div class="srv-card-body">
+                  <div class="srv-url-row" id="srv-web-url-box">
+                    <div class="srv-url-label">Local LAN URL</div>
+                    <div class="srv-url-display">
+                      <input type="text" readonly id="srv-web-url-input" class="srv-url-input" value="http://--:8577">
+                      <button class="btn icon sm" id="btn-copy-web-url" title="Copy LAN Server URL" type="button"><span class="mi">content_copy</span></button>
+                      <button class="btn icon sm" id="btn-open-web-url" title="Open in Browser" type="button"><span class="mi">open_in_new</span></button>
+                    </div>
+                  </div>
+
+                  <div class="srv-url-row" id="srv-web-ts-box" hidden>
+                    <div class="srv-url-label">Tailscale VPN URL</div>
+                    <div class="srv-url-display">
+                      <input type="text" readonly id="srv-web-ts-input" class="srv-url-input" value="">
+                      <button class="btn icon sm" id="btn-copy-web-ts" title="Copy Tailscale URL" type="button"><span class="mi">content_copy</span></button>
+                    </div>
+                  </div>
+
+                  <div class="srv-metrics-grid">
+                    <div class="srv-metric-box">
+                      <span class="mi">timer</span>
+                      <div>
+                        <small>Uptime</small>
+                        <strong id="srv-web-uptime">Offline</strong>
+                      </div>
+                    </div>
+                    <div class="srv-metric-box">
+                      <span class="mi">devices</span>
+                      <div>
+                        <small>Connected</small>
+                        <strong id="srv-web-clients-count">0 Devices</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="srv-card-actions">
+                  <button class="btn primary srv-action-toggle" id="btn-toggle-server" type="button">
+                    <span class="mi">play_arrow</span><span>Start Server</span>
+                  </button>
+                  <button class="btn srv-action-btn" id="btn-restart-server" title="Restart Server" type="button">
+                    <span class="mi">refresh</span><span>Restart</span>
+                  </button>
+                  <button class="btn srv-action-btn" id="btn-qr-server" title="Scan QR Code with Phone" type="button">
+                    <span class="mi">qr_code_2</span><span>QR Code</span>
+                  </button>
+                </div>
               </div>
-              <p class="hint">Shared by the phone server and the OPDS catalog, so there is one
-                 secret to manage rather than two.</p>
+
+              <!-- OPDS 1.2 Catalog Card -->
+              <div class="srv-card" id="srv-card-opds">
+                <div class="srv-card-header">
+                  <div class="srv-card-title-group">
+                    <span class="mi srv-card-icon">menu_book</span>
+                    <div>
+                      <div class="srv-card-title">OPDS 1.2 Catalog</div>
+                      <div class="srv-card-subtitle">Readest, Panels, Aldiko &amp; Thorium</div>
+                    </div>
+                  </div>
+                  <span class="srv-pill offline" id="srv-opds-pill">
+                    <span class="pulse-dot"></span><span class="pill-text">Offline</span>
+                  </span>
+                </div>
+
+                <div class="srv-card-body">
+                  <div class="srv-url-row" id="srv-opds-url-box">
+                    <div class="srv-url-label">Catalog Feed URL</div>
+                    <div class="srv-url-display">
+                      <input type="text" readonly id="srv-opds-url-input" class="srv-url-input" value="http://--:8578/opds">
+                      <button class="btn icon sm" id="btn-copy-opds-url" title="Copy OPDS URL" type="button"><span class="mi">content_copy</span></button>
+                    </div>
+                  </div>
+
+                  <div class="srv-url-row" id="srv-opds-ts-box" hidden>
+                    <div class="srv-url-label">Tailscale OPDS URL</div>
+                    <div class="srv-url-display">
+                      <input type="text" readonly id="srv-opds-ts-input" class="srv-url-input" value="">
+                      <button class="btn icon sm" id="btn-copy-opds-ts" title="Copy Tailscale OPDS URL" type="button"><span class="mi">content_copy</span></button>
+                    </div>
+                  </div>
+
+                  <div class="srv-metrics-grid">
+                    <div class="srv-metric-box">
+                      <span class="mi">auto_stories</span>
+                      <div>
+                        <small>Indexed</small>
+                        <strong id="srv-opds-titles-count">0 Titles</strong>
+                      </div>
+                    </div>
+                    <div class="srv-metric-box">
+                      <span class="mi">devices</span>
+                      <div>
+                        <small>Active Readers</small>
+                        <strong id="srv-opds-clients-count">0 Readers</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="srv-card-actions">
+                  <button class="btn primary srv-action-toggle" id="btn-toggle-opds" type="button">
+                    <span class="mi">play_arrow</span><span>Start OPDS</span>
+                  </button>
+                  <button class="btn srv-action-btn" id="btn-restart-opds" title="Restart OPDS" type="button">
+                    <span class="mi">refresh</span><span>Restart</span>
+                  </button>
+                  <button class="btn srv-action-btn" id="btn-qr-opds" title="Scan QR Code for OPDS" type="button">
+                    <span class="mi">qr_code_2</span><span>QR Code</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
+
+            <!-- Connected Devices & Active Readers Section -->
+            <div class="srv-devices-panel">
+              <div class="srv-panel-header">
+                <div class="srv-panel-title">
+                  <span class="mi" style="color:var(--accent)">devices</span>
+                  <span>Connected Devices &amp; Active Readers</span>
+                  <span class="badge primary" id="srv-total-devices-badge">0</span>
+                </div>
+                <div class="srv-panel-controls">
+                  <button class="btn sm" id="btn-refresh-devices" type="button"><span class="mi">sync</span>Refresh</button>
+                  <button class="btn sm" id="btn-clear-devices" type="button"><span class="mi">delete_sweep</span>Clear Inactive</button>
+                </div>
+              </div>
+
+              <!-- Devices List Container -->
+              <div id="srv-devices-container">
+                <div class="srv-empty-devices" id="srv-empty-devices">
+                  <span class="mi">devices_other</span>
+                  <p><strong>No remote devices connected yet</strong><br>
+                  <small>Open the LAN URL on your phone or connect an OPDS reader app to monitor live streaming sessions.</small></p>
+                </div>
+                <div class="srv-devices-grid" id="srv-devices-grid" hidden></div>
+              </div>
+            </div>
+
+            <!-- Configuration & Ports -->
+            <div class="field" style="margin-top:16px">
+              <label for="set-server-token">Access Token &amp; OPDS Password</label>
+              <div class="with-btn">
+                <input type="text" id="set-server-token" placeholder="At least 16 characters" autocomplete="off">
+                <button class="btn icon" id="btn-toggle-token-reveal" title="Show / Hide Password" type="button"><span class="mi" id="token-reveal-icon">visibility</span></button>
+                <button class="btn icon" id="btn-copy-token-main" title="Copy Password" type="button"><span class="mi">content_copy</span></button>
+                <button class="btn" id="server-token-gen" type="button"><span class="mi">casino</span>Generate</button>
+              </div>
+              <p class="hint">Shared password for both the LAN Web Server and OPDS Catalog (any username works in OPDS readers).</p>
+            </div>
+
             <div class="row-2">
               <div class="field">
-                <label for="set-server-port">Phone server port</label>
-                <input type="number" id="set-server-port" min="1" max="65535">
+                <label for="set-server-port">LAN Web Server Port</label>
+                <input type="number" id="set-server-port" min="1024" max="65535" value="8577">
               </div>
               <div class="field">
-                <label for="set-opds-port">OPDS catalog port</label>
-                <input type="number" id="set-opds-port" min="1" max="65535">
+                <label for="set-opds-port">OPDS Catalog Port</label>
+                <input type="number" id="set-opds-port" min="1024" max="65535" value="8578">
               </div>
             </div>
-            <label class="check"><input type="checkbox" id="set-server-verbose"> Verbose server log</label>
-            <div class="field">
-              <label for="set-opds-cover-root">OPDS cover folder (optional)</label>
+
+            <div class="srv-checkboxes-grid">
+              <label class="check"><input type="checkbox" id="set-server-autostart">
+                <span class="cl">Start LAN Web Server automatically with Mangasurf<small>Enables instant remote control from phone upon launching the app</small></span></label>
+              <label class="check"><input type="checkbox" id="set-opds-autostart">
+                <span class="cl">Start OPDS Catalog automatically with Mangasurf<small>Allows Readest and other reader apps to reach your library anytime</small></span></label>
+              <label class="check"><input type="checkbox" id="set-server-verbose">
+                <span class="cl">Verbose server logging<small>Log every individual page stream and API call</small></span></label>
+            </div>
+
+            <div class="field" style="margin-top:12px">
+              <label for="set-opds-cover-root">OPDS Cover Root Folder (optional)</label>
               <div class="with-btn">
-                <input type="text" id="set-opds-cover-root" placeholder="Defaults to your downloads folder">
-                <button class="btn" id="set-opds-cover-browse"><span class="mi">folder_open</span>Browse</button>
+                <input type="text" id="set-opds-cover-root" placeholder="Defaults to your downloads directory">
+                <button class="btn" id="set-opds-cover-browse" type="button"><span class="mi">folder_open</span>Browse</button>
               </div>
             </div>
-            <label class="check"><input type="checkbox" id="set-opds-autostart">
-              <span class="cl">Start the OPDS catalog with the app<small>So Readest and other readers can reach your library right away</small></span></label>
+
+            <!-- Real-Time Server Activity & Traffic Console -->
+            <div class="srv-log-section">
+              <div class="srv-panel-header">
+                <div class="srv-panel-title">
+                  <span class="mi" style="color:var(--accent)">terminal</span>
+                  <span>Live Server Traffic &amp; Request Log</span>
+                </div>
+                <div class="srv-panel-controls">
+                  <div class="tabs compact" id="srv-log-tabs">
+                    <button class="tab on" data-srv-log="all" type="button">All</button>
+                    <button class="tab" data-srv-log="server" type="button">Web Server</button>
+                    <button class="tab" data-srv-log="opds" type="button">OPDS</button>
+                  </div>
+                  <button class="btn sm" id="btn-clear-srv-logs" type="button"><span class="mi">delete</span>Clear</button>
+                </div>
+              </div>
+              <div class="srv-console-box" id="srv-console-box">
+                <div class="srv-log-line info"><span class="t">Ready</span><span class="lvl">INFO</span><span class="msg">Server monitor initialized. Press Start to serve.</span></div>
+              </div>
+            </div>
+
           </div>
         </details>
 
@@ -827,7 +1377,8 @@
           <button class="btn primary big" id="d-download">
             <span class="mi">download</span><span id="d-download-label">Download</span>
           </button>
-          <button class="btn big" id="d-queue"><span class="mi">add_shopping_cart</span>Add to queue</button>
+          <button class="btn big" id="d-cart-btn" title="Add to Cart for bulk downloading"><span class="mi">add_shopping_cart</span>Add to Cart</button>
+          <button class="btn big" id="d-queue"><span class="mi">queue</span>Add to queue</button>
           <button class="btn big" id="d-read" hidden><span class="mi">menu_book</span>Read</button>
         </div>
       </section>
@@ -913,7 +1464,10 @@
   </footer>
 
   <aside id="r-panel" hidden>
-    <h3>Reading mode</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0">Reading options</h3>
+      <button class="btn icon sm" id="r-panel-collapse" title="Collapse options" type="button"><span class="mi">close</span></button>
+    </div>
     <div class="seg grid4" id="mode-seg" role="group" aria-label="Reading mode">
       <button data-mode="webtoon">Webtoon</button>
       <button data-mode="vertical">Vertical</button>
@@ -974,7 +1528,7 @@
         <button class="tab on" data-ptab="all" role="tab">
           <span class="mi">list</span>Pages<span class="count" id="pl-count-all">0</span>
         </button>
-        <button class="tab" data-ptab="marked" role="tab">
+        <button class="tab" id="pl-tab-marked" data-ptab="marked" role="tab">
           <span class="mi">bookmark</span>Marked<span class="count" id="pl-count-marked">0</span>
         </button>
       </div>
@@ -1076,7 +1630,7 @@
 <div id="lock" hidden>
   <div class="lock-box">
     <span class="mi">lock</span>
-    <h2>ReaderM is locked</h2>
+    <h2>Mangasurf is locked</h2>
     <p id="lock-hint-text">Enter your password to continue.</p>
     <input type="password" id="lock-input" placeholder="Password" autocomplete="current-password">
     <div class="err" id="lock-error"></div>
@@ -1084,12 +1638,100 @@
   </div>
 </div>
 
-<div id="boot" class="boot"><div class="spin"></div>Starting ReaderM…</div>
+<!-- Custom Context Menu for Library & Marks -->
+<div id="card-context-menu" class="card-context-menu" hidden>
+  <div class="cmenu-header">
+    <span class="cmenu-title" id="cmenu-title">Manga Title</span>
+  </div>
+  <div class="cmenu-body">
+    <button type="button" class="cmenu-item" id="cmenu-read"><span class="mi">menu_book</span>Read Manga</button>
+    <button type="button" class="cmenu-item" id="cmenu-info"><span class="mi">info</span>Series Details</button>
+    <button type="button" class="cmenu-item" id="cmenu-folder"><span class="mi">folder_open</span>Show in Folder</button>
+    
+    <div class="cmenu-divider"></div>
+    <div class="cmenu-label">Card Color Tag</div>
+    <div class="cmenu-colors" id="cmenu-colors">
+      <button type="button" class="cmenu-color" data-color="" title="Clear color" style="background:var(--surface-3);border:1px solid var(--border)"><span class="mi" style="font-size:12px">close</span></button>
+      <button type="button" class="cmenu-color" data-color="#38bdf8" title="Cyan" style="background:#38bdf8"></button>
+      <button type="button" class="cmenu-color" data-color="#818cf8" title="Indigo" style="background:#818cf8"></button>
+      <button type="button" class="cmenu-color" data-color="#a855f7" title="Purple" style="background:#a855f7"></button>
+      <button type="button" class="cmenu-color" data-color="#10b981" title="Emerald" style="background:#10b981"></button>
+      <button type="button" class="cmenu-color" data-color="#fbbf24" title="Amber" style="background:#fbbf24"></button>
+      <button type="button" class="cmenu-color" data-color="#f43f5e" title="Rose" style="background:#f43f5e"></button>
+    </div>
+
+    <div class="cmenu-divider"></div>
+    <button type="button" class="cmenu-item" id="cmenu-sync-meta"><span class="mi">sync</span>Sync manga.json Metadata</button>
+    
+    <div class="cmenu-divider"></div>
+    <button type="button" class="cmenu-item text-danger" id="cmenu-del-meta"><span class="mi">delete</span>Remove from Library (Keep Files)</button>
+    <button type="button" class="cmenu-item text-danger" id="cmenu-del-all"><span class="mi">delete_forever</span>Delete Everything (Files &amp; Folder)</button>
+  </div>
+</div>
+
+<!-- ── server QR code modal ─────────────────────────────────────────── -->
+<div id="srv-qr-modal" class="sheet-wrap" hidden>
+  <div class="sheet" style="text-align:center;max-width:390px">
+    <h3 id="srv-qr-title" style="display:flex;align-items:center;justify-content:center;gap:8px">
+      <span class="mi" style="color:var(--accent)">qr_code_2</span><span>Pair Phone / Tablet</span>
+    </h3>
+    <p class="hint" id="srv-qr-subtitle" style="margin:4px 0 12px 0">Point your phone's camera at the QR code to connect instantly.</p>
+    
+    <!-- Interface Switcher Tabs: Wi-Fi LAN vs Tailscale VPN -->
+    <div class="tabs compact srv-qr-tabs" id="srv-qr-tabs" style="margin-bottom:12px;display:flex;justify-content:center;gap:4px">
+      <button class="tab on" data-qr-type="wifi" id="tab-qr-wifi" type="button"><span class="mi">wifi</span>Local Wi-Fi</button>
+      <button class="tab" data-qr-type="tailscale" id="tab-qr-tailscale" type="button"><span class="mi">vpn_lock</span>Tailscale VPN</button>
+    </div>
+
+    <div id="srv-qr-canvas-wrap" style="display:flex;justify-content:center;align-items:center;padding:16px;background:#ffffff;border-radius:var(--r-lg);margin:0 auto 14px;max-width:240px;box-shadow:var(--shadow-md)">
+      <div id="srv-qr-svg-target"></div>
+    </div>
+
+    <div class="field" style="text-align:left;margin-bottom:16px">
+      <label id="srv-qr-url-label">Direct URL</label>
+      <div class="with-btn">
+        <input type="text" id="srv-qr-url-text" readonly style="font-size:12px;font-family:monospace">
+        <button class="btn" id="btn-copy-qr-url" type="button"><span class="mi">content_copy</span>Copy</button>
+      </div>
+    </div>
+
+    <div class="sheet-acts" style="justify-content:center">
+      <button class="btn primary" id="srv-qr-close-btn" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── live downloading notification toast ──────────────────────────── -->
+<div id="download-toast-card" class="download-toast-card" hidden>
+  <div class="dl-toast-thumb" id="dl-toast-thumb"><span class="mi">download</span></div>
+  <div class="dl-toast-info">
+    <div class="dl-toast-status"><span class="pulse-dot"></span>Downloading…</div>
+    <div class="dl-toast-title" id="dl-toast-title">Manga Title</div>
+    <div class="dl-toast-chapter" id="dl-toast-chapter">Chapter 01</div>
+  </div>
+</div>
+
+<div id="boot" class="boot">
+  <div class="boot-content">
+    <div class="boot-logo-wrap">
+      <div class="boot-glow"></div>
+      <div class="boot-spin-ring"></div>
+      <div class="boot-icon">
+        <span class="mi">auto_stories</span>
+      </div>
+    </div>
+    <div class="boot-text">
+      <span class="boot-title">MANGASURF</span>
+      <span class="boot-sub">Starting high-performance reader…</span>
+    </div>
+  </div>
+</div>
 
 <!-- HeroUI, bundled statically by ui/build.mjs. Loaded before app.js so
      window.ReaderMUI exists when the interface mounts its islands. Node is a
      build-time tool: nothing here needs it at runtime. -->
 <script src="./vendor/heroui.js"></script>
+<script src="./qrcode.js"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

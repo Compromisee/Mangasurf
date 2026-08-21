@@ -110,12 +110,16 @@ class WebtoonsSource(Source):
 
     # ----------------------------------------------------------- search
 
-    def search(self, query: str, limit: int = 32, genre=None, **_):
+    def search(self, query: str, limit: int = 32, genre=None, page: int = 1, **_):
         query = (query or "").strip()
         if not query:
-            return self.browse(genre=genre, limit=limit)
+            return self.browse(genre=genre, limit=limit, page=page)
+        page_val = max(1, int(page or _.get("page", 1) or 1))
+        url = f"{SITE}/en/search?keyword={quote(query)}"
+        if page_val > 1:
+            url += f"&page={page_val}"
         try:
-            response = self.fetch(f"{SITE}/en/search?keyword={quote(query)}")
+            response = self.fetch(url)
         except ScrapeError as e:
             logger.error("Webtoons search failed: %s", e)
             return []

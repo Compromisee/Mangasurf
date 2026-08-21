@@ -1,4 +1,4 @@
-"""One ReaderM at a time, and a way to poke the one already running.
+"""One Mangasurf at a time, and a way to poke the one already running.
 
 Why this exists
 ---------------
@@ -6,7 +6,7 @@ Nothing stopped a second copy starting while the first sat in the system
 tray. Reproduced by launching three times against one profile: **all three
 stayed alive**, each with its own tray icon, its own download engine and its
 own writes to the same ``library.json``, ``config.json`` and job journals.
-Since the window is hidden, the obvious way to "reopen" ReaderM -- run it
+Since the window is hidden, the obvious way to "reopen" Mangasurf -- run it
 again -- is exactly what produced the duplicates.
 
 How it works
@@ -87,7 +87,7 @@ def _write_instance(port, token):
 
 
 def notify_existing(command="show"):
-    """Ask an already-running ReaderM to surface. True if one answered.
+    """Ask an already-running Mangasurf to surface. True if one answered.
 
     A stale port file (the previous run was killed) simply fails to connect
     and returns False, so startup continues normally.

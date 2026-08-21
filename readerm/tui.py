@@ -1,6 +1,6 @@
-"""ReaderM - full-screen terminal UI (Textual).
+"""Mangasurf - full-screen terminal UI (Textual).
 
-Launch with:  readerm tui
+Launch with:  mangasurf tui
          or:  python -m readerm tui
 """
 
@@ -15,8 +15,8 @@ if __package__ in (None, ""):
     import readerm  # noqa: F401
     __package__ = "readerm"
 
-# Textual is an optional extra ("pip install readerm[tui]"). Importing it at
-# module scope means a missing install crashes `readerm tui` with a raw
+# Textual is an optional extra ("pip install mangasurf[tui]"). Importing it at
+# module scope means a missing install crashes `mangasurf tui` with a raw
 # ModuleNotFoundError: the friendly message in run_tui() never gets to print,
 # because the module fails while it is still being imported. Stand-ins keep
 # the module importable so run_tui() can explain itself instead.
@@ -48,20 +48,12 @@ except ImportError:                    # pragma: no cover - install dependent
         return None
 
     class _MissingMeta(type):
-        """Any attribute lookup yields another placeholder.
-
-        The class body below references widget *message* classes such as
-        ``Button.Pressed`` in decorators, which are evaluated at import
-        time -- so a plain stub raises AttributeError before run_tui() can
-        print anything useful.
-        """
-
+        """Any attribute lookup yields another placeholder."""
         def __getattr__(cls, _name):
             return cls
 
     class _Missing(metaclass=_MissingMeta):
         """Placeholder widget; only reachable when Textual is absent."""
-
         def __init__(self, *_args, **_kwargs):
             raise RuntimeError("Textual is not installed")
 
@@ -77,6 +69,7 @@ from .sources import (DEFAULT_SOURCE, SOURCES, browse_all, detect_source,
                       genres_all, get_source, list_sources, search_all,
                       source_for_url)
 from .utils import chapter_number
+from .console import format_source_badge, format_colored_tag
 
 ACCENT = "#7aa2f7"
 
@@ -84,10 +77,10 @@ ACCENT = "#7aa2f7"
 # --------------------------------------------------------------------- app
 
 
-class ReaderMTUI(App):
+class MangasurfTUI(App):
     """Search, browse and download manga without leaving the terminal."""
 
-    TITLE = "ReaderM"
+    TITLE = "Mangasurf"
     SUB_TITLE = "terminal edition"
 
     CSS = """
@@ -120,8 +113,12 @@ class ReaderMTUI(App):
     #manga-empty { height: 1fr; content-align: center middle; color: $text-muted; }
     #manga-body { height: 1fr; }
     #manga-info {
-        width: 42; min-width: 30; margin-right: 2;
-        border: round $primary 30%; padding: 1 2;
+        width: 44; min-width: 32; margin-right: 2;
+        border: round $primary 30%; padding: 1 1;
+    }
+    #manga-cover {
+        height: auto; min-height: 8; content-align: center middle;
+        margin-bottom: 1; border: round $primary 20%; padding: 0;
     }
     #manga-title { text-style: bold; color: $primary; }
     #manga-source { color: $text-muted; text-style: italic; }
@@ -229,6 +226,7 @@ class ReaderMTUI(App):
                 yield Static("Search for a manga first  (Ctrl+S)", id="manga-empty")
                 with Horizontal(id="manga-body", classes="hidden"):
                     with VerticalScroll(id="manga-info"):
+                        yield Static("", id="manga-cover")
                         yield Static("", id="manga-title")
                         yield Static("", id="manga-source")
                         yield Static("", id="manga-meta")
@@ -294,7 +292,7 @@ class ReaderMTUI(App):
             with TabPane("Settings", id="tab-settings"):
                 with Vertical(id="settings-box"):
                     yield Static("Changes apply to new downloads. Saved to "
-                                 "~/.readerm/settings.json", classes="set-hint")
+                                 "~/.mangasurf/settings.json", classes="set-hint")
                     with Horizontal(classes="set-row"):
                         yield Label("Output directory")
                         yield Input(value=self.settings["output_dir"], id="set-output")
@@ -319,7 +317,6 @@ class ReaderMTUI(App):
                         yield Input(value=str(self.settings["delay"]),
                                     id="set-delay", type="number")
                     with Horizontal(classes="set-row"):
-                        yield Label("Keep raw images")
                         yield Switch(value=self.settings.get("keep_images", False),
                                      id="set-keep")
                     with Horizontal(classes="set-row"):
@@ -362,65 +359,50 @@ class ReaderMTUI(App):
         return rows[index]["id"]
 
     @on(Button.Pressed, "#src-up")
-    def handle_src_up(self):
+    def handle_source_up(self, _e):
         from . import config as appconfig
-        source_id = self._selected_source()
-        if source_id:
-            appconfig.move(source_id, -1)
-            listview = self.query_one("#src-rank-list", ListView)
-            target = max(0, (listview.index or 0) - 1)
-            self._refresh_source_list()
-            listview.index = target
+        sid = self._selected_source()
+        if not sid:
+            return
+        appconfig.move(sid, -1)
+        self._refresh_source_list()
 
     @on(Button.Pressed, "#src-down")
-    def handle_src_down(self):
+    def handle_source_down(self, _e):
         from . import config as appconfig
-        source_id = self._selected_source()
-        if source_id:
-            appconfig.move(source_id, 1)
-            listview = self.query_one("#src-rank-list", ListView)
-            target = min(len(self._source_rows) - 1, (listview.index or 0) + 1)
-            self._refresh_source_list()
-            listview.index = target
+        sid = self._selected_source()
+        if not sid:
+            return
+        appconfig.move(sid, 1)
+        self._refresh_source_list()
 
     @on(Button.Pressed, "#src-toggle")
-    def handle_src_toggle(self):
+    def handle_source_toggle(self, _e):
         from . import config as appconfig
-        source_id = self._selected_source()
-        if source_id:
-            appconfig.set_enabled(source_id, not appconfig.is_enabled(source_id))
-            self._refresh_source_list()
+        sid = self._selected_source()
+        if not sid:
+            return
+        row = next((r for r in self._source_rows if r["id"] == sid), None)
+        if not row:
+            return
+        appconfig.set_enabled(sid, not row.get("enabled", True))
+        self._refresh_source_list()
 
     @on(Button.Pressed, "#src-reset")
-    def handle_src_reset(self):
+    def handle_source_reset(self, _e):
         from . import config as appconfig
         appconfig.reset_config()
         self._refresh_source_list()
 
     def on_mount(self):
-        self.query_one("#search-input").focus()
-        fmt = self.settings.get("format", "cbz")
-        try:
-            self.query_one("#fmt-select", Select).value = fmt
-        except Exception:
-            pass
-        self._source_rows = []
-        try:
-            self._refresh_source_list()
-        except Exception:
-            pass
         self._load_genres()
-        # open on a trending feed instead of an empty list
-        self.handle_search()
+        self._refresh_source_list()
 
-    # ----------------------------------------------------------- actions
+    # ---------------------------------------------------------- bindings
 
     def action_focus_search(self):
         self.query_one(TabbedContent).active = "tab-search"
-        self.query_one("#search-input").focus()
-
-    def action_switch_tab(self, tab: str):
-        self.query_one(TabbedContent).active = tab
+        self.query_one("#search-input", Input).focus()
 
     def action_start_download(self):
         self._start_download()
@@ -547,8 +529,9 @@ class ReaderMTUI(App):
         self.results = results
         status.update(f"[dim]{len(results)} results - press Enter to open[/]")
         for r in results:
-            label = r.get("source_name") or r.get("source") or ""
-            tag = f"[dim]\\[{label}][/] " if label else ""
+            src_name = r.get("source_name") or r.get("source") or ""
+            badge = format_source_badge(r.get("source") or "", src_name)
+            tag = f"{badge} " if src_name else ""
             listview.append(ListItem(
                 Static(f"{tag}[bold {ACCENT}]{r['title']}[/]\n[dim]{r['url']}[/]")
             ))
@@ -594,21 +577,33 @@ class ReaderMTUI(App):
         self.query_one("#manga-empty").add_class("hidden")
         self.query_one("#manga-body").remove_class("hidden")
 
+        # Start background cover render
+        self.query_one("#manga-cover", Static).update("[dim]Loading cover...[/]")
+        self._fetch_cover_art(info)
+
         self.query_one("#manga-title", Static).update(info["title"])
         provider = info.get("source_name") or (
             self.source.name if self.source else info.get("source") or "")
+        badge = format_source_badge(info.get("source") or (self.source.id if self.source else ""), provider)
         self.query_one("#manga-source", Static).update(
-            f"[dim]from[/] [{ACCENT}]{provider}[/]" if provider else "")
+            f"[dim]from[/] {badge}" if provider else "")
         meta = []
         if info.get("authors"):
             meta.append("by " + ", ".join(info["authors"]))
         if info.get("status"):
-            meta.append(f"[{ACCENT}]{info['status']}[/]")
+            status_color = "green" if str(info['status']).lower() == "ongoing" else ACCENT
+            meta.append(f"[{status_color}]{info['status']}[/]")
         meta.append(f"{len(chapters)} chapters")
         self.query_one("#manga-meta", Static).update("  |  ".join(meta))
-        self.query_one("#manga-tags", Static).update(
-            "[dim]tags:[/] " + " [dim]·[/] ".join(
-                f"[{ACCENT}]{t}[/]" for t in (info.get("tags") or [])[:10]))
+        
+        # Tags formatted with vibrant per-category colors
+        tags = info.get("tags") or []
+        if tags:
+            tag_badges = " ".join(format_colored_tag(t) for t in tags[:12])
+            self.query_one("#manga-tags", Static).update(f"[dim]tags:[/] {tag_badges}")
+        else:
+            self.query_one("#manga-tags", Static).update("")
+            
         self.query_one("#manga-desc", Static).update(info.get("description") or "")
 
         sel = self.query_one("#chapter-list", SelectionList)
@@ -617,6 +612,35 @@ class ReaderMTUI(App):
         for i in range(len(chapters) - 1, -1, -1):
             sel.add_option(Selection(chapters[i]["name"], i, True))
         self._update_count()
+
+    @work(thread=True, group="cover")
+    def _fetch_cover_art(self, info):
+        cover_url = info.get("cover")
+        if not cover_url:
+            self.call_from_thread(self._cover_ready, "")
+            return
+        try:
+            from .covers import render_terminal_cover
+            ansi_art = render_terminal_cover(cover_url, width=28, max_height=14,
+                                             source_id=info.get("source"),
+                                             referer=info.get("url"))
+        except Exception:
+            ansi_art = ""
+        self.call_from_thread(self._cover_ready, ansi_art)
+
+    def _cover_ready(self, ansi_art):
+        try:
+            cover_widget = self.query_one("#manga-cover", Static)
+            if not ansi_art:
+                cover_widget.update("[dim]No cover art[/]")
+                return
+            try:
+                from rich.text import Text
+                cover_widget.update(Text.from_ansi(ansi_art))
+            except Exception:
+                cover_widget.update(ansi_art)
+        except Exception:
+            pass
 
     def _update_count(self):
         if not self.manga:
@@ -661,13 +685,11 @@ class ReaderMTUI(App):
                 if not part:
                     continue
                 if "-" in part:
-                    left, _, right = part.partition("-")
-                    lo = float(left) if left.strip() else float("-inf")
-                    hi = float(right) if right.strip() else float("inf")
-                    if lo > hi:
-                        lo, hi = hi, lo
+                    lo_s, hi_s = part.split("-", 1)
+                    lo, hi = float(lo_s.strip()), float(hi_s.strip())
                     for i, c in enumerate(chapters):
-                        if lo <= chapter_number(c["name"]) <= hi:
+                        num = chapter_number(c["name"])
+                        if lo <= num <= hi:
                             wanted.add(i)
                 else:
                     target = float(part)
@@ -899,16 +921,20 @@ class ReaderMTUI(App):
         self.notify("Settings saved")
 
 
+# Backwards-compatibility alias
+MangasurfTUI = MangasurfTUI
+
+
 def run_tui():
     from .logs import setup_logging
     setup_logging()
     if not TEXTUAL_AVAILABLE:
         print("The full-screen TUI needs Textual, which is not installed.\n"
-              "    pip install textual          (or: pip install readerm[tui])\n"
+              "    pip install textual          (or: pip install mangasurf[tui])\n"
               "\nThe interactive menu needs nothing extra:\n"
-              "    readerm menu")
+              "    mangasurf menu")
         return 1
-    ReaderMTUI().run()
+    MangasurfTUI().run()
     return 0
 
 

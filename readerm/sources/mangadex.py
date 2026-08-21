@@ -109,7 +109,7 @@ class MangaDexSource(Source):
         from .. import __version__
         h["User-Agent"] = (
             f"ReaderM/{__version__} "
-            "(+https://github.com/Compromisee/MDL)"
+            "(+https://github.com/Compromisee/mangasurf)"
         )
         return h
 
@@ -293,11 +293,13 @@ class MangaDexSource(Source):
 
     def search(self, query: str, limit: int = 32, sort: str = "Best Match",
                status=None, content_rating=None, year=None,
-               included_tags=None, genre=None, **_):
+               included_tags=None, genre=None, page: int = 1, **_):
         order_key, order_dir = self._SORTS.get(sort, self._SORTS["Best Match"])
+        limit_val = max(1, min(100, limit))
+        page_val = max(1, int(page or _.get("page", 1) or 1))
         params = [
-            ("limit", max(1, min(100, limit))),
-            ("offset", 0),
+            ("limit", limit_val),
+            ("offset", max(0, (page_val - 1) * limit_val)),
             ("includes[]", "cover_art"),
             ("includes[]", "author"),
             ("includes[]", "artist"),

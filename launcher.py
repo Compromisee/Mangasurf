@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Unified entry point for the packaged executable.
 
-    ReaderM.exe                 -> the launcher window (pick an interface)
-    ReaderM.exe gui             -> desktop app
-    ReaderM.exe menu            -> interactive terminal menu
-    ReaderM.exe tui             -> full-screen terminal UI
-    ReaderM.exe server          -> LAN server for your phone
-    ReaderM.exe opds            -> OPDS catalog for Readest etc.
-    ReaderM.exe server --gui    -> ...with its control window
-    ReaderM.exe <url> [...]     -> CLI download
-    ReaderM.exe search "query"  -> CLI search
-    ReaderM.exe --help          -> CLI help
+    Mangasurf.exe                 -> the launcher window (pick an interface)
+    Mangasurf.exe gui             -> desktop app
+    Mangasurf.exe menu            -> interactive terminal menu
+    Mangasurf.exe tui             -> full-screen terminal UI
+    Mangasurf.exe server          -> LAN server for your phone
+    Mangasurf.exe opds            -> OPDS catalog for Readest etc.
+    Mangasurf.exe server --gui    -> ...with its control window
+    Mangasurf.exe <url> [...]     -> CLI download
+    Mangasurf.exe search "query"  -> CLI search
+    Mangasurf.exe --help          -> CLI help
 
 Double-clicking opens the **launcher**, not the desktop app directly. The
 exe is five programs in one, and a double-click previously committed you to
@@ -18,7 +18,7 @@ the GUI with no way to reach the TUI, the menu or the phone server short of
 opening a terminal and knowing the subcommand. The launcher makes those
 visible, and reaching the desktop app is one click.
 
-``ReaderM.exe gui`` still goes straight there, so an existing shortcut
+``Mangasurf.exe gui`` still goes straight there, so an existing shortcut
 keeps its behaviour.
 """
 

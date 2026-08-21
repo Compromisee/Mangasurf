@@ -58,11 +58,11 @@ COVER_NAMES = ("cover.jpg", "cover.jpeg", "cover.png", "cover.webp",
 #: "[Group]", "(2024)", "{v2}" -- anywhere in the name.
 _BRACKETED = re.compile(r"[\[\(\{][^\]\)\}]*[\]\)\}]")
 
-#: ReaderM's own suffixes, and the usual third-party equivalents.
+#: Mangasurf's own suffixes, and the usual third-party equivalents.
 #: Handles "Chapter 5", "Chapters 001-050", "Ch. 3-9", "c045", "#12".
 _CHAPTER_TAIL = re.compile(
     r"""[\s._-]*                       # separator before the marker
-        (?:-\s*)?                      # ReaderM writes " - Chapters ..."
+        (?:-\s*)?                      # Mangasurf writes " - Chapters ..."
         (?:chapters?|chapts?|chaps?|chs|ch|cap(?:itulo)?s?|
            episodes?|eps?|c|e|\#)      # longest spellings first, or "ch"
                                        # would match inside "chs" and leave
@@ -153,10 +153,39 @@ def _archives_in(directory):
 
 def existing_cover(directory):
     """Path of a cover already in this folder, or ``None``."""
+    if not directory or not os.path.isdir(directory):
+        return None
     for name in COVER_NAMES:
         path = os.path.join(directory, name)
         if os.path.isfile(path) and os.path.getsize(path) > 0:
             return path
+
+    # Check for any direct image file
+    try:
+        imgs = images_in(directory)
+        if imgs:
+            return os.path.join(directory, imgs[0])
+    except Exception:
+        pass
+
+    # Extract first image from first .cbz/.zip archive if available
+    try:
+        archives = _archives_in(directory)
+        if archives:
+            import zipfile
+            first_arc = os.path.join(directory, archives[0])
+            if zipfile.is_zipfile(first_arc):
+                with zipfile.ZipFile(first_arc, "r") as z:
+                    names = [n for n in z.namelist() if any(n.lower().endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".avif")) and not n.startswith("__MACOSX")]
+                    names.sort(key=_natural_key)
+                    if names:
+                        target_cover = os.path.join(directory, "cover.jpg")
+                        with open(target_cover, "wb") as out_f:
+                            out_f.write(z.read(names[0]))
+                        return target_cover
+    except Exception:
+        pass
+
     return None
 
 
@@ -352,6 +381,92 @@ def save_cover(url, directory, source_id=None, referer=None,
     if not ok:
         return None
     return destination
+
+
+def fetch_cover_bytes(url, source_id=None, referer=None, timeout=10):
+    """Fetch raw cover image bytes with appropriate headers/referers."""
+    if not url:
+        return None
+    from .sources import get_source, source_for_url
+    source = None
+    try:
+        source = get_source(source_id) if source_id else source_for_url(url)
+    except Exception:
+        try:
+            source = source_for_url(url)
+        except Exception:
+            source = None
+    if source is None:
+        from .sources import get_source as _default
+        source = _default()
+
+    try:
+        headers = {"Referer": referer} if referer else None
+        response = source.session.get(url, headers=headers, timeout=timeout)
+        if response.status_code == 200 and response.content:
+            return response.content
+    except Exception as e:
+        logger.debug("fetch_cover_bytes failed for %s: %s", url, e)
+    finally:
+        try:
+            source.close()
+        except Exception:
+            pass
+    return None
+
+
+def render_terminal_cover(source_or_bytes, width=28, max_height=18, source_id=None, referer=None):
+    """Render a manga cover as 24-bit TrueColor ANSI half-block artwork.
+
+    Each character cell renders two vertical pixels using the Unicode half block character '▀'.
+    Supports image bytes, local file paths, or remote URLs.
+    """
+    if not source_or_bytes:
+        return ""
+    try:
+        import io
+        from PIL import Image
+
+        blob = None
+        if isinstance(source_or_bytes, (bytes, bytearray)):
+            blob = bytes(source_or_bytes)
+        elif isinstance(source_or_bytes, str):
+            if source_or_bytes.startswith(("http://", "https://")):
+                blob = fetch_cover_bytes(source_or_bytes, source_id=source_id, referer=referer)
+                if not blob:
+                    return ""
+            elif os.path.isfile(source_or_bytes):
+                with open(source_or_bytes, "rb") as f:
+                    blob = f.read()
+
+        if not blob:
+            return ""
+
+        img = Image.open(io.BytesIO(blob))
+        img = img.convert("RGB")
+        w, h = img.size
+        if w == 0 or h == 0:
+            return ""
+
+        calc_height = int((h / w) * width * 0.5)
+        calc_height = min(calc_height, max_height)
+        calc_height = max(calc_height, 4)
+        img = img.resize((width, calc_height * 2), Image.Resampling.LANCZOS)
+
+        lines = []
+        pixels = img.load()
+        for y in range(0, calc_height * 2, 2):
+            line = []
+            for x in range(width):
+                r1, g1, b1 = pixels[x, y]
+                r2, g2, b2 = pixels[x, y + 1] if y + 1 < calc_height * 2 else (0, 0, 0)
+                line.append(f"\033[38;2;{r1};{g1};{b1}m\033[48;2;{r2};{g2};{b2}m▀")
+            line.append("\033[0m")
+            lines.append("".join(line))
+        return "\n".join(lines)
+    except Exception as e:
+        logger.debug("render_terminal_cover failed: %s", e)
+        return ""
 
 # ------------------------------------------------------------ auto-pick
 #

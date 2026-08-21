@@ -162,11 +162,15 @@ class ManhwaReadSource(Source):
                 break
         return results
 
-    def search(self, query: str, limit: int = 32, genre=None, **_):
+    def search(self, query: str, limit: int = 32, genre=None, page: int = 1, **_):
         query = (query or "").strip()
         if not query:
-            return self.browse(genre=genre, limit=limit)
-        url = f"{SITE}/?s={quote(query)}&post_type=wp-manga"
+            return self.browse(genre=genre, limit=limit, page=page)
+        page_val = max(1, int(page or _.get("page", 1) or 1))
+        if page_val > 1:
+            url = f"{SITE}/page/{page_val}/?s={quote(query)}&post_type=wp-manga"
+        else:
+            url = f"{SITE}/?s={quote(query)}&post_type=wp-manga"
         try:
             response = self.fetch(url)
         except ScrapeError as e:

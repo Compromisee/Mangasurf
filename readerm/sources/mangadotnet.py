@@ -25,6 +25,7 @@ class MangaDotNetSource(Source):
     name = "MangaDotNet"
     base_url = SITE
     domains = ("mangadot.net", "www.mangadot.net")
+    needs_flaresolverr = True
 
     supports_search = True
     supports_browse = True
@@ -67,15 +68,16 @@ class MangaDotNetSource(Source):
     def genres(self) -> list:
         return [{"id": name.lower(), "name": name} for name in self.GENRES]
 
-    def search(self, query: str, limit: int = 32, **_) -> list:
+    def search(self, query: str, limit: int = 32, page: int = 1, **_) -> list:
         query_str = (query or "").strip()
         if not query_str:
             return []
 
+        page_val = max(1, int(page or _.get("page", 1) or 1))
         url = f"{API_BASE}/search"
         results = []
         try:
-            data = self.fetch_json(url, params={"q": query_str, "per_page": max(limit, 50)})
+            data = self.fetch_json(url, params={"q": query_str, "per_page": max(limit, 50), "page": page_val})
             parsed = self._parse_search_response(data)
             results = [
                 self._result(

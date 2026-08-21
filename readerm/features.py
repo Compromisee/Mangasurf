@@ -742,7 +742,7 @@ def export_library(path, fmt="json"):
                     entry.get("directory", ""), entry.get("last_download", ""),
                 ])
     elif fmt in ("md", "markdown"):
-        lines = ["# ReaderM library", "",
+        lines = ["# Mangasurf library", "",
                  "| Title | Source | Chapters | Last download |",
                  "|---|---|---|---|"]
         for entry in sorted(entries, key=lambda e: (e.get("title") or "").lower()):

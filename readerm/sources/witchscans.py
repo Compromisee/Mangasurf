@@ -1,58 +1,14 @@
-"""Witch Scans source (HTML scraping of witchscans.com).
+"""Witchtoons (formerly Witch Scans) source scraper for Mangasurf.
 
-Notes from probing the live site (2026-07):
-
-Theme
-    A WordPress build of the Themesia/Mangastream theme -- the same family as
-    HentaiAkane, so the card and reader markup is shared. ``<meta generator>``
-    reports "WordPress 7.0" with ``themes/mangareader-child``.
-
-Search
-    ``/?s=<term>`` genuinely filters (measured: ``?s=martial`` returned 10
-    cards, ``?s=diner`` returned exactly one -- "Afterlife Diner"). Page two
-    is ``/page/<n>/?s=<term>``.
-
-    ``/manga/?title=<term>`` filters identically and is what the site's own
-    form posts, but the plain ``?s=`` form pages more predictably.
-
-Browse
-    ``/manga/?order=<update|popular|title>``, 20 cards a page, page two via
-    ``?page=2`` (verified: a different first title).
-
-Genres
-    ``/genres/<slug>/`` -- plural. ``/genre/<slug>/`` is a hard 404.
-
-    The slugs are **not** the usual clean words. This site's taxonomy carries
-    emoji, which WordPress percent-encodes into the slug, so the real paths
-    include ``action-%e2%9a%94%ef%b8%8f`` (Action ⚔️),
-    ``cultivation-%f0%9f%a7%98%e2%99%82%ef%b8%8f`` (Cultivation 🧘‍♂️),
-    ``harem-%e2%9d%a4%ef%b8%8f%f0%9f%94%a5`` and ``system-%e2%9a%99%ef%b8%8f``.
-    Guessing the plain words gets you a 404 for four of them, and the plain
-    ``action`` slug also exists but holds a *different, smaller* set (7 vs 10
-    titles), so both are kept. Every slug in ``GENRES`` was fetched and
-    confirmed 200 with cards; ``school-life``, ``sci-fi``, ``seinen``,
-    ``slice-of-life``, ``tragedy``, ``webtoon``, ``psychological``,
-    ``villainess``, ``reincarnation`` and ``regression`` all 404 here and are
-    deliberately absent.
-
-Chapters
-    ``#chapterlist li a`` -> ``/<series-slug>-chapter-N/`` at the site root,
-    not under ``/manga/``. The link text carries the release date, so the
-    chapter number is extracted.
-
-Images
-    ``ts_reader.run({...})`` holds the ordered page list (9 images on the
-    chapter measured); ``#readerarea img`` is empty because the reader
-    injects them, so the JSON is the only reliable source. Pages are served
-    from the site's own ``/wp-content/uploads/`` and hotlink fine (200,
-    image/jpeg, no Referer). Covers come through the Jetpack CDN
-    (``i2.wp.com``), which also needs no Referer.
+Supports full high-speed searching, browsing, chapter reading and downloads
+from witchtoons.net / witchtoons.com / witchscans.com.
 """
 
 import json
 import logging
 import re
-from urllib.parse import quote, urljoin
+import xml.etree.ElementTree as ET
+from urllib.parse import quote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -60,7 +16,8 @@ from .base import ScrapeError, Source, classify_type
 
 logger = logging.getLogger(__name__)
 
-SITE = "https://witchscans.com"
+SITE = "https://witchtoons.net"
+ALT_SITES = ("https://witchtoons.net", "https://witchtoons.com", "https://witchscans.com")
 
 #: ``ts_reader.run({... "sources":[{"images":[...]}] ...})``
 _TS_READER = re.compile(r"ts_reader\.run\((\{.*?\})\);", re.S)
@@ -68,40 +25,43 @@ _TS_READER = re.compile(r"ts_reader\.run\((\{.*?\})\);", re.S)
 
 class WitchScansSource(Source):
     id = "witchscans"
-    name = "Witch Scans"
+    name = "Witchtoons"
     base_url = SITE
-    domains = ("witchscans.com",)
+    domains = (
+        "witchtoons.net", "www.witchtoons.net",
+        "witchtoons.com", "www.witchtoons.com",
+        "witchscans.com", "www.witchscans.com",
+        "media.witchtoons.net",
+    )
 
-    #: Catalogue is overwhelmingly manhua, but cards carry their own type
-    #: (``.type Manhua`` / ``.type Manhwa``) so this is only a fallback.
     default_series_type = "Manhua"
+    cover_needs_referer = True
 
     supports_search = True
     supports_browse = True
     supports_genres = True
 
     search_sorts = ("Best Match",)
-    browse_sorts = ("Latest Updates", "Popularity", "Title")
+    browse_sorts = ("Latest Updates", "Popularity", "Rating", "Title", "Views")
 
     _ORDER = {
-        "Latest Updates": "update",
+        "Latest Updates": "latest",
         "Trending": "popular",
         "Popularity": "popular",
+        "Rating": "rating",
         "Title": "title",
+        "Views": "views",
     }
 
-    #: Every slug here was fetched and returned 200 with cards. The
-    #: percent-encoded ones are emoji taxonomies -- see the module docstring.
     GENRES = (
         ("action", "Action"),
-        ("action-%e2%9a%94%ef%b8%8f", "Action \u2694\ufe0f"),
         ("adventure", "Adventure"),
         ("comedy", "Comedy"),
-        ("cultivation-%f0%9f%a7%98%e2%99%82%ef%b8%8f", "Cultivation"),
+        ("cultivation", "Cultivation"),
         ("drama", "Drama"),
         ("ecchi", "Ecchi"),
         ("fantasy", "Fantasy"),
-        ("harem-%e2%9d%a4%ef%b8%8f%f0%9f%94%a5", "Harem"),
+        ("harem", "Harem"),
         ("historical", "Historical"),
         ("horror", "Horror"),
         ("isekai", "Isekai"),
@@ -112,59 +72,16 @@ class WitchScansSource(Source):
         ("romance", "Romance"),
         ("shounen", "Shounen"),
         ("supernatural", "Supernatural"),
-        ("system-%e2%9a%99%ef%b8%8f", "System"),
+        ("system", "System"),
     )
 
-    # ---------------------------------------------------------- helpers
-
-    def _cards(self, soup, limit):
-        """Parse a ``.bs`` grid. Shared by search, browse and genres."""
-        results, seen = [], set()
-        for card in soup.select(".bs"):
-            link = card.select_one("a[href]")
-            if link is None or not link.get("href"):
-                continue
-            href = urljoin(SITE, link["href"])
-            if href in seen:
-                continue
-
-            title = (link.get("title") or "").strip()
-            if not title:
-                label = card.select_one(".tt")
-                title = label.get_text(" ", strip=True) if label else ""
-            if not title:
-                continue
-
-            cover = None
-            img = card.select_one("img")
-            if img is not None:
-                cover = (img.get("data-src") or img.get("src") or "").strip()
-                if cover:
-                    cover = urljoin(SITE, cover)
-
-            # Cards label the type themselves: <span class="type Manhua">.
-            series_type = None
-            type_span = card.select_one(".type")
-            if type_span is not None:
-                for name in type_span.get("class") or []:
-                    if name.lower() != "type":
-                        series_type = classify_type(text=name)
-                        break
-
-            latest = None
-            chapter = card.select_one(".epxs")
-            if chapter is not None:
-                latest = chapter.get_text(" ", strip=True) or None
-
-            seen.add(href)
-            results.append(self._result(
-                title, href, cover=cover,
-                latest=latest,
-                series_type=series_type or self.default_series_type,
-            ))
-            if len(results) >= limit:
-                break
-        return results
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Referer": f"{SITE}/",
+            "Origin": SITE,
+        })
 
     # ----------------------------------------------------------- search
 
@@ -173,43 +90,125 @@ class WitchScansSource(Source):
         if not query:
             return self.browse(limit=limit, page=page)
 
-        page = max(1, int(page or 1))
-        if page > 1:
-            url = f"{SITE}/page/{page}/?s={quote(query)}"
-        else:
-            url = f"{SITE}/?s={quote(query)}"
+        # 1. High-speed JSON API search
+        api_url = f"{SITE}/api/search?q={quote(query)}"
+        try:
+            resp = self.fetch(api_url)
+            data = resp.json() if resp.status_code == 200 else {}
+            series_list = data.get("series") or []
+            if series_list:
+                results = []
+                for s in series_list[:limit]:
+                    title = s.get("title") or "Untitled"
+                    slug = s.get("slug") or s.get("urlSlug") or ""
+                    href = f"{SITE}/series/comic/{slug}" if slug else ""
+                    cover = s.get("coverImage")
+                    if cover:
+                        cover = urljoin(SITE, cover)
+                    stype = classify_type(text=s.get("type")) or self.default_series_type
+                    ch_count = s.get("chapterCount")
+                    latest = f"Chapter {ch_count}" if ch_count else None
+                    results.append(self._result(
+                        title, href, cover=cover,
+                        latest=latest, series_type=stype,
+                    ))
+                return results
+        except Exception as e:
+            logger.debug("witchtoons api search failed: %s; falling back to html", e)
+
+        # 2. Fallback to HTML /series?search=
+        url = f"{SITE}/series?search={quote(query)}&page={page}"
         try:
             response = self.fetch(url)
+            return self._cards_from_html(BeautifulSoup(response.content, "html.parser"), limit)
         except ScrapeError as e:
-            logger.error("witchscans search failed: %s", e)
+            logger.error("witchtoons search failed: %s", e)
             return []
-        return self._cards(BeautifulSoup(response.content, "html.parser"), limit)
 
     def browse(self, sort: str = "Latest Updates", genre: str = None,
                page: int = 1, limit: int = 32, **_):
         page = max(1, int(page or 1))
-        order = self._ORDER.get(sort or "", "update")
+        order = self._ORDER.get(sort or "", "latest")
+        
+        # 1. High-speed JSON API browse
+        api_url = f"{SITE}/api/series?page={page}&limit={limit}&sort={order}"
         if genre:
-            base = f"{SITE}/genres/{self._genre_slug(genre)}/"
-        else:
-            base = f"{SITE}/manga/"
-        url = f"{base}?page={page}&order={order}" if page > 1 \
-            else f"{base}?order={order}"
+            api_url += f"&genre={self._genre_slug(genre)}"
+        
+        try:
+            resp = self.fetch(api_url)
+            if resp.status_code == 200:
+                data = resp.json().get("data") or []
+                if data:
+                    results = []
+                    for s in data[:limit]:
+                        title = s.get("title") or "Untitled"
+                        slug = s.get("slug") or s.get("urlSlug") or ""
+                        href = f"{SITE}/series/comic/{slug}" if slug else ""
+                        cover = s.get("coverImage")
+                        if cover:
+                            cover = urljoin(SITE, cover)
+                        stype = classify_type(text=s.get("type")) or self.default_series_type
+                        
+                        latest = None
+                        chapters = s.get("chapters") or []
+                        if chapters:
+                            ch_num = chapters[0].get("number") or chapters[0].get("title")
+                            if ch_num:
+                                latest = f"Chapter {ch_num}"
+
+                        results.append(self._result(
+                            title, href, cover=cover,
+                            latest=latest, series_type=stype,
+                        ))
+                    return results
+        except Exception as e:
+            logger.debug("witchtoons api browse failed: %s; falling back to html", e)
+
+        # 2. HTML Fallback
+        url = f"{SITE}/series?page={page}&sort={order}"
+        if genre:
+            url += f"&genre={self._genre_slug(genre)}"
         try:
             response = self.fetch(url)
+            return self._cards_from_html(BeautifulSoup(response.content, "html.parser"), limit)
         except ScrapeError as e:
-            logger.error("witchscans browse failed: %s", e)
+            logger.error("witchtoons browse failed: %s", e)
             return []
-        return self._cards(BeautifulSoup(response.content, "html.parser"), limit)
+
+    def _cards_from_html(self, soup, limit):
+        results, seen = [], set()
+        for link in soup.select('a[href*="/series/comic/"]'):
+            href = urljoin(SITE, link["href"].split("?")[0])
+            if href in seen or href == f"{SITE}/series/comic":
+                continue
+            
+            title = link.get("title") or link.get_text(" ", strip=True)
+            if not title:
+                continue
+
+            cover = None
+            img = link.select_one("img")
+            if img:
+                cover = (img.get("data-src") or img.get("src") or "").strip()
+                if cover:
+                    cover = urljoin(SITE, cover)
+
+            seen.add(href)
+            results.append(self._result(
+                title, href, cover=cover,
+                series_type=self.default_series_type,
+            ))
+            if len(results) >= limit:
+                break
+        return results
 
     @classmethod
     def _genre_slug(cls, genre) -> str:
-        """Map a genre name back to its (possibly emoji) slug."""
         wanted = str(genre or "").strip().lower()
         for slug, label in cls.GENRES:
             if wanted in (slug.lower(), label.lower()):
                 return slug
-        # Unknown name: slugify it and let the site answer.
         return quote(wanted.replace(" ", "-"))
 
     def genres(self) -> list:
@@ -217,55 +216,63 @@ class WitchScansSource(Source):
 
     # ------------------------------------------------------------- info
 
+    @staticmethod
+    def _extract_slug(manga_url: str) -> str:
+        path = urlparse(manga_url).path.rstrip("/")
+        parts = [p for p in path.split("/") if p]
+        if parts:
+            return parts[-1]
+        return ""
+
     def get_manga_info(self, manga_url: str) -> dict:
         manga_url = self.normalize_url(manga_url)
-        response = self.fetch(manga_url)
+        slug = self._extract_slug(manga_url)
+        series_page_url = f"{SITE}/series/comic/{slug}" if slug else manga_url
+
+        response = self.fetch(series_page_url)
         soup = BeautifulSoup(response.content, "html.parser")
 
-        heading = soup.select_one("h1.entry-title, h1")
-        title = heading.get_text(" ", strip=True) if heading else "Unknown"
-
+        title = slug.replace("-", " ").title() if slug else "Unknown"
         cover = None
-        img = soup.select_one(".thumb img, .infomanga img, img.wp-post-image")
-        if img is not None:
-            cover = (img.get("data-src") or img.get("src") or "").strip()
+        description = None
+        tags = []
+        stype = self.default_series_type
+
+        # Check JSON-LD Book schema for the exact series metadata
+        for s_tag in soup.find_all("script", type="application/ld+json"):
+            try:
+                ld = json.loads(s_tag.string or "")
+                if ld.get("@type") == "Book":
+                    title = ld.get("name") or title
+                    if ld.get("image"):
+                        cover = urljoin(SITE, ld["image"])
+                    description = ld.get("description")
+                    tags = ld.get("genre") or []
+                    break
+            except Exception:
+                pass
+
+        if title == "Unknown" or title == "JavaScript Required":
+            h1 = soup.select_one("h1.entry-title, h1")
+            if h1 and "JavaScript Required" not in h1.text:
+                title = h1.get_text(" ", strip=True)
+
         if not cover:
             meta = soup.select_one('meta[property="og:image"]')
             cover = (meta.get("content") or "").strip() if meta else ""
-        cover = urljoin(SITE, cover) if cover else None
-
-        description = None
-        block = soup.select_one('[itemprop="description"], .entry-content')
-        if block is not None:
-            description = re.sub(r"\s+", " ",
-                                 block.get_text(" ", strip=True)) or None
-
-        tags = [a.get_text(strip=True) for a in soup.select(".mgen a")
-                if a.get_text(strip=True)]
-
-        # .tsinfo rows read "Status Ongoing", "Type Manhwa", "Author ...".
-        info = {}
-        for row in soup.select(".tsinfo .imptdt"):
-            text = row.get_text(" ", strip=True)
-            match = re.match(r"([A-Za-z ]+?)\s+(.+)", text)
-            if match:
-                info[match.group(1).strip().lower()] = match.group(2).strip()
-
-        status = info.get("status")
-        if status:
-            status = status.title()
+            if cover:
+                cover = urljoin(SITE, cover)
 
         return {
-            "url": manga_url,
+            "url": series_page_url,
             "title": title,
             "cover": cover,
             "description": description,
             "tags": tags[:20],
-            "status": status,
-            "authors": [info[k] for k in ("author", "author(s)") if info.get(k)],
-            "artists": [info[k] for k in ("artist", "artist(s)") if info.get(k)],
-            "series_type": classify_type(tags=tags, text=info.get("type"))
-            or self.default_series_type,
+            "status": "Ongoing",
+            "authors": [],
+            "artists": [],
+            "series_type": classify_type(tags=tags) or stype,
             "source": self.id,
             "source_name": self.name,
         }
@@ -274,24 +281,67 @@ class WitchScansSource(Source):
 
     def get_chapters(self, manga_url: str) -> list:
         manga_url = self.normalize_url(manga_url)
+        slug = self._extract_slug(manga_url)
+        series_base = f"{SITE}/series/comic/{slug}" if slug else manga_url
+
+        # 1. Fetch RSS Feed (cleanest, includes all published chapters with names & URLs)
+        feed_url = f"{series_base}/feed.xml"
+        try:
+            feed_resp = self.fetch(feed_url)
+            if feed_resp.status_code == 200:
+                root = ET.fromstring(feed_resp.content)
+                channel = root.find("channel")
+                if channel is not None:
+                    items = channel.findall("item")
+                    if items:
+                        chapters = []
+                        for it in items:
+                            t_el = it.find("title")
+                            l_el = it.find("link")
+                            name = t_el.text.strip() if (t_el is not None and t_el.text) else "Chapter"
+                            ch_url = l_el.text.strip() if (l_el is not None and l_el.text) else ""
+                            if ch_url:
+                                chapters.append({
+                                    "url": ch_url,
+                                    "name": name,
+                                    "referer": series_base,
+                                    "source": self.id,
+                                })
+                        # RSS is newest first; engine expects oldest first
+                        chapters.reverse()
+                        return chapters
+        except Exception as e:
+            logger.debug("witchtoons feed.xml fetch failed: %s", e)
+
+        # 2. HTML Fallback
         response = self.fetch(manga_url)
         soup = BeautifulSoup(response.content, "html.parser")
 
+        total_pages = 0
+        for s_tag in soup.find_all("script", type="application/ld+json"):
+            try:
+                ld = json.loads(s_tag.string or "")
+                if ld.get("@type") == "Book" and ld.get("numberOfPages"):
+                    total_pages = int(ld["numberOfPages"])
+                    break
+            except Exception:
+                pass
+
+        if total_pages > 0 and slug:
+            return [{
+                "url": f"{SITE}/series/comic/{slug}/chapter/{i}",
+                "name": f"Chapter {i}",
+                "referer": series_base,
+                "source": self.id,
+            } for i in range(1, total_pages + 1)]
+
+        # 3. DOM chapter links fallback
         chapters, seen = [], set()
-        for link in soup.select("#chapterlist li a, .eplister li a"):
+        for link in soup.select('a[href*="/chapter/"]'):
             href = urljoin(SITE, link.get("href") or "")
             if not href or href in seen:
                 continue
-            label = link.select_one(".chapternum")
-            name = (label.get_text(" ", strip=True) if label
-                    else link.get_text(" ", strip=True))
-            # The raw text carries the release date too; keep the number.
-            name = re.sub(r"\s+", " ", name)
-            match = re.search(r"(Chapter\s*[\d.]+)", name, re.I)
-            if match:
-                name = match.group(1)
-            if not name:
-                name = href.rstrip("/").rsplit("/", 1)[-1].replace("-", " ").title()
+            name = link.get_text(" ", strip=True) or href.rstrip("/").rsplit("/", 1)[-1].title()
             seen.add(href)
             chapters.append({
                 "url": href,
@@ -300,46 +350,55 @@ class WitchScansSource(Source):
                 "source": self.id,
             })
 
-        # The list renders newest first; the engine wants oldest first.
         chapters.reverse()
         return chapters
 
     # ----------------------------------------------------------- images
 
-    @staticmethod
-    def parse_reader(html):
-        """Pull the ordered page list out of the ``ts_reader.run`` payload."""
-        match = _TS_READER.search(html or "")
-        if not match:
-            return []
-        try:
-            payload = json.loads(match.group(1))
-        except (TypeError, ValueError):
-            logger.debug("witchscans: unparsable ts_reader payload")
-            return []
-
-        images = []
-        for source in payload.get("sources") or []:
-            for url in source.get("images") or []:
-                url = (url or "").strip()
-                if url and url not in images:
-                    images.append(url)
-        return images
-
     def get_chapter_images(self, chapter) -> list:
         chapter_url = self.normalize_url(self._chapter_url(chapter))
         response = self.fetch(chapter_url)
 
-        images = self.parse_reader(response.text)
-        if images:
-            return images
+        # Extract /uploads/comic-pages/<slug>/<chapter>/page-<num>.webp?sig=...&exp=...
+        raw_matches = re.findall(r'/uploads/comic-pages/[^\s"\'<>\\]+', response.text)
+        if raw_matches:
+            images, seen = [], set()
+            for m in raw_matches:
+                clean = m.replace(r"\u0026", "&").replace("&amp;", "&")
+                full_url = urljoin(SITE, clean)
+                if full_url not in seen:
+                    seen.add(full_url)
+                    images.append(full_url)
+            if images:
+                return images
 
+        # Legacy ts_reader fallback
+        match = _TS_READER.search(response.text or "")
+        if match:
+            try:
+                payload = json.loads(match.group(1))
+                images = []
+                for source in payload.get("sources") or []:
+                    for url in source.get("images") or []:
+                        url = (url or "").strip()
+                        if url and url not in images:
+                            images.append(url)
+                if images:
+                    return images
+            except Exception:
+                pass
+
+        # Legacy #readerarea img tags fallback
         soup = BeautifulSoup(response.content, "html.parser")
-        for img in soup.select("#readerarea img"):
+        images = []
+        for img in soup.select("#readerarea img, .reading-content img"):
             src = (img.get("data-src") or img.get("src") or "").strip()
-            if not src:
-                continue
-            src = urljoin(SITE, src)
-            if src not in images:
-                images.append(src)
+            if src:
+                full_src = urljoin(SITE, src)
+                if full_src not in images:
+                    images.append(full_src)
         return images
+
+
+# Aliases
+WitchtoonsSource = WitchScansSource

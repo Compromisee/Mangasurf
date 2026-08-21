@@ -122,6 +122,21 @@ def entry_items(entry: dict) -> list:
 
     directory = entry.get("directory")
     if directory and os.path.isdir(directory):
+        # Scan for packaged archives (.cbz, .cbr, .epub, .pdf, .zip) inside the series directory
+        try:
+            for fname in sorted(os.listdir(directory)):
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in (".cbz", ".cbr", ".cb7", ".epub", ".pdf", ".zip"):
+                    fpath = os.path.join(directory, fname)
+                    if fpath not in seen and os.path.isfile(fpath):
+                        seen.add(fpath)
+                        info = describe(fpath)
+                        if info.get("readable"):
+                            info["label"] = os.path.splitext(fname)[0]
+                            items.append(info)
+        except OSError:
+            pass
+
         for folder in chapter_folders(directory):
             if folder in seen:
                 continue
@@ -135,19 +150,82 @@ def entry_items(entry: dict) -> list:
     return items
 
 
+def _resolve_entry_cover(entry: dict, items: list = None) -> str:
+    """Find a local cover image for an entry from its record, folder, or files."""
+    from .. import covers
+    cov = (entry.get("cover") or "").strip()
+    if cov and os.path.isfile(cov):
+        return os.path.abspath(cov)
+
+    directory = entry.get("directory")
+    if directory and os.path.isdir(directory):
+        found = covers.existing_cover(directory)
+        if found:
+            return found
+        try:
+            imgs = covers.images_in(directory)
+            if imgs:
+                return os.path.join(directory, imgs[0])
+        except Exception:
+            pass
+
+    for out in entry.get("outputs") or []:
+        if out and os.path.isfile(out):
+            out_dir = os.path.dirname(out)
+            found = covers.existing_cover(out_dir)
+            if found:
+                return found
+
+    for item in items or []:
+        if item.get("kind") == "folder" and os.path.isdir(item.get("path", "")):
+            imgs = pages_of(item["path"])
+            if imgs:
+                return imgs[0]
+
+    return cov
+
+
 def library_books() -> list:
     """The whole downloaded library, as reader-openable entries."""
+    try:
+        from ..config import load_settings
+        s = load_settings()
+        roots = ([s.get("output_dir")] if s.get("output_dir") else []) + (s.get("library_folders") or [])
+        if roots:
+            library.scan_library_folders(roots)
+    except Exception:
+        pass
+
     books = []
     for entry in library.load_library().values():
         items = entry_items(entry)
         if not items:
             continue
+        cover_path = _resolve_entry_cover(entry, items)
+        directory = entry.get("directory") or ""
+        desc = entry.get("description") or ""
+
+        # If description is missing, check manga.json in series directory
+        if not desc and directory and os.path.isdir(directory):
+            meta_path = os.path.join(directory, "manga.json")
+            if os.path.isfile(meta_path):
+                try:
+                    with open(meta_path, "r", encoding="utf-8") as fh:
+                        meta = json.load(fh)
+                        desc = meta.get("description") or meta.get("summary") or ""
+                except Exception:
+                    pass
+
         books.append({
             "title": entry.get("title") or "Untitled",
             "url": entry.get("url") or "",
             "source": entry.get("source") or "",
-            "cover": entry.get("cover") or "",
-            "directory": entry.get("directory") or "",
+            "source_name": entry.get("source_name") or entry.get("provider") or entry.get("source") or "",
+            "provider": entry.get("provider") or entry.get("source_name") or entry.get("source") or "",
+            "cover": cover_path,
+            "directory": directory,
+            "description": desc,
+            "color": entry.get("color") or "",
             "added": entry.get("added") or "",
             "last_download": entry.get("last_download") or "",
             "chapters": len(entry.get("chapters") or {}),

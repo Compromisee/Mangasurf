@@ -18,7 +18,7 @@ const isPDF = async file => {
 }
 
 const isCBZ = ({ name, type }) =>
-    type === 'application/vnd.comicbook+zip' || name.endsWith('.cbz')
+    type === 'application/vnd.comicbook+zip' || (name && (name.toLowerCase().endsWith('.cbz') || name.toLowerCase().endsWith('.cbr') || name.toLowerCase().endsWith('.zip')))
 
 const isFB2 = ({ name, type }) =>
     type === 'application/x-fictionbook+xml' || name.endsWith('.fb2')

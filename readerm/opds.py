@@ -37,12 +37,16 @@ once it holds more than a screenful.
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 import mimetypes
 import os
 import re
 import sys
 import time
 from xml.sax.saxutils import escape, quoteattr
+
+logger = logging.getLogger(__name__)
 
 # Allow running this file directly (python readerm/opds.py, or an IDE's
 # "Run file"). Without this the relative imports below have no parent
@@ -53,7 +57,7 @@ if __package__ in (None, ""):
     import readerm  # noqa: F401
     __package__ = "readerm"
 
-from . import library
+from . import library, paths
 
 #: Atom namespaces used in every feed.
 NS = ('xmlns="http://www.w3.org/2005/Atom" '
@@ -93,6 +97,43 @@ IMAGE_TYPES = {
 }
 
 DEFAULT_PORT = 8578
+
+OPDS_FOLDERS_FILE = os.path.join(paths.DIR, "opds_folders.json")
+
+DEFAULT_OPDS_FOLDERS = [
+    {"id": "all", "name": "All Downloads", "type": "special", "enabled": True, "filter": "all"},
+    {"id": "favorites", "name": "Favorites", "type": "shelf", "enabled": True, "filter": "shelf:Favorites"},
+    {"id": "recent", "name": "Recently Added", "type": "special", "enabled": True, "filter": "recent"},
+    {"id": "manhwa", "name": "Manhwa & Webtoons", "type": "shelf", "enabled": True, "filter": "shelf:Manhwa"},
+]
+
+
+def load_opds_folders():
+    """Load organized OPDS folders configuration."""
+    if not os.path.isfile(OPDS_FOLDERS_FILE):
+        return list(DEFAULT_OPDS_FOLDERS)
+    try:
+        with open(OPDS_FOLDERS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+    except Exception as e:
+        logger.warning("Could not read opds_folders.json: %s", e)
+    return list(DEFAULT_OPDS_FOLDERS)
+
+
+def save_opds_folders(folders):
+    """Save organized OPDS folders configuration."""
+    try:
+        os.makedirs(os.path.dirname(OPDS_FOLDERS_FILE), exist_ok=True)
+        with open(OPDS_FOLDERS_FILE + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(folders, f, indent=2)
+        os.replace(OPDS_FOLDERS_FILE + ".tmp", OPDS_FOLDERS_FILE)
+        return True
+    except Exception as e:
+        logger.error("Could not save opds_folders.json: %s", e)
+        return False
+
 
 #: Entries per page. Enough that a phone scrolls rather than paginates,
 #: small enough that a 2000-book library does not build one enormous XML
@@ -182,8 +223,8 @@ def feed(feed_id, title, entries, links, updated=None, extra=""):
         f"  {element('id', feed_id)}\n"
         f"  {element('title', title)}\n"
         f"  {element('updated', updated or _now_rfc3339())}\n"
-        "  <author><name>ReaderM</name>"
-        "<uri>https://github.com/Compromisee/ReaderM</uri></author>\n"
+        "  <author><name>Mangasurf</name>"
+        "<uri>https://github.com/Compromisee/mangasurf</uri></author>\n"
         f"{joined}\n{extra}\n{body}\n"
         "</feed>\n"
     )
@@ -197,15 +238,32 @@ def _entry_formats(entry):
 
     A library entry records what was *produced*; the file may since have
     been moved or deleted. Offering a link to a missing file gives the
-    reader a 404 mid-download, so they are filtered here.
+    reader a 404 mid-download, so they are filtered here. Also checks the
+    series directory for discovered .cbz/.epub/.pdf/.zip archives.
     """
     out = []
+    seen = set()
     for path in entry.get("outputs") or []:
         try:
-            if os.path.isfile(path) and os.path.getsize(path) > 0:
+            if path and path not in seen and os.path.isfile(path) and os.path.getsize(path) > 0:
+                seen.add(path)
                 out.append(path)
         except OSError:
             continue
+
+    # Auto-scan directory for newly produced or loose CBZ / EPUB / PDF / ZIP files
+    directory = entry.get("directory")
+    if directory and os.path.isdir(directory):
+        try:
+            for fname in sorted(os.listdir(directory)):
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in (".cbz", ".cbr", ".cb7", ".epub", ".pdf", ".zip"):
+                    fpath = os.path.join(directory, fname)
+                    if fpath not in seen and os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
+                        seen.add(fpath)
+                        out.append(fpath)
+        except OSError:
+            pass
     return out
 
 
@@ -237,6 +295,15 @@ def library_rows():
     Returns dicts, not raw library entries, so the feed builders and the
     tests share one shape.
     """
+    try:
+        from .config import load_settings
+        s = load_settings()
+        roots = ([s.get("output_dir")] if s.get("output_dir") else []) + (s.get("library_folders") or [])
+        if roots:
+            library.scan_library_folders(roots)
+    except Exception as e:
+        logger.debug("Failed auto-scanning library folders for OPDS: %s", e)
+
     rows = []
     for entry in library.load_library().values():
         formats = _entry_formats(entry)
@@ -247,13 +314,16 @@ def library_rows():
             "id": stable_id("series", entry.get("url") or title),
             "title": title,
             "url": entry.get("url") or "",
-            "source": entry.get("source") or "",
+            "source": entry.get("source_name") or entry.get("provider") or entry.get("source") or "",
+            "provider": entry.get("provider") or entry.get("source_name") or entry.get("source") or "",
             "directory": entry.get("directory") or "",
+            "description": entry.get("description") or "",
+            "authors": entry.get("authors") or [],
             "files": formats,
             "cover": _cover_for(entry),
             "chapters": len(entry.get("chapters", {}) or {}),
             "pages": sum(c.get("pages", 0)
-                         for c in (entry.get("chapters", {}) or {}).values()),
+                         for c in (entry.get("chapters", {}) or {}).values() if isinstance(c, dict)),
             "updated": _to_rfc3339(entry.get("last_download")
                                    or entry.get("added")),
             "added": _to_rfc3339(entry.get("added")),
@@ -331,7 +401,7 @@ def navigation_feed(base, rows):
             "  </entry>"
         )
     return feed(
-        stable_id("root", base), "ReaderM Library", entries,
+        stable_id("root", base), "Mangasurf Library", entries,
         [
             link("self", base + "/opds", NAV_TYPE),
             link("start", base + "/opds", NAV_TYPE),
@@ -436,7 +506,7 @@ def opensearch_document(base):
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<OpenSearchDescription '
         'xmlns="http://a9.com/-/spec/opensearch/1.1/">\n'
-        "  <ShortName>ReaderM</ShortName>\n"
+        "  <ShortName>Mangasurf</ShortName>\n"
         "  <Description>Search your downloaded library</Description>\n"
         "  <InputEncoding>UTF-8</InputEncoding>\n"
         f'  <Url type="{ACQ_TYPE}" '

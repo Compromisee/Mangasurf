@@ -42,10 +42,11 @@ if __package__ in (None, ""):
 try:
     from flask import Flask, Response, abort, request, send_file
 except ImportError:                                        # pragma: no cover
-    print("Flask is not installed. Run:\n\n    pip install flask\n"
-          "\nor install the server extra:\n\n    pip install -e \".[server]\"\n",
-          file=sys.stderr)
-    raise SystemExit(1)
+    Flask = None
+    Response = None
+    abort = None
+    request = None
+    send_file = None
 
 from . import logs as wclogs
 from . import opds
@@ -90,9 +91,26 @@ class OpdsLog:
             self._lines = []
 
 
+GLOBAL_OPDS_LOG = OpdsLog()
+
+
+def _get_flask():
+    global Flask, Response, abort, request, send_file
+    if Flask is None:
+        try:
+            from flask import Flask as _F, Response as _R, abort as _A, request as _Req, send_file as _S
+            Flask, Response, abort, request, send_file = _F, _R, _A, _Req, _S
+        except ImportError:
+            pass
+    return Flask
+
+
 def create_app(token=None, log=None):
     """Build the OPDS Flask app. Separate so tests can drive it."""
-    log = log if log is not None else OpdsLog()
+    _get_flask()
+    if Flask is None:
+        raise RuntimeError("Flask is required for the OPDS server. Run: pip install flask")
+    log = log if log is not None else GLOBAL_OPDS_LOG
     app = Flask(__name__)
     app.config["OPDS_TOKEN"] = token
     app.config["OPDS_LOG"] = log
@@ -130,7 +148,7 @@ def create_app(token=None, log=None):
                         "- bad or missing password")
         return Response(
             "Authentication required", 401,
-            {"WWW-Authenticate": 'Basic realm="ReaderM library"'})
+            {"WWW-Authenticate": 'Basic realm="Mangasurf library"'})
 
     def _client():
         return request.headers.get("X-Forwarded-For") or request.remote_addr
@@ -144,6 +162,17 @@ def create_app(token=None, log=None):
     @app.before_request
     def note_client():
         who = _client()
+        ua = request.headers.get("User-Agent", "")
+        try:
+            from .devices import tracker
+            tracker.record_request(
+                ip=who,
+                user_agent=ua,
+                service="opds",
+                endpoint=request.path,
+            )
+        except Exception:
+            pass
         if who and who not in _seen:
             _seen.add(who)
             log.add("info", f"Reader connected: {who}")
@@ -225,6 +254,50 @@ def create_app(token=None, log=None):
         rows = opds.group_by_source(opds.library_rows()).get(name, [])
         return xml(opds.acquisition_feed(
             base_url(), rows, name, f"/opds/source/{name}", _page(),
+            facets=False), opds.ACQ_TYPE)
+
+    @app.get("/opds/folders")
+    def organized_folders():
+        if not authorised():
+            return challenge()
+        folders = [f for f in opds.load_opds_folders() if f.get("enabled", True)]
+        entries = []
+        all_rows = opds.library_rows()
+        for f in folders:
+            fid = f.get("id")
+            name = f.get("name", fid)
+            path = f"/opds/folder/{fid}"
+            entries.append(
+                "  <entry>\n"
+                f"    {opds.element('title', name)}\n"
+                f"    {opds.element('id', opds.stable_id('folder', fid))}\n"
+                f"    {opds.element('updated', opds._now_rfc3339())}\n"
+                f"    {opds.element('content', f'Organized section: {name}', type='text')}\n"
+                f"  {opds.link('subsection', base_url() + path, opds.ACQ_TYPE)}\n"
+                "  </entry>")
+        return xml(opds.feed(
+            opds.stable_id("folders"), "Organised Shelves & Folders", entries,
+            [opds.link("self", base_url() + "/opds/folders", opds.NAV_TYPE),
+             opds.link("start", base_url() + "/opds", opds.NAV_TYPE),
+             opds.link("up", base_url() + "/opds", opds.NAV_TYPE)]),
+            opds.NAV_TYPE)
+
+    @app.get("/opds/folder/<folder_id>")
+    def by_folder(folder_id):
+        if not authorised():
+            return challenge()
+        folders = {f.get("id"): f for f in opds.load_opds_folders()}
+        folder = folders.get(folder_id, {"name": folder_id, "filter": "all"})
+        name = folder.get("name", folder_id)
+        rows = opds.library_rows()
+        filt = str(folder.get("filter", "all")).lower()
+        if filt.startswith("shelf:"):
+            target_shelf = filt[6:].strip()
+            rows = [r for r in rows if target_shelf in str(r.get("shelves") or r.get("shelf") or "").lower()]
+        elif filt == "recent":
+            pass  # already newest first
+        return xml(opds.acquisition_feed(
+            base_url(), rows, name, f"/opds/folder/{folder_id}", _page(),
             facets=False), opds.ACQ_TYPE)
 
     @app.get("/opds/letters")
@@ -316,6 +389,18 @@ def create_app(token=None, log=None):
                 "auth": bool(token),
                 "titles": len(opds.library_rows())}
 
+    @app.get("/opds/_devices")
+    def opds_devices():
+        if not authorised():
+            return challenge()
+        from .devices import tracker
+        return {
+            "ok": True,
+            "devices": tracker.get_devices(service="opds"),
+            "active_count": tracker.active_count(service="opds"),
+            "total_count": tracker.total_count(service="opds"),
+        }
+
     @app.get("/opds/_log")
     def read_log():
         if not authorised():
@@ -333,7 +418,7 @@ def create_app(token=None, log=None):
 
 _LANDING = """<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReaderM library</title><style>
+<title>Mangasurf library</title><style>
 body{background:#0b0a12;color:#f2f0ff;font:15px/1.6 system-ui,sans-serif;
 display:grid;place-items:center;min-height:100vh;margin:0;text-align:center}
 div{max-width:44ch;padding:26px}
@@ -342,7 +427,7 @@ word-break:break-all;display:inline-block;margin-top:6px}
 h1{font-size:22px;margin-bottom:6px}
 p{color:#a8a3c4}
 </style></head><body><div>
-<h1>ReaderM library</h1>
+<h1>Mangasurf library</h1>
 <p>%(count)s titles, served as an OPDS catalog.</p>
 <p>Add this URL in Readest, Panels, KyBook or any OPDS reader:</p>
 <code>%(url)s</code>
@@ -362,7 +447,8 @@ def build_url(host, port, token=None):
 
 
 def serve(host="0.0.0.0", port=None, token=None, no_auth=False,
-          verbose=None, log=None, on_ready=None, debug=False):
+          verbose=None, log=None, on_ready=None, debug=False,
+          server_instance_holder=None):
     """Run the OPDS server. Shared by the CLI and the control window."""
     from .servercfg import load_server_settings
 
@@ -392,12 +478,23 @@ def serve(host="0.0.0.0", port=None, token=None, no_auth=False,
         except Exception:
             logger.exception("on_ready callback failed")
 
-    try:
-        app.run(host=host, port=port, debug=debug, threaded=True,
-                use_reloader=False)
-    except OSError as exc:
-        log.add("error", f"Could not bind port {port}: {exc}")
-        raise
+    if server_instance_holder is not None:
+        try:
+            from werkzeug.serving import make_server
+            server = make_server(host, port, app, threaded=True)
+            server_instance_holder["server"] = server
+            server.serve_forever()
+            return app
+        except OSError as exc:
+            log.add("error", f"Could not bind port {port}: {exc}")
+            raise
+    else:
+        try:
+            app.run(host=host, port=port, debug=debug, threaded=True,
+                    use_reloader=False)
+        except OSError as exc:
+            log.add("error", f"Could not bind port {port}: {exc}")
+            raise
     return app
 
 
@@ -449,12 +546,18 @@ def main(argv=None):
     url = build_url(args.host, port, token)
     count = len(opds.library_rows())
 
+    from .server import tailscale_ip
+    ts_ip = tailscale_ip()
+    ts_url = f"http://{ts_ip}:{port}/opds" if ts_ip else None
+
     line = "\u2500" * 62
     print(f"\n{line}")
-    print("  ReaderM OPDS catalog")
+    print("  Mangasurf OPDS catalog")
     print(f"{line}")
     print(f"  Titles         {count}")
     print(f"  Catalog URL    {url}")
+    if ts_url:
+        print(f"  Tailscale VPN  {ts_url}")
     print(f"  On this PC     http://localhost:{port}/opds")
     if token:
         print(f"\n  Password       {token}")
@@ -475,7 +578,7 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     except OSError as exc:
-        print(f"\n[ReaderM] Could not start the OPDS server: {exc}\n",
+        print(f"\n[Mangasurf] Could not start the OPDS server: {exc}\n",
               file=sys.stderr)
         return 1
     return 0

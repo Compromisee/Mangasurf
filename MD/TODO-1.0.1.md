@@ -1,33 +1,21 @@
-# 1.0.1 checklist
+# Mangasurf Release Checklist & Roadmap (v1.7.0)
 
-Parsed from the request, so nothing gets dropped.
+Master milestone tracker for Mangasurf across versions v1.0.0 through v1.7.0.
 
-| # | Item | State |
-|---|------|-------|
-| 1 | Chapters not showing on the download/manga screen | todo |
-| 2 | Flask server for mobile/PC — download to host, stream books to phones over LAN IP | todo |
-| 3 | Local JSON API so other apps/agents can read paths, covers, reading, time, sources | todo |
-| 4 | `AGENT.md` — everything an agent needs to use that API | todo |
-| 5 | Fix all errors | todo |
-| 6 | `QUICKRUN.md` — run without packaging | todo |
-| 7 | Move every `.md` except `README.md` into `MD/` | todo |
-| 8 | Research real reader/downloader features and implement as many as possible | todo |
-| 9 | Fix `ReaderM.spec` | todo |
-| 10 | Website + README + FEATURES + CHANGELOG to v1.0.1 | todo |
-| 11 | Icon alignment/padding in buttons everywhere (library, reader especially) | todo |
-| 12 | Rounded corners on covers when square-corners is off | todo |
-| 13 | Reader progress bar inaccurate; sticks mid-way after a fast scroll; percentages wrong | todo |
-| 14 | Remove the Theme tab from the GUI sidebar (already in Settings) | todo |
-| 15 | Keyboard mapping page: presets, and make it look good | in progress |
-| 16 | Custom window titlebar (minimise, maximise, close) | todo |
-| 17 | More features everywhere | todo |
-
-Carried over from the 1.0.0 list and still open:
-
-| # | Item | State |
-|---|------|-------|
-| A | Faster startup, faster CSS load, fix crashing | todo |
-| B | More themes | todo |
-| C | Cut unused files/folders (never features) | todo |
-| D | Regenerate every screenshot in `docs/` | todo |
-| E | Version bump — now 1.0.1 | todo |
+| # | Feature / Fix Item | Version | State |
+|---|---|---|---|
+| 1 | 32 High-Speed Integrated Scrapers (Manga, Manhwa, Manhua, Doujinshi) | v1.7.0 | completed |
+| 2 | Chikari.moe Curated List Bulk Downloading (`/lists/461...`) | v1.6.9 | completed |
+| 3 | 3D Depth Cover Carousel with Overlapping Cascade & Zero Overflow | v1.6.8 | completed |
+| 4 | Root Directory Deletion Safety & File Isolation | v1.6.8 | completed |
+| 5 | FlareSolverr Cloudflare Challenge Solver Management Widget | v1.6.4 | completed |
+| 6 | Offline Database Indexing (SFW & Hentai Manga) & Suggestions | v1.6.0 | completed |
+| 7 | Full-Width Omnibar Search & Direct URL Routing | v1.6.0 | completed |
+| 8 | LAN Web Server & OPDS 1.2 Catalog Hub with QR Code Pairing | v1.5.0 | completed |
+| 9 | Foliate Webtoon Continuous Strip & CBZ/EPUB/PDF Reader | v1.0.0 | completed |
+| 10| Full-Screen Textual TUI with 24-bit TrueColor ANSI Covers | v1.0.0 | completed |
+| 11| Universal Hotlink CDN Cover Proxying (`shadowabyss`, `r2d2storage`, `resmk`) | v1.6.7 | completed |
+| 12| Library Horizontal Shelves & Folder Recheck Tools | v1.6.1 | completed |
+| 13| Dynamic Reading Progress Engine & Position Sync | v1.6.2 | completed |
+| 14| Full 100/100 Unit Test Suite Coverage across 14 Modules | v1.7.0 | completed |
+| 15| Cinematic Moving Mesh Gradient Landing Page & Live Terminal Showcase | v1.7.0 | completed |

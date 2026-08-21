@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "playwright": "^1.62.1",
+    "puppeteer-core": "^24.43.1",
+    "ws": "^8.21.3"
+  }
+}

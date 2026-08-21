@@ -1,18 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for Mangasurf — all-inclusive executable.
+"""PyInstaller spec for Mangasurf — all-inclusive standalone executable.
 
 Build:
     pyinstaller Mangasurf.spec                 # one-folder build
     pyinstaller Mangasurf.spec -- --onefile    # single-file build
 
-Output lands in dist/Mangasurf/ (or dist/Mangasurf.exe for onefile).
+Output lands in dist/Mangasurf/ (or dist/Mangasurf.exe / dist/Mangasurf for onefile).
 """
 
+import os
 import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-ONEFILE = "--onefile" in sys.argv
+ONEFILE = "--onefile" in sys.argv or os.environ.get("PYINSTALLER_ONEFILE", "").lower() in ("1", "true", "yes")
 
 APP_NAME = "Mangasurf"
 
@@ -21,6 +22,12 @@ datas = [
     ("readerm/reader/foliate", "readerm/reader/foliate"),
     ("ui", "ui"),
 ]
+
+# Include icons and documentation assets if present
+for asset in ["docs/icon.ico", "docs/icon.png", "docs/icon.svg", "docs/index.html"]:
+    if os.path.exists(asset):
+        datas.append((asset, os.path.dirname(asset)))
+
 datas += collect_data_files("textual")
 
 hiddenimports = [
@@ -28,6 +35,7 @@ hiddenimports = [
     "PyQt6.QtWidgets",
     "PyQt6.QtCore",
     "PyQt6.QtGui",
+    "webview",
     "webview.platforms.winforms",
     "webview.platforms.edgechromium",
     "webview.platforms.cocoa",
@@ -39,11 +47,22 @@ hiddenimports = [
     "pystray._appindicator",
     "pystray._gtk",
     "pystray._xorg",
+    "PIL",
     "PIL.Image",
     "PIL.ImageDraw",
+    "PIL.ImageFilter",
     "flask",
     "jinja2",
     "werkzeug",
+    "requests",
+    "bs4",
+    "rich",
+    "fpdf2",
+    "ebooklib",
+    "ebooklib.epub",
+    "readerm.database",
+    "readerm.devices",
+    "readerm.flaresolverr",
     "readerm.server",
     "readerm.serverui",
     "readerm.servercfg",
@@ -53,16 +72,21 @@ hiddenimports = [
     "readerm.opdsui",
     "readerm.shelves",
     "readerm.localapi",
-    "readerm.sources.weebcentral",
-    "readerm.sources.mangakatana",
-    "readerm.sources.kagane",
-    "readerm.sources.comix",
-    "readerm.sources.vymanga",
-    "readerm.sources.mangadotnet",
+    "readerm.sources",
     "logging.handlers",
 ]
+
 hiddenimports += collect_submodules("readerm")
+hiddenimports += collect_submodules("readerm.sources")
 hiddenimports += collect_submodules("textual.widgets")
+
+icon_file = None
+if sys.platform == "win32" and os.path.exists("docs/icon.ico"):
+    icon_file = "docs/icon.ico"
+elif sys.platform == "darwin" and os.path.exists("docs/icon.png"):
+    icon_file = "docs/icon.png"
+elif os.path.exists("docs/icon.png"):
+    icon_file = "docs/icon.png"
 
 a = Analysis(
     ["launcher.py"],
@@ -96,7 +120,7 @@ if ONEFILE:
         upx_exclude=[],
         runtime_tmpdir=None,
         console=True,
-        icon="docs/icon.ico" if sys.platform == "win32" else None,
+        icon=icon_file,
     )
 else:
     exe = EXE(
@@ -109,7 +133,7 @@ else:
         strip=False,
         upx=False,
         console=True,
-        icon="docs/icon.ico" if sys.platform == "win32" else None,
+        icon=icon_file,
     )
     coll = COLLECT(
         exe,
@@ -125,7 +149,7 @@ if sys.platform == "darwin" and not ONEFILE:
     app = BUNDLE(
         coll,
         name=f"{APP_NAME}.app",
-        icon=None,
+        icon=icon_file,
         bundle_identifier="io.github.mangasurf.app",
         info_plist={
             "NSHighResolutionCapable": True,

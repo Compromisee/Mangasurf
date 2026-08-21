@@ -1,4 +1,4 @@
-"""ReaderM command line interface.
+"""Mangasurf command line interface.
 
 Downloads manga from several sites (MangaDex, Mangakatana, Natomanga,
 Weeb Central). The source is detected automatically from the URL.
@@ -6,13 +6,13 @@ Weeb Central). The source is detected automatically from the URL.
 Default behaviour: download every chapter and pack them into a single CBZ,
 sorted into a per-manga folder inside the output directory.
 
-    readerm <manga-url>                    one CBZ with all chapters
-    readerm <manga-url> --per 10           one CBZ per 10 chapters
-    readerm <manga-url> -c 1-50 -f pdf     chapters 1-50 as a single PDF
-    readerm search "one piece"             search every source
-    readerm search "one piece" -s mangadex search one source
-    readerm sources                        list supported sites
-    readerm info <manga-url>               show manga details and chapters
+    mangasurf <manga-url>                    one CBZ with all chapters
+    mangasurf <manga-url> --per 10           one CBZ per 10 chapters
+    mangasurf <manga-url> -c 1-50 -f pdf     chapters 1-50 as a single PDF
+    mangasurf search "one piece"             search every source
+    mangasurf search "one piece" -s mangadex search one source
+    mangasurf sources                        list supported sites
+    mangasurf info <manga-url>               show manga details and chapters
 """
 
 import argparse
@@ -23,8 +23,8 @@ import threading
 # Allow running this file directly (python readerm/cli.py)
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
 # Rich is optional. It used to be a hard import here, which meant a bare
 # clone -- no `pip install -e .` -- could not run the CLI at all: `py cli.py`
@@ -40,48 +40,48 @@ from .sources import (DEFAULT_SOURCE, SOURCES, browse_all, detect_source,
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="readerm",
+        prog="mangasurf",
         description=(f"Download manga, manhwa and manhua from {len(SOURCES)} "
                      f"sources as CBZ, PDF or EPUB."),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
-            "  readerm https://mangadex.org/title/<uuid>\n"
-            "  readerm <url> --per 10               one CBZ per 10 chapters\n"
-            "  readerm <url> -c 1-50 -f pdf         chapters 1-50 as one PDF\n"
-            "  readerm <url> -c latest              only the newest chapter\n"
-            "  readerm search \"one piece\"          search all sources\n"
-            "  readerm search \"berserk\" -s mangadex\n"
-            "  readerm search                           (no query) trending titles\n"
-            "  readerm trending romance                 top romance across sources\n"
-            "  readerm genres                           list every genre\n"
-            "  readerm search \"blue\" -g Romance         genre-filtered search\n"
-            "  readerm sources                          list supported sites\n"
-            "  readerm config disable natomanga         exclude a source\n"
-            "  readerm config up mangakatana            rank a source higher\n"
-            "  readerm stats                            download statistics\n"
-            "  readerm lock set                         set an app passcode\n"
-            "  readerm watch add <url>                  track a series for updates\n"
-            "  readerm watch check                      check every watched series\n"
-            "  readerm disk usage                       disk usage per series\n"
-            "  readerm covers --dry-run                 plan a cover rebuild, change nothing\n"
-            "  readerm covers                           rebuild cover.jpg beside each CBZ\n"
-            "  readerm covers -o DIR --sort-only        just split a flat folder by series\n"
-            "  readerm library verify                   check files still exist\n"
-            "  readerm library scan ~/Manga             re-link moved folders\n"
-            "  readerm info <url>\n"
-            "  readerm resume                       resume an interrupted download\n"
-            "  readerm menu                         interactive numbered menu\n"
-            "  readerm tui                          full-screen terminal UI\n"
+            "  mangasurf https://mangadex.org/title/<uuid>\n"
+            "  mangasurf <url> --per 10               one CBZ per 10 chapters\n"
+            "  mangasurf <url> -c 1-50 -f pdf         chapters 1-50 as one PDF\n"
+            "  mangasurf <url> -c latest              only the newest chapter\n"
+            "  mangasurf search \"one piece\"          search all sources\n"
+            "  mangasurf search \"berserk\" -s mangadex\n"
+            "  mangasurf search                           (no query) trending titles\n"
+            "  mangasurf trending romance                 top romance across sources\n"
+            "  mangasurf genres                           list every genre\n"
+            "  mangasurf search \"blue\" -g Romance         genre-filtered search\n"
+            "  mangasurf sources                          list supported sites\n"
+            "  mangasurf config disable natomanga         exclude a source\n"
+            "  mangasurf config up mangakatana            rank a source higher\n"
+            "  mangasurf stats                            download statistics\n"
+            "  mangasurf lock set                         set an app passcode\n"
+            "  mangasurf watch add <url>                  track a series for updates\n"
+            "  mangasurf watch check                      check every watched series\n"
+            "  mangasurf disk usage                       disk usage per series\n"
+            "  mangasurf covers --dry-run                 plan a cover rebuild, change nothing\n"
+            "  mangasurf covers                           rebuild cover.jpg beside each CBZ\n"
+            "  mangasurf covers -o DIR --sort-only        just split a flat folder by series\n"
+            "  mangasurf library verify                   check files still exist\n"
+            "  mangasurf library scan ~/Manga             re-link moved folders\n"
+            "  mangasurf info <url>\n"
+            "  mangasurf resume                       resume an interrupted download\n"
+            "  mangasurf menu                         interactive numbered menu\n"
+            "  mangasurf tui                          full-screen terminal UI\n"
             "\nsearch syntax:\n"
-            "  readerm search \"solo\" --type manhwa      only manhwa\n"
-            "  readerm search \"one piece\" --status Ongoing\n"
-            "  readerm search \"naruto\" -n 5 --sort title\n"
-            "  readerm search \"berserk\" --sort chapters --reverse\n"
-            "  readerm search \"blue\" --urls               URLs only, pipe-friendly\n"
-            "  readerm search \"blue\" --json               machine-readable\n"
-            "  readerm search \"berserk\" --open 1          search, then show #1\n"
-            "  readerm search \"berserk\" --download 1      search, then grab #1\n"
+            "  mangasurf search \"solo\" --type manhwa      only manhwa\n"
+            "  mangasurf search \"one piece\" --status Ongoing\n"
+            "  mangasurf search \"naruto\" -n 5 --sort title\n"
+            "  mangasurf search \"berserk\" --sort chapters --reverse\n"
+            "  mangasurf search \"blue\" --urls               URLs only, pipe-friendly\n"
+            "  mangasurf search \"blue\" --json               machine-readable\n"
+            "  mangasurf search \"berserk\" --open 1          search, then show #1\n"
+            "  mangasurf search \"berserk\" --download 1      search, then grab #1\n"
         ),
     )
     parser.add_argument("target", nargs="?",
@@ -126,7 +126,7 @@ def build_parser():
     source_group.add_argument("--data-saver", action="store_true",
                               help="download compressed pages, MangaDex only")
     source_group.add_argument("-g", "--genre", default=None, metavar="NAME",
-                              help="filter by genre (see: readerm genres)")
+                              help="filter by genre (see: mangasurf genres)")
     search_group = parser.add_argument_group("search and listing")
     search_group.add_argument("--type", default=None, metavar="KIND",
                               choices=["manga", "manhwa", "manhua", "comic",
@@ -167,23 +167,42 @@ def build_parser():
 # ------------------------------------------------------------------ commands
 
 def cmd_sources():
-    """List every supported site and what it can do."""
+    """List every supported site, categories, and capabilities."""
+    from .console import format_source_badge
+    
+    console.print(Panel(
+        f"[bold bright_white]MANGASURF SOURCES REGISTRY[/] — [bright_cyan]{len(list_sources())} Scrapers Active[/]\n"
+        f"[{DIM}]High-concurrency multi-source scraper engine with 0.0s instant failover[/]",
+        border_style=ACCENT, box=box.ROUNDED
+    ))
+    
     table = Table(box=box.SIMPLE_HEAD, header_style=f"bold {ACCENT}")
-    table.add_column("ID")
-    table.add_column("Site")
-    table.add_column("URL", style=DIM, overflow="fold")
-    table.add_column("Notes", style=DIM)
+    table.add_column("ID", style="bold")
+    table.add_column("Source", style=HEAD)
+    table.add_column("Base URL", style=DIM, overflow="fold")
+    table.add_column("Features")
+    table.add_column("Status", justify="center")
+
     for meta in list_sources():
         notes = []
-        if meta["supports_language"]:
-            notes.append("languages")
-        if meta["supports_scanlator"]:
-            notes.append("scanlators")
-        if meta["needs_flaresolverr"]:
-            notes.append("needs FlareSolverr")
-        table.add_row(meta["id"], meta["name"], meta["base_url"], ", ".join(notes) or "-")
+        if meta.get("supports_browse"):
+            notes.append("[bright_green]browse[/]")
+        if meta.get("supports_genres"):
+            notes.append("[bright_magenta]genres[/]")
+        if meta.get("supports_language"):
+            notes.append("[bright_cyan]languages[/]")
+        if meta.get("supports_scanlator"):
+            notes.append("[yellow]scanlators[/]")
+        if meta.get("needs_flaresolverr"):
+            notes.append("[bold red]cloudflare[/]")
+        
+        status = "[bright_green]● active[/]"
+        badge = format_source_badge(meta["id"], meta["name"])
+        table.add_row(meta["id"], badge, meta["base_url"], " ".join(notes) or "[dim]-[/]", status)
+
     console.print(table)
-    console.print(f"[{DIM}]Use with: readerm search \"title\" -s <id>[/]")
+    console.print(f"[{DIM}]Search a specific source:[/] mangasurf search \"title\" -s <id>")
+    console.print(f"[{DIM}]Direct download:[/]         mangasurf <url>")
     return 0
 
 
@@ -196,7 +215,7 @@ def cmd_config(args) -> int:
 
     if action in ("enable", "disable", "include", "exclude"):
         if len(rest) < 2:
-            console.print("[red]Usage: readerm config enable|disable <source>[/]")
+            console.print("[red]Usage: mangasurf config enable|disable <source>[/]")
             return 1
         source_id = rest[1].lower()
         if source_id not in SOURCES:
@@ -208,13 +227,13 @@ def cmd_config(args) -> int:
                       f"[{ACCENT}]{'enabled' if on else 'excluded'}[/]")
     elif action in ("up", "down"):
         if len(rest) < 2:
-            console.print(f"[red]Usage: readerm config {action} <source>[/]")
+            console.print(f"[red]Usage: mangasurf config {action} <source>[/]")
             return 1
         appconfig.move(rest[1].lower(), -1 if action == "up" else 1)
     elif action == "rank":
         order = [s.lower() for s in rest[1:]]
         if not order:
-            console.print("[red]Usage: readerm config rank <source> <source> ...[/]")
+            console.print("[red]Usage: mangasurf config rank <source> <source> ...[/]")
             return 1
         appconfig.reorder(order)
         console.print("Ranking updated.")
@@ -240,8 +259,8 @@ def cmd_config(args) -> int:
             f"[{ACCENT}]enabled[/]" if enabled else "[red]excluded[/]",
         )
     console.print(table)
-    console.print(f"[{DIM}]readerm config up|down <source>   "
-                  f"readerm config disable <source>[/]")
+    console.print(f"[{DIM}]mangasurf config up|down <source>   "
+                  f"mangasurf config disable <source>[/]")
     return 0
 
 
@@ -356,7 +375,7 @@ def cmd_lock(args) -> int:
                       else f"[red]{result['error']}[/]")
         return 0 if result.get("ok") else 1
 
-    console.print(f"[{DIM}]Usage: readerm lock status|set|change|off[/]")
+    console.print(f"[{DIM}]Usage: mangasurf lock status|set|change|off[/]")
     return 1
 
 
@@ -365,7 +384,7 @@ def cmd_export(args) -> int:
 
     rest = [a for a in args.query]
     if not rest:
-        console.print("[red]Usage: readerm export <file> [json|csv|md][/]")
+        console.print("[red]Usage: mangasurf export <file> [json|csv|md][/]")
         return 1
     path = rest[0]
     fmt = rest[1] if len(rest) > 1 else (
@@ -398,7 +417,7 @@ def _print_results(results, header=None):
         table.add_row(str(index), row.get("source_name") or row.get("source") or "?",
                       row.get("title", "?"), row.get("url", ""))
     console.print(table)
-    console.print(f"[{DIM}]Download with: readerm <url>[/]")
+    console.print(f"[{DIM}]Download with: mangasurf <url>[/]")
     return 0
 
 
@@ -448,7 +467,7 @@ def cmd_genres(args) -> int:
     for row in rows:
         table.add_row(row["name"], ", ".join(sorted(row["sources"])))
     console.print(table)
-    console.print(f"[{DIM}]Browse one with: readerm trending <genre>[/]")
+    console.print(f"[{DIM}]Browse one with: mangasurf trending <genre>[/]")
     return 0
 
 
@@ -466,7 +485,7 @@ def cmd_api(args) -> int:
         console.print(f"[bold {ACCENT}]Local API endpoints[/]")
         for endpoint in sorted(localapi.ENDPOINTS):
             console.print(f"  {endpoint}")
-        console.print(f"\n[{DIM}]readerm api <name>   "
+        console.print(f"\n[{DIM}]mangasurf api <name>   "
                       f"or   GET /local/<name>[/]")
         return 0
     if name not in localapi.ENDPOINTS:
@@ -538,7 +557,7 @@ def cmd_library(args) -> int:
             table.add_row(row.get("title") or "?", row.get("directory") or "-",
                           ", ".join(problems))
         console.print(table)
-        console.print(f"[{DIM}]Re-link with: readerm library scan <folder>[/]")
+        console.print(f"[{DIM}]Re-link with: mangasurf library scan <folder>[/]")
         return 0
 
     if action in ("scan", "find"):
@@ -573,7 +592,7 @@ def cmd_library(args) -> int:
 
     if action in ("move", "relocate"):
         if len(rest) < 3:
-            console.print("[red]Usage: readerm library move <url> <new-folder>[/]")
+            console.print("[red]Usage: mangasurf library move <url> <new-folder>[/]")
             return 1
         result = library.relocate_entry(rest[1], rest[2])
         if result.get("ok"):
@@ -583,8 +602,14 @@ def cmd_library(args) -> int:
         console.print(f"[red]{result.get('error')}[/]")
         return 1
 
-    console.print(f"[{DIM}]Usage: readerm library verify|scan [folder]|"
-                  f"move <url> <folder>[/]")
+    if action in ("metadata", "meta", "sync-metadata"):
+        roots = rest[1:] or None
+        result = library.rebuild_library_metadata(roots)
+        console.print(f"[green]Synced manga.json metadata for [bold]{result.get('written', 0)}[/] folders (total {result.get('total_series', 0)} series).[/]")
+        return 0
+
+    console.print(f"[{DIM}]Usage: mangasurf library verify|scan [folder]|"
+                  f"move <url> <folder>|metadata[/]")
     return 1
 
 
@@ -599,7 +624,7 @@ def cmd_watch(args) -> int:
         entries = tracking.get_watchlist()
         if not entries:
             console.print("[yellow]Nothing is being watched.[/]")
-            console.print(f"[{DIM}]Add one with: readerm watch add <url>[/]")
+            console.print(f"[{DIM}]Add one with: mangasurf watch add <url>[/]")
             return 0
         table = Table(box=box.SIMPLE_HEAD, header_style=f"bold {ACCENT}")
         table.add_column("Title")
@@ -619,7 +644,7 @@ def cmd_watch(args) -> int:
 
     if action in ("add", "remove", "rm"):
         if len(rest) < 2:
-            console.print(f"[red]Usage: readerm watch {action} <url>[/]")
+            console.print(f"[red]Usage: mangasurf watch {action} <url>[/]")
             return 1
         url = rest[1]
         if action == "add":
@@ -660,7 +685,7 @@ def cmd_watch(args) -> int:
         console.print(table)
         return 0
 
-    console.print(f"[{DIM}]Usage: readerm watch list|add|remove|check [url][/]")
+    console.print(f"[{DIM}]Usage: mangasurf watch list|add|remove|check [url][/]")
     return 1
 
 
@@ -797,7 +822,7 @@ def cmd_disk(args) -> int:
                 console.print(f"  [{DIM}]missing: {missing}[/]")
         return 0
 
-    console.print(f"[{DIM}]Usage: readerm disk usage|dupes|orphans [dir][/]")
+    console.print(f"[{DIM}]Usage: mangasurf disk usage|dupes|orphans [dir][/]")
     return 1
 
 
@@ -933,12 +958,14 @@ def cmd_search(query: str, source_id: str = "", language: str = "en",
 
     table = Table(box=box.SIMPLE_HEAD, header_style=f"bold {ACCENT}")
     table.add_column("#", style=DIM, justify="right")
-    table.add_column("Source", style=ACCENT)
-    table.add_column("Title")
+    table.add_column("Source")
+    table.add_column("Title", style=HEAD)
     table.add_column("Type", style=DIM)
     table.add_column("URL", style=DIM, overflow="fold")
     for i, r in enumerate(results, 1):
-        table.add_row(str(i), r.get("source_name") or r.get("source") or "?",
+        from .console import format_source_badge
+        badge = format_source_badge(r.get("source") or "", r.get("source_name") or r.get("source") or "?")
+        table.add_row(str(i), badge,
                       r.get("title", "?"), r.get("series_type") or "",
                       r.get("url", ""))
     console.print(table)
@@ -964,8 +991,8 @@ def cmd_search(query: str, source_id: str = "", language: str = "en",
             args.source = chosen.get("source") or source_id
             return cmd_download(args)
 
-    console.print(f"[{DIM}]Download with: readerm <url>   "
-                  f"or: readerm search \"{query}\" --download N[/]")
+    console.print(f"[{DIM}]Download with: mangasurf <url>   "
+                  f"or: mangasurf search \"{query}\" --download N[/]")
     return 0
 
 
@@ -979,7 +1006,7 @@ def cmd_info(url: str, source_id: str = "", language: str = "en"):
     except Exception as e:
         console.print(f"[red]Error:[/] {e}")
         return 1
-    with console.status("Fetching manga information..."):
+    with console.status("Fetching manga information & cover..."):
         try:
             info = source.get_manga_info(url)
             chapters = source.get_chapters(url)
@@ -989,24 +1016,50 @@ def cmd_info(url: str, source_id: str = "", language: str = "en"):
         finally:
             source.close()
 
+    from .console import format_source_badge, format_colored_tag
     provider = info.get("source_name") or source.name
-    body = [f"[{DIM}]from[/] [{ACCENT}]{provider}[/]", ""]
+    source_badge = format_source_badge(info.get("source") or source_id or source.id, provider)
+
+    # Render TrueColor cover if available
+    cover_art = ""
+    if info.get("cover"):
+        from .covers import render_terminal_cover
+        try:
+            cover_art = render_terminal_cover(info["cover"], width=30, max_height=18,
+                                              source_id=info.get("source") or source_id,
+                                              referer=url)
+        except Exception:
+            cover_art = ""
+
+    body = [f"[{DIM}]Source:[/]   {source_badge}", f"[{DIM}]URL:[/]      [{DIM}]{url}[/]"]
     if info.get("authors"):
-        body.append(f"[{DIM}]Author[/]   {', '.join(info['authors'])}")
+        body.append(f"[{DIM}]Author:[/]   [bold]{', '.join(info['authors'])}[/]")
     if info.get("status"):
-        body.append(f"[{DIM}]Status[/]   {info['status']}")
+        status_color = "bright_green" if str(info['status']).lower() == "ongoing" else "bright_cyan"
+        body.append(f"[{DIM}]Status:[/]   [{status_color}]{info['status']}[/]")
     if info.get("tags"):
-        body.append(f"[{DIM}]Tags[/]     {', '.join(info['tags'])}")
-    body.append(f"[{DIM}]Chapters[/] {len(chapters)}")
+        tag_pills = " ".join(format_colored_tag(t) for t in (info.get("tags") or [])[:12])
+        body.append(f"[{DIM}]Tags:[/]     {tag_pills}")
+    body.append(f"[{DIM}]Chapters:[/] [bold bright_white]{len(chapters)}[/] available")
     if info.get("description"):
         body.append("")
-        body.append(info["description"])
-    console.print(Panel("\n".join(body), title=f"[bold]{info['title']}[/]",
+        body.append(f"[{DIM}]{info['description'][:400]}{'...' if len(info['description']) > 400 else ''}[/]")
+
+    if cover_art:
+        try:
+            from rich.text import Text
+            console.print()
+            console.print(Text.from_ansi(cover_art))
+        except Exception:
+            print(cover_art)
+
+    console.print(Panel("\n".join(body), title=f"[bold bright_white]{info['title']}[/]",
                         border_style=ACCENT, box=box.ROUNDED))
 
     if chapters:
         first, last = chapters[0]["name"], chapters[-1]["name"]
         console.print(f"[{DIM}]First:[/] {first}    [{DIM}]Latest:[/] {last}")
+        console.print(f"\n[{OK}]Download command:[/] mangasurf \"{url}\" --format cbz")
     return 0
 
 
@@ -1240,8 +1293,8 @@ def _run_rich(options, skip_confirm=False) -> int:
 
 #: Subcommands that own their entire flag set. They are handed off before the
 #: main parser runs, because it would reject `--port`/`--no-auth` as unknown
-#: arguments before dispatch ever happened -- `readerm server --port 9000`
-#: died on "unrecognized arguments" while plain `readerm server` was read as
+#: arguments before dispatch ever happened -- `mangasurf server --port 9000`
+#: died on "unrecognized arguments" while plain `mangasurf server` was read as
 #: a URL to download.
 DELEGATED = {
     "server": ("readerm.server", "main"),
@@ -1330,7 +1383,7 @@ def main(argv=None):
         console.print(f"[{DIM}]Supported sites:[/]")
         for meta in list_sources():
             console.print(f"  [{DIM}]{meta['name']:<14}{meta['base_url']}[/]")
-        console.print(f"[{DIM}]Or search: readerm search \"manga name\"[/]")
+        console.print(f"[{DIM}]Or search: mangasurf search \"manga name\"[/]")
         return 1
     return cmd_download(args)
 

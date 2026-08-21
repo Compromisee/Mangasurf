@@ -189,6 +189,24 @@ class JobProgress:
     def finish(self):
         self.finished = time.time()
 
+    @property
+    def fraction(self) -> float:
+        with self._lock:
+            if self.chapters_total > 0:
+                return min(1.0, max(0.0, self.chapters_done / self.chapters_total))
+            if self.pages_total > 0:
+                return min(1.0, max(0.0, self.pages_done / self.pages_total))
+            return 0.0
+
+    @property
+    def chapter(self) -> str:
+        with self._lock:
+            if self.chapters_total > 0:
+                return f"Chapter {self.chapters_done}/{self.chapters_total}"
+            if self.pages_total > 0:
+                return f"Page {self.pages_done}/{self.pages_total}"
+            return "Downloading"
+
     # -- reads --------------------------------------------------------
 
     def eta_seconds(self):

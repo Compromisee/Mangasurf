@@ -58,7 +58,7 @@ export const ACTION_BY_ID = Object.fromEntries(ACTIONS.map(a => [a.id, a]))
  * for reading with one hand on a laptop.
  */
 export const PRESETS = {
-    default: { label: 'ReaderM default', keys: {} },
+    default: { label: 'Mangasurf default', keys: {} },
     vim: {
         label: 'Vim (hjkl)',
         keys: {

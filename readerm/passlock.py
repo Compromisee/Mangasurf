@@ -5,7 +5,7 @@ passcode itself. The verifier is PBKDF2-HMAC-SHA256 over a per-install random
 salt, so the stored file cannot be reversed into the original passcode and two
 users with the same passcode get different hashes.
 
-Scope, stated plainly: this gates the ReaderM user interface. It stops someone
+Scope, stated plainly: this gates the Mangasurf user interface. It stops someone
 casually opening the app and seeing your library. It is **not** disk
 encryption -- downloaded files stay readable on disk, and anyone with access to
 the machine can read them directly. Treat it as a privacy screen, not a vault.

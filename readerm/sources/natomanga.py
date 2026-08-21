@@ -125,15 +125,21 @@ class NatomangaSource(Source):
 
     # ---------------------------------------------------------- search
 
-    def search(self, query: str, limit: int = 32, sort: str = None, **_):
+    def search(self, query: str, limit: int = 32, sort: str = None, page: int = 1, **_):
         query = (query or "").strip()
         if not query:
             return []
+        page_val = max(1, int(page or _.get("page", 1) or 1))
         # the site slugifies the query: spaces -> underscores
         term = quote(re.sub(r"\s+", "_", query.lower()))
         url = f"{SITE}/search/story/{term}"
+        params = []
         if sort and sort in self._SORTS:
-            url += f"?orby={self._SORTS[sort]}"
+            params.append(f"orby={self._SORTS[sort]}")
+        if page_val > 1:
+            params.append(f"page={page_val}")
+        if params:
+            url += "?" + "&".join(params)
 
         try:
             response = self.fetch(url)

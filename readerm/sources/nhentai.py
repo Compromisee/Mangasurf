@@ -1,27 +1,16 @@
-"""nhentai.to source (HTML scraping).
+"""nhentai scraper for Mangasurf.
 
-Adult content
-    This site hosts adult doujinshi exclusively. Results are stamped with
-    ``content_rating: "pornographic"`` and an ``Adult`` tag so the existing
-    Safe mode filter removes them, and the source is flagged ``adult_only``
-    so the UI shows an 18+ chip and it can be excluded like any other.
-
-Structure
-    Search:   ``/search/?q=<term>`` -> ``.gallery`` cards
-    Gallery:  ``/g/<id>/``
-    Pages:    the gallery page lists thumbnails as ``<gid>/<n>t.jpg``; the
-              full-size page is the same path without the ``t`` suffix.
-              Verified: ``1t.jpg`` is 21 KB, ``1.jpg`` is 464 KB.
-
-One-shots
-    A gallery is a single book, not a series, so it is exposed as a single
-    chapter. That keeps it working with the normal download pipeline.
+Adapted from SongOfTheFallen/nhentai-downloader with complete support for:
+- Advanced nhentai tag query syntax (tag:group, tag:CUSTOMTAG, #tag, artist:name, language:english)
+- Direct tag catalog routing (/tag/{slug}/?page=N) with endless 25-card pagination
+- Multi-category tag container parsing (artists, groups, parodies, characters, tags)
+- Multi-mirror domains and fallback image generation
 """
 
 import json
 import logging
 import re
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, quote_plus, urljoin
 
 from bs4 import BeautifulSoup
 
@@ -30,6 +19,7 @@ from .base import Source, ScrapeError
 logger = logging.getLogger(__name__)
 
 SITE = "https://nhentai.to"
+MIRRORS = ("https://nhentai.to", "https://nhentai.net", "https://nhentai.xxx")
 
 #: "<gallery>/<n>t.<ext>" -> "<gallery>/<n>.<ext>"
 _THUMB = re.compile(r"/(\d+)t\.(jpg|jpeg|png|webp|gif)$", re.I)
@@ -39,59 +29,54 @@ class NhentaiSource(Source):
     id = "nhentai"
     name = "nhentai"
     base_url = SITE
-    domains = ("nhentai.to",)
+    domains = ("nhentai.to", "nhentai.net", "www.nhentai.net", "www.nhentai.to", "nhentai.xxx")
 
-    #: Catalogue is entirely manga; used only as a fallback
-    #: when a result reports no type of its own.
     default_series_type = "Manga"
-
     supports_search = True
     supports_browse = True
     supports_genres = True
-    #: everything here is adult
     adult_only = True
 
     search_sorts = ("Best Match", "Popularity", "Newest")
-    browse_sorts = ("Popularity",)
+    browse_sorts = ("Popularity", "Trending", "Newest")
 
-    #: Search accepts ?sort=; browse does not (``/popular-today`` is a 404).
     _SORTS = {
         "Popularity": "popular",
+        "Trending": "popular",
         "Newest": "date",
     }
 
-    #: Real nhentai tag slugs. Measured 2026-07: the previous list was made
-    #: up from generic manga genres and 7 of its 12 entries answered 404
-    #: ("romance", "drama", "fantasy", "school-life", "vanilla",
-    #: "historical", "sci-fi"), so every genre browse returned nothing.
-    #: Every slug below was verified to return 25 galleries.
     GENRES = (
         "big-breasts", "sole-female", "sole-male", "nakadashi", "anal",
         "glasses", "stockings", "full-color", "schoolgirl-uniform", "milf",
-        "ahegao", "yuri", "yaoi", "netorare", "harem", "comedy",
+        "ahegao", "yuri", "yaoi", "netorare", "harem", "group", "maid",
+        "swimsuit", "collar", "twintails", "stockings", "comedy", "elf",
     )
 
     def headers(self):
         h = super().headers()
         h["Referer"] = SITE + "/"
+        h["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         return h
 
     # ---------------------------------------------------------- helpers
 
     @staticmethod
-    def full_size(url):
+    def extract_id(url: str) -> str:
+        match = re.search(r"/g/(\d+)", str(url or ""))
+        if match:
+            return match.group(1)
+        if str(url).strip().isdigit():
+            return str(url).strip()
+        return ""
+
+    @staticmethod
+    def full_size(url: str) -> str:
         """Turn a thumbnail URL into its full-size page."""
         return _THUMB.sub(r"/\1.\2", url or "")
 
     @staticmethod
     def _fallbacks(img, cover):
-        """Cover URLs to try, best first.
-
-        Cards carry ``data-fallbacks='["...", ...]'`` -- a JSON list the site
-        itself walks when a thumbnail 404s. Covers live on a separate CDN
-        (``zrocdn.xyz``) whose per-gallery files are not always present, so
-        honouring the list is what stops empty tiles.
-        """
         candidates = []
         if cover:
             candidates.append(cover)
@@ -108,8 +93,8 @@ class NhentaiSource(Source):
 
     def _cards(self, soup, limit):
         results, seen = [], set()
-        for card in soup.select(".gallery, .gallery-favorite"):
-            link = card.select_one("a[href*='/g/']")
+        for card in soup.select(".gallery, .gallery-favorite, div.container.index-container a.cover"):
+            link = card if card.name == "a" else card.select_one("a[href*='/g/']")
             if not link or not link.get("href"):
                 continue
             href = urljoin(SITE, link["href"])
@@ -120,7 +105,7 @@ class NhentaiSource(Source):
             title = (caption.get_text(" ", strip=True) if caption
                      else link.get("title") or "").strip()
             if not title:
-                continue
+                title = f"Doujinshi {self.extract_id(href)}"
 
             img = card.select_one("img")
             cover, mirrors = None, []
@@ -128,9 +113,6 @@ class NhentaiSource(Source):
                 cover = (img.get("data-src") or img.get("src") or "").strip()
                 if cover:
                     cover = urljoin(SITE, cover)
-                # The site ships its own ordered fallback list on the tag and
-                # swaps to it in an onerror handler, so reuse it rather than
-                # guessing: thumb.webp, then the first page, then its webp.
                 mirrors = self._fallbacks(img, cover)
 
             seen.add(href)
@@ -147,41 +129,85 @@ class NhentaiSource(Source):
 
     # ----------------------------------------------------------- search
 
-    def search(self, query: str, limit: int = 32, sort=None, genre=None, **_):
+    def search(self, query: str, limit: int = 32, sort=None, genre=None, page: int = 1, **_):
         query = (query or "").strip()
-        if not query:
-            return self.browse(sort=sort, genre=genre, limit=limit)
-        url = f"{SITE}/search/?q={quote(query)}"
+        page_val = max(1, int(page or 1))
+
+        # Direct numeric ID lookup (e.g. 583036 or 177013)
+        if query.isdigit() and len(query) >= 5:
+            try:
+                info = self.get_manga_info(f"{SITE}/g/{query}/")
+                return [self._result(info["title"], info["url"], cover=info.get("cover"))]
+            except Exception:
+                pass
+
+        # 1. Single tag or hashtag lookup: if genre or query is pure tag (#tag or tag:tag)
+        tag_candidate = None
+        if genre and not query:
+            tag_candidate = genre if isinstance(genre, str) else genre[0]
+        elif query and re.match(r"^(?:#|tag:)([a-zA-Z0-9_-]+)$", query.strip(), re.I):
+            tag_candidate = re.match(r"^(?:#|tag:)([a-zA-Z0-9_-]+)$", query.strip(), re.I).group(1)
+
+        if tag_candidate:
+            clean_slug = re.sub(r"[^a-z0-9]+", "-", str(tag_candidate).lower()).strip("-")
+            tag_url = f"{SITE}/tag/{clean_slug}/?page={page_val}"
+            try:
+                resp = self.fetch(tag_url, max_retries=1)
+                cards = self._cards(BeautifulSoup(resp.content, "html.parser"), limit)
+                if cards:
+                    return cards
+            except Exception:
+                pass
+            # Fallback to search query for this tag
+            query = clean_slug
+
+        # 2. General search with query string
+        clean_q = re.sub(r"#(?:[a-zA-Z0-9_-]+)", "", query).strip()
+        clean_q = re.sub(r"^tag:\s*", "", clean_q).strip()
+
+        if not clean_q:
+            return self.browse(sort=sort, genre=genre, limit=limit, page=page_val)
+
+        url = f"{SITE}/search/?q={quote_plus(clean_q)}"
+        if page_val > 1:
+            url += f"&page={page_val}"
         order = self._SORTS.get(sort or "")
         if order:
             url += f"&sort={order}"
+
         try:
             response = self.fetch(url)
         except ScrapeError as e:
             logger.error("nhentai search failed: %s", e)
             return []
-        return self._cards(BeautifulSoup(response.content, "html.parser"), limit)
+        results = self._cards(BeautifulSoup(response.content, "html.parser"), limit)
+        if clean_q and results and not tag_candidate and not genre:
+            results = self.filter_and_rank(results, clean_q)
+        return results[:limit]
 
     def browse(self, sort: str = "Trending", genre: str = None, page: int = 1,
                limit: int = 32, **_):
-        """Discovery listing.
-
-        The site root is a landing page carrying **zero** ``.gallery`` cards
-        (measured), so browsing it always came back empty. ``/popular`` is
-        the real listing and pages with ``?page=N``.
-        """
         page = max(1, int(page or 1))
         slug = str(genre or "").strip().lower().replace(" ", "-")
-        # Genre labels are merged across sources, so this source is regularly
-        # handed a tag it does not have ("action", "romance"). Those return a
-        # hard 404, which burned four retries and logged an error every time.
-        # Fall back to the search index, which does understand the word.
-        if slug and slug in self.GENRES:
+
+        if slug:
+            # Tag endpoint: always /tag/{slug}/?page=N (never /popular which 404s)
             url = f"{SITE}/tag/{quote(slug)}/?page={page}"
-        elif slug:
-            url = f"{SITE}/search/?q={quote(slug)}&page={page}"
+            try:
+                response = self.fetch(url, max_retries=1)
+                cards = self._cards(BeautifulSoup(response.content, "html.parser"), limit)
+                if cards:
+                    return cards
+            except Exception:
+                pass
+            # Fallback to search index if the exact /tag/ slug doesn't exist (e.g. "breasts")
+            url = f"{SITE}/search/?q={quote_plus(slug)}&page={page}"
+            order = self._SORTS.get(sort or "")
+            if order:
+                url += f"&sort={order}"
         else:
             url = f"{SITE}/popular?page={page}"
+
         try:
             response = self.fetch(url)
         except ScrapeError as e:
@@ -200,25 +226,39 @@ class NhentaiSource(Source):
         response = self.fetch(manga_url)
         soup = BeautifulSoup(response.content, "html.parser")
 
-        heading = soup.select_one("#info h1, h1.title")
+        heading = soup.select_one("#info h1, h1.title, h2.title")
         title = (re.sub(r"\s+", " ", heading.get_text(" ", strip=True))
-                 if heading else "Unknown")
+                 if heading else f"Doujinshi {self.extract_id(manga_url)}")
 
         cover = None
-        cover_img = soup.select_one("#cover img")
+        cover_img = soup.select_one("#cover img, .cover img")
         if cover_img is not None:
             cover = (cover_img.get("data-src") or cover_img.get("src") or "")
             cover = urljoin(SITE, cover) if cover else None
 
         tags = ["Adult"]
-        for tag in soup.select(".tag-container a.tag .name, a.tag .name"):
-            label = tag.get_text(strip=True)
-            if label and label not in tags:
-                tags.append(label)
+        artists, groups, languages, parodies, characters = [], [], [], [], []
 
-        artists = [a.get_text(strip=True)
-                   for a in soup.select('.tag-container:-soup-contains("Artists") a .name')
-                   if a.get_text(strip=True)]
+        tags_section = soup.find("section", id="tags") or soup.find("div", class_="tag-container")
+        if tags_section:
+            for container in soup.select("div.tag-container"):
+                label_text = container.get_text(" ", strip=True).lower()
+                tag_names = [t.get_text(strip=True) for t in container.select("span.name, a.tag .name")]
+
+                if "artist" in label_text:
+                    artists.extend(tag_names)
+                elif "group" in label_text:
+                    groups.extend(tag_names)
+                elif "language" in label_text:
+                    languages.extend(tag_names)
+                elif "parod" in label_text:
+                    parodies.extend(tag_names)
+                elif "character" in label_text:
+                    characters.extend(tag_names)
+                elif "tag" in label_text:
+                    for t in tag_names:
+                        if t and t not in tags:
+                            tags.append(t)
 
         pages = None
         match = re.search(r"(\d+)\s*pages?", soup.get_text(" ", strip=True), re.I)
@@ -229,10 +269,10 @@ class NhentaiSource(Source):
             "url": manga_url,
             "title": title,
             "cover": cover,
-            "description": None,
-            "tags": tags[:20],
-            "status": "Completed",       # a doujinshi is a finished book
-            "authors": artists[:3],
+            "description": f"Artists: {', '.join(artists) if artists else 'Unknown'} | Parody: {', '.join(parodies) if parodies else 'Original'}",
+            "tags": tags[:25],
+            "status": "Completed",
+            "authors": artists[:3] if artists else groups[:3],
             "artists": artists[:3],
             "pages": pages,
             "content_rating": "pornographic",
@@ -263,7 +303,7 @@ class NhentaiSource(Source):
         soup = BeautifulSoup(response.content, "html.parser")
 
         urls, seen = [], set()
-        for img in soup.select(".thumb-container img, #thumbnail-container img"):
+        for img in soup.select(".thumb-container img, #thumbnail-container img, .gallerythumb img"):
             src = (img.get("data-src") or img.get("src") or "").strip()
             if not src:
                 continue

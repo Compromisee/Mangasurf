@@ -177,3 +177,120 @@ export function createMatrix(canvas) {
         resume: start,
     }
 }
+
+/* ────────────────────────────────── search perspective grid wave ──── */
+
+export function createSearchGridWave(canvas) {
+    if (!canvas) return null
+    const ctx = canvas.getContext('2d', { alpha: true })
+    if (!ctx) return null
+    let raf = null
+    let enabled = true
+    let running = false
+    let lastDraw = 0
+    let opacity = 1
+    let targetOpacity = 1
+
+    const TARGET_FPS = 30
+    const FRAME_MS = 1000 / TARGET_FPS
+
+    const resize = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+        const parent = canvas.parentElement || document.querySelector('#search-view')
+        const w = parent ? parent.clientWidth || window.innerWidth : window.innerWidth
+        const h = parent ? parent.clientHeight || window.innerHeight : 600
+        canvas.width = Math.floor(w * dpr)
+        canvas.height = Math.floor(h * dpr)
+        canvas.style.width = `${w}px`
+        canvas.style.height = `${h}px`
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+
+    const frame = now => {
+        if (!running) return
+        raf = requestAnimationFrame(frame)
+        if (now - lastDraw < FRAME_MS) return
+        lastDraw = now
+
+        opacity += (targetOpacity - opacity) * 0.08
+        if (opacity < 0.01 && targetOpacity === 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            return
+        }
+
+        const parent = canvas.parentElement || document.querySelector('#search-view')
+        const w = parent ? parent.clientWidth || window.innerWidth : window.innerWidth
+        const h = parent ? parent.clientHeight || window.innerHeight : 600
+        ctx.clearRect(0, 0, w, h)
+
+        const rows = 18
+        const cols = 32
+        const horizonY = h * 0.20
+
+        const accent = getComputedStyle(document.documentElement)
+            .getPropertyValue('--accent').trim() || '#38bdf8'
+
+        // Fullscreen 3D Perspective Wave Grid (Horizontal Waves)
+        for (let r = 0; r < rows; r++) {
+            const zNorm = (r + 1) / rows
+            const yBase = horizonY + (h - horizonY) * (zNorm * zNorm)
+            const scale = 0.25 + 0.75 * zNorm
+            const rowAlpha = (0.04 + 0.22 * zNorm) * opacity
+
+            ctx.beginPath()
+            for (let c = 0; c < cols; c++) {
+                const xNorm = (c / (cols - 1) - 0.5) * 2
+                const x = w / 2 + xNorm * (w * 0.75) * scale
+                const waveY = Math.sin(c * 0.38 + now * 0.0018) * Math.cos(r * 0.35 + now * 0.0014) * (20 * zNorm)
+                const y = yBase + waveY
+
+                if (c === 0) ctx.moveTo(x, y)
+                else ctx.lineTo(x, y)
+            }
+            ctx.strokeStyle = `color-mix(in srgb, ${accent} ${Math.round(rowAlpha * 100)}%, transparent)`
+            ctx.lineWidth = 1 + zNorm * 0.8
+            ctx.stroke()
+        }
+
+        // Longitudinal Depth Grid Lines across full screen
+        for (let c = 0; c < cols; c += 2) {
+            const xNorm = (c / (cols - 1) - 0.5) * 2
+            ctx.beginPath()
+            for (let r = 0; r < rows; r++) {
+                const zNorm = (r + 1) / rows
+                const yBase = horizonY + (h - horizonY) * (zNorm * zNorm)
+                const scale = 0.25 + 0.75 * zNorm
+                const x = w / 2 + xNorm * (w * 0.75) * scale
+                const waveY = Math.sin(c * 0.38 + now * 0.0018) * Math.cos(r * 0.35 + now * 0.0014) * (20 * zNorm)
+                const y = yBase + waveY
+                if (r === 0) ctx.moveTo(x, y)
+                else ctx.lineTo(x, y)
+            }
+            ctx.strokeStyle = `color-mix(in srgb, ${accent} ${Math.round(0.10 * opacity * 100)}%, transparent)`
+            ctx.lineWidth = 0.8
+            ctx.stroke()
+        }
+    }
+
+    const start = () => {
+        if (!enabled || running || document.hidden) return
+        running = true
+        resize()
+        raf = requestAnimationFrame(frame)
+    }
+
+    const stop = () => {
+        running = false
+        if (raf) cancelAnimationFrame(raf)
+        raf = null
+    }
+
+    window.addEventListener('resize', () => { if (running) resize() })
+
+    return {
+        start,
+        stop,
+        setOpacity(val) { targetOpacity = Math.max(0, Math.min(1, val)) },
+        get running() { return running },
+    }
+}

@@ -364,6 +364,33 @@ class DownloadEngine:
             except Exception:
                 logger.debug("Failed to record outputs in library", exc_info=True)
 
+        # Write metadata JSON file into the series folder
+        try:
+            meta = {
+                "title": title,
+                "url": opt.url,
+                "description": info.get("description") or "",
+                "source": self.source.id,
+                "source_name": self.source.name,
+                "provider": self.source.name,
+                "status": info.get("status") or "Ongoing",
+                "authors": info.get("authors") or [],
+                "artists": info.get("artists") or [],
+                "tags": info.get("tags") or [],
+                "format": opt.format,
+                "cover": info.get("cover") or "",
+                "total_chapters": completed,
+                "total_pages": total_pages,
+                "size_bytes": byte_total,
+                "outputs": outputs,
+                "downloaded_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            meta_path = os.path.join(manga_dir, "manga.json")
+            with open(meta_path, "w", encoding="utf-8") as mf:
+                json.dump(meta, mf, indent=2, ensure_ascii=False)
+        except Exception:
+            logger.debug("Failed to write manga.json metadata", exc_info=True)
+
         # Only this job's record -- a sibling job may still be running.
         _logs.clear_journal(self.job_id)
         self.progress.finish()

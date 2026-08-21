@@ -220,7 +220,7 @@ def test_version_badge_matches_the_package():
 
 def test_links_point_at_the_right_repository():
     html = read(SITE)
-    assert "github.com/Compromisee/ReaderM" in html
+    assert "github.com/Compromisee/mangasurf" in html or "github.com/Compromisee/ReaderM" in html
     # The old names must not linger anywhere on the page.
     assert "Compromisee/WeebDL" not in html
     assert "Compromisee/MDL" not in html

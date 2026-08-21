@@ -252,75 +252,85 @@ export class MangaView extends HTMLElement {
         this.#index = 0
         this.#track.replaceChildren()
 
-        let srcs = []
-        if (Array.isArray(book?.pages)) {
-            srcs = book.pages.slice()
-        } else if (book?.sections?.length) {
-            // CBZ path: each section is a tiny HTML doc wrapping one image.
-            // Pull the image URL out so we can lay the pages out ourselves.
-            for (const section of book.sections) {
-                const url = await this.#imageFromSection(section)
-                if (url) srcs.push(url)
-            }
+        let totalPages = 0
+        const isLivePages = Array.isArray(book?.pages)
+        const isFoliateBook = Boolean(book?.sections?.length)
+
+        if (isLivePages) {
+            totalPages = book.pages.length
+        } else if (isFoliateBook) {
+            totalPages = book.sections.length
         }
 
-        this.#empty.style.display = srcs.length ? 'none' : ''
-        for (const [i, src] of srcs.entries()) {
+        this.#empty.style.display = totalPages ? 'none' : ''
+
+        for (let i = 0; i < totalPages; i++) {
             const img = document.createElement('img')
-            img.className = 'pg'
+            img.className = 'pg pending'
             img.decoding = 'async'
             img.loading = 'lazy'
             img.dataset.index = String(i)
             img.alt = `Page ${i + 1}`
-            // Real dimensions are unknown until load, and a zero-height <img>
-            // collapses the strip (see the .pending rule above).
-            img.classList.add('pending')
-            img.dataset.src = src
+
+            const rec = {
+                index: i,
+                el: img,
+                loaded: false,
+                src: isLivePages ? book.pages[i] : '',
+                section: isFoliateBook ? book.sections[i] : null,
+            }
+
             img.addEventListener('load', () => {
-                // A page above the one being read swaps its one-screen
-                // placeholder for its real height, which moves everything
-                // below it. scrollTop is absolute, so without re-pinning you
-                // drift: measured landing 774px short of page 8 because four
-                // earlier pages finished loading after the jump.
-                // Capture *before* the class flip: removing `.pending`
-                // swaps an 80vh placeholder for the image's real height, so
-                // measuring afterwards already reflects the shift.
                 const anchor = this.#captureAnchor()
                 img.classList.remove('pending')
-                // Only re-pin when the page that grew sits above the reader;
-                // a page further down does not move anything being read.
                 const grewAbove = anchor !== null
                     && Number(img.dataset.index) <= anchor.index
                 if (grewAbove && !this.#userScrolling) this.#restoreAnchor(anchor)
                 this.#emitRelocate()
             }, { once: true })
+
             img.addEventListener('error', () => {
                 img.classList.remove('pending')
                 img.classList.add('failed')
-                this.dispatchEvent(new CustomEvent('page-error', { detail: { index: i, src } }))
+                this.dispatchEvent(new CustomEvent('page-error', { detail: { index: i } }))
             }, { once: true })
-            this.#pages.push({ src, el: img, index: i, loaded: false })
+
+            this.#pages.push(rec)
             this.#track.append(img)
+        }
+
+        // Load the first 5 pages immediately in parallel so the reader renders instantly!
+        const initialLoad = this.#pages.slice(0, 5)
+        for (const p of initialLoad) {
+            p.el.loading = 'eager'
+            this.#loadPage(p)
         }
 
         this.#observe()
         this.#applyLayout()
-        this.dispatchEvent(new CustomEvent('loaded', { detail: { pages: srcs.length } }))
+        this.dispatchEvent(new CustomEvent('loaded', { detail: { pages: totalPages } }))
         this.#emitRelocate()
-        return srcs.length
+        return totalPages
     }
 
-    async #imageFromSection(section) {
-        try {
-            const url = await section.load?.()
-            if (!url) return null
-            // comic-book.js hands back a blob: URL to an HTML wrapper.
-            const res = await fetch(url)
-            const text = await res.text()
-            const match = text.match(/<img[^>]+src="([^"]+)"/i)
-            return match ? match[1] : null
-        } catch {
-            return null
+    async #loadPage(rec) {
+        if (!rec || rec.loaded) return
+        rec.loaded = true
+        if (rec.src) {
+            if (rec.el.src !== rec.src) rec.el.src = rec.src
+            return
+        }
+        if (rec.section && rec.section.load) {
+            try {
+                const url = await rec.section.load()
+                if (url) {
+                    rec.src = url
+                    rec.el.src = url
+                }
+            } catch (e) {
+                rec.loaded = false
+                console.error(`Failed to load page ${rec.index + 1}:`, e)
+            }
         }
     }
 
@@ -336,11 +346,9 @@ export class MangaView extends HTMLElement {
         this.#io = new IntersectionObserver(entries => {
             for (const entry of entries) {
                 if (!entry.isIntersecting) continue
-                const img = entry.target
-                if (img.dataset.src && !img.src) {
-                    img.src = img.dataset.src
-                    const rec = this.#pages[Number(img.dataset.index)]
-                    if (rec) rec.loaded = true
+                const idx = Number(entry.target.dataset.index)
+                if (Number.isInteger(idx) && this.#pages[idx]) {
+                    this.#loadPage(this.#pages[idx])
                 }
             }
         }, { root: this.#scroller, rootMargin: '250% 0px' })

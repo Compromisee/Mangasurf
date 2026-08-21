@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mangasurf"
-version = "1.2.0"
-description = "Download manga, manhwa and manhua from 23+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader"
+version = "1.7.0"
+description = "Download manga, manhwa and manhua from 32+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"

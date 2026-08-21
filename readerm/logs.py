@@ -1,6 +1,6 @@
-"""File logging and crash-resume journal for ReaderM.
+"""File logging and crash-resume journal for Mangasurf.
 
-- Rotating log file:  ~/.readerm/logs/readerm.log
+- Rotating log file:  ~/.readerm/logs/mangasurf.log
 - Job journals:       ~/.readerm/jobs/<id>.json  (one per interrupted job)
 """
 
@@ -26,7 +26,7 @@ from .paths import ensure as _ensure_data_dir
 #: exists -- see readerm.paths.migrate.
 BASE_DIR = _ensure_data_dir()
 LOG_DIR = os.path.join(BASE_DIR, "logs")
-LOG_FILE = os.path.join(LOG_DIR, "readerm.log")
+LOG_FILE = os.path.join(LOG_DIR, "mangasurf.log")
 CRASH_FILE = os.path.join(LOG_DIR, "crash.log")
 JOURNAL_PATH = os.path.join(BASE_DIR, "job.json")
 
@@ -135,15 +135,42 @@ def quiet_pywebview():
         pw.addFilter(_BridgeNoiseFilter())
 
 
+class SafeRotatingFileHandler(RotatingFileHandler):
+    """A RotatingFileHandler that tolerates Windows file locking (WinError 32) gracefully.
+
+    On Windows, when multiple processes or worker threads access the log file,
+    os.rename() in doRollover() can raise PermissionError: [WinError 32].
+    This handler catches the lock contention, resets the stream, and avoids
+    crashing the logging subsystem on every incoming HTTP request.
+    """
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except (PermissionError, OSError) as exc:
+            # File is locked by another process on Windows.
+            # Close and reopen active stream cleanly without dumping tracebacks.
+            if self.stream:
+                try:
+                    self.stream.close()
+                except Exception:
+                    pass
+                self.stream = None
+            try:
+                self.stream = self._open()
+            except Exception:
+                pass
+
+
 def setup_logging(level=logging.INFO):
-    """Attach a rotating file handler to the root logger (idempotent)."""
+    """Attach a safe rotating file handler to the root logger (idempotent)."""
     global _configured
     if _configured:
         return LOG_FILE
     try:
         os.makedirs(LOG_DIR, exist_ok=True)
-        handler = RotatingFileHandler(
-            LOG_FILE, maxBytes=2 * 1024 * 1024, backupCount=3, encoding="utf-8")
+        handler = SafeRotatingFileHandler(
+            LOG_FILE, maxBytes=2 * 1024 * 1024, backupCount=3, encoding="utf-8", delay=True)
         handler.setFormatter(logging.Formatter(
             "%(asctime)s  %(levelname)-8s %(name)s: %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S"))

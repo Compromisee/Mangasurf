@@ -12,11 +12,12 @@ import { createShelves } from './shelves.js'
 import {
     ACCENTS, ACCENT_ORDER, THEMES, THEME_ORDER,
     applyAccent, applyAnimations, applyColumns, applyCorners, applyTheme,
-    createMatrix,
+    createMatrix, createSearchGridWave,
 } from './themes.js'
 
 const $ = sel => document.querySelector(sel)
 const $$ = sel => [...document.querySelectorAll(sel)]
+const escapeHtml = s => s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 const state = {
     settings: {},
@@ -47,15 +48,27 @@ let useBridge = false
 
 async function call(method, ...args) {
     try {
-        if (useBridge && window.pywebview?.api?.[method])
-            return await window.pywebview.api[method](...args)
+        if (useBridge && window.pywebview?.api?.[method]) {
+            const val = await window.pywebview.api[method](...args)
+            return val?.result && typeof val.result === 'object' ? { ...val.result, ...val } : val
+        }
         const res = await fetch(`./_api/${method}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ args }),
         })
-        if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
-        return await res.json()
+        if (!res.ok) {
+            const res2 = await fetch(`/api/${method}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ args }),
+            })
+            if (!res2.ok) return { ok: false, error: `HTTP ${res.status}` }
+            const data2 = await res2.json()
+            return data2?.result && typeof data2.result === 'object' ? { ...data2.result, ...data2 } : data2
+        }
+        const data = await res.json()
+        return data?.result && typeof data.result === 'object' ? { ...data.result, ...data } : data
     } catch (e) {
         return { ok: false, error: String(e?.message || e) }
     }
@@ -105,6 +118,7 @@ function pushSettings(changes) {
 /* ── appearance ───────────────────────────────────────────────────────── */
 
 let matrix = null
+let searchWave = null
 
 function setTheme(name, { persist = true } = {}) {
     const theme = applyTheme(name)
@@ -265,12 +279,39 @@ function showTab(container, name) {
 }
 
 function showView(name) {
+    if (name === 'servers') {
+        $$('.view').forEach(v => v.classList.toggle('on', v.dataset.view === 'settings'))
+        $$('.rail-btn').forEach(b => b.classList.toggle('on', b.id === 'rail-server-btn'))
+        const srvTab = $(`#settings-nav-tabs .tab[data-set-target="servers-group"]`)
+        if (srvTab) srvTab.click()
+        return
+    }
+
     $$('.view').forEach(v => v.classList.toggle('on', v.dataset.view === name))
-    $$('.rail-btn[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === name))
+    $$('.rail-btn').forEach(b => {
+        if (b.id === 'rail-server-btn') {
+            b.classList.remove('on')
+        } else {
+            b.classList.toggle('on', b.dataset.view === name)
+        }
+    })
     if (name === 'library') refreshLibrary()
     if (name === 'queue') refreshQueue()
     if (name === 'stats') refreshStats()
     if (name === 'marks') refreshMarks()
+    if (name === 'search') {
+        const input = $('#search-input')
+        const grid = $('#search-grid')
+        const searchView = $('#search-view') || $('.view[data-view="search"]')
+        if (searchView && (!input?.value?.trim() && !grid?.children?.length)) {
+            searchView.classList.add('search-centered')
+            $('#search-hero')?.classList.remove('query-active')
+            searchWave?.start()
+            searchWave?.setOpacity(1)
+        }
+    } else {
+        searchWave?.stop()
+    }
 }
 
 /* ── library ──────────────────────────────────────────────────────────── */
@@ -299,22 +340,79 @@ async function refreshLibrary() {
     renderStats(libraryCache, recent?.items || [])
 }
 
+function parseBookTitleParts(item) {
+    let raw = item.title || item.name || 'Untitled'
+    let path = item.path || ''
+    // Strip file extension (.cbz, .cbr, .epub, .pdf, .zip, etc.)
+    raw = raw.replace(/\.(cbz|cbr|epub|pdf|zip|cb7|mobi|azw3)$/i, '').trim()
+
+    let seriesTitle = raw
+    let chapterLabel = ''
+
+    // Match patterns like ' - Chapters 001-050', ' - Chapter 12', ' - Vol. 3', ' Ch. 5', '#12'
+    const match = raw.match(/^(.*?)(?:\s*[-–—]\s*|\s+)(Chapters?|Ch\.?|Volumes?|Vol\.?|Ep\.?|Episodes?|#)\s*([0-9].*)$/i)
+    if (match) {
+        seriesTitle = match[1].trim()
+        const prefix = match[2].trim()
+        const num = match[3].trim()
+        chapterLabel = `${prefix} ${num}`.trim()
+    } else if (/^(?:chapter|ch\.?|ep\.?|volume|vol\.?|#)?\s*\d+/i.test(raw) && path) {
+        const parts = path.replace(/[\\/]+$/, '').split(/[\\/]/)
+        if (parts.length >= 2) {
+            seriesTitle = parts[parts.length - 2]
+            chapterLabel = raw
+        }
+    }
+
+    return {
+        title: seriesTitle || raw,
+        chapter: chapterLabel || (item.kind === 'folder' ? raw : ''),
+    }
+}
+
+function circularProgressHtml(pct) {
+    const radius = 16
+    const circ = 2 * Math.PI * radius // ~100.53
+    const fraction = Math.max(0, Math.min(100, pct)) / 100
+    const offset = circ * (1 - fraction)
+    return `
+    <div class="progress-ring-wrap" title="${Math.round(pct)}% completed">
+      <svg class="progress-ring-svg" width="40" height="40" viewBox="0 0 40 40">
+        <circle class="progress-ring-bg" cx="20" cy="20" r="${radius}"></circle>
+        <circle class="progress-ring-fill" cx="20" cy="20" r="${radius}"
+                stroke-dasharray="${circ.toFixed(2)}"
+                stroke-dashoffset="${offset.toFixed(2)}"></circle>
+      </svg>
+      <span class="progress-ring-text">${Math.round(pct)}%</span>
+    </div>`
+}
+
 function renderContinue(items) {
     const wrap = $('#continue-wrap'), box = $('#continue')
     const usable = items.filter(i => i.readable !== false)
     wrap.hidden = !usable.length
-    box.innerHTML = usable.map(i => `
+    box.innerHTML = usable.map(i => {
+        const art = coverAttrs(i.cover, '')
+        const parts = parseBookTitleParts(i)
+        const pct = Math.round((i.fraction || 0) * 100)
+        const pageText = i.total ? `page ${(i.index || 0) + 1} of ${i.total}` : 'in progress'
+        const subDetails = parts.chapter ? `${esc(parts.chapter)} · ${pageText}` : pageText
+        return `
         <div class="row" data-open="${esc(i.path)}">
-          <div class="rthumb" style="${i.cover ? `background-image:url('${esc(i.cover)}')` : ''}">
-            ${i.cover ? '' : '<span class="mi">image</span>'}
+          <div class="rthumb" style="${art.style}"${art.data}>
+            ${art.fallback ? '<span class="mi">image</span>' : ''}
           </div>
           <div class="rmain">
-            <div class="rname">${esc(i.title || i.name || 'Untitled')}</div>
-            <div class="rsub">${esc(i.name || '')} · ${i.total ? `page ${(i.index || 0) + 1} of ${i.total}` : 'in progress'}</div>
+            <div class="rname">${esc(parts.title)}</div>
+            <div class="rsub">${subDetails}</div>
           </div>
-          <div class="rpct">${Math.round((i.fraction || 0) * 100)}%</div>
-        </div>`).join('')
+          ${circularProgressHtml(pct)}
+        </div>`
+    }).join('')
+    hydrateCovers(box)
 }
+
+let currentLibPage = 1
 
 function renderLibrary() {
     const term = ($('#lib-filter').value || '').toLowerCase().trim()
@@ -322,36 +420,78 @@ function renderLibrary() {
     // typing should search *within* the shelf, not jump back to everything.
     let books = shelves.visibleBooks(libraryCache)
     if (term) books = books.filter(b => (b.title || '').toLowerCase().includes(term))
+    renderCarousel(books)
+
     const grid = $('#library-grid')
-    $('#library-empty').hidden = !!books.length
-    $('#all-title').hidden = !books.length
-    const shelf = shelves.state.selected
-        ? shelves.findNode(shelves.state.selected)
-        : null
-    $('#all-title').textContent = shelf ? shelf.name : 'All downloads'
-    grid.innerHTML = books.map(b => {
+    const emptyEl = $('#library-empty')
+    const titleEl = $('#all-title')
+    const pagBar = $('#lib-pagination')
+
+    const mode = state.settings?.lib_display_mode || 'carousel'
+    const isCarouselOnly = mode === 'carousel-only'
+
+    if (isCarouselOnly) {
+        grid.hidden = true
+        if (titleEl) titleEl.hidden = true
+        if (pagBar) pagBar.hidden = true
+    } else {
+        grid.hidden = !books.length
+    }
+
+    const isPaginate = !!state.settings?.lib_paginate
+    const pageSize = Number(state.settings?.lib_page_size) || 24
+    const totalPages = isPaginate ? Math.max(1, Math.ceil(books.length / pageSize)) : 1
+
+    if (currentLibPage > totalPages) currentLibPage = totalPages
+    if (currentLibPage < 1) currentLibPage = 1
+
+    let displayBooks = books
+    if (isPaginate && books.length > pageSize) {
+        const start = (currentLibPage - 1) * pageSize
+        displayBooks = books.slice(start, start + pageSize)
+        if (pagBar) {
+            pagBar.hidden = false
+            const nums = $('#lib-page-numbers')
+            if (nums) {
+                nums.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `
+                    <button class="lib-page-btn ${p === currentLibPage ? 'on' : ''}" data-page="${p}" type="button">${p}</button>
+                `).join('')
+            }
+            const prevBtn = $('#lib-page-prev')
+            const nextBtn = $('#lib-page-next')
+            if (prevBtn) prevBtn.disabled = currentLibPage <= 1
+            if (nextBtn) nextBtn.disabled = currentLibPage >= totalPages
+        }
+    } else {
+        if (pagBar) pagBar.hidden = true
+    }
+
+    grid.innerHTML = displayBooks.map(b => {
         const first = b.items[0]
-        const cover = b.cover ? `background-image:url('${esc(b.cover)}')` : ''
+        const art = coverAttrs(b.cover, b.source)
         // Clicking the cover of something you already downloaded opens it to
         // *read*. It used to route to the series page, which is the download
         // manager -- the wrong destination for a book already on disk. The
         // info button on the corner still goes there.
         const target = first?.path
             ? `data-open="${esc(first.path)}"`
-            : `data-manga="${esc(b.url)}" data-source="${esc(b.source || '')}"`
-        return `<div class="card" ${target}>
-          <div class="thumb" style="${cover}">
-            ${b.cover ? '' : '<span class="mi">image</span>'}
+            : `data-manga="${esc(b.url)}"`
+        const metaAttrs = `data-key="${esc(b.key || b.url || b.directory || '')}" data-manga="${esc(b.url || '')}" data-directory="${esc(b.directory || '')}" data-title="${esc(b.title || '')}" data-source="${esc(b.source || '')}"`
+        const colorAttr = b.color ? `data-card-color="${esc(b.color)}" style="--card-color:${esc(b.color)}"` : ''
+        return `<div class="card" ${target} ${metaAttrs} ${colorAttr}>
+          <div class="thumb" style="${art.style}"${art.data}>
+            ${art.fallback ? '<span class="mi">image</span>' : ''}
             ${b.url ? `<button class="thumb-info" title="Series info"
                          data-manga="${esc(b.url)}" data-source="${esc(b.source || '')}"
                        ><span class="mi">info</span></button>` : ''}
           </div>
           <div class="meta">
             <div class="name">${esc(b.title)}</div>
-            <div class="sub">${b.items.length} item${b.items.length === 1 ? '' : 's'} · ${esc(b.source || 'local')}</div>
+            <div class="sub">${b.items.length} item${b.items.length === 1 ? '' : 's'} · ${esc(b.source_name || b.provider || b.source || 'local')}</div>
           </div>
         </div>`
     }).join('')
+    hydrateCovers(grid)
 }
 
 /* ── search (manga sources, not text-in-book) ────────────────────────── */
@@ -359,47 +499,220 @@ function renderLibrary() {
 async function fillSources() {
     const res = await call('get_sources')
     const list = res?.sources || []
-    const sel = $('#search-source')
-    sel.innerHTML = '<option value="">All sources</option>' +
-        list.map(s => `<option value="${esc(s.id || s.name)}">${esc(s.name || s.id)}</option>`).join('')
+    const sourceSelect = $('#set-default-source')
+    if (sourceSelect) {
+        const cur = state.settings?.default_source || 'mangadex'
+        sourceSelect.innerHTML = list.map(s =>
+            `<option value="${esc(s.id || s.name)}" ${s.id === cur ? 'selected' : ''}>${esc(s.name || s.id)}</option>`
+        ).join('')
+        sourceSelect.value = cur
+    }
+    if ($('#quick-sources-chips')) refreshQuickSources()
 }
 
-async function doSearch() {
+let currentSearchPage = 1
+let currentSearchTotal = 0
+let activeSearchSeq = 0
+const loadedSearchUrls = new Set()
+
+let searchLayout = 'grid'
+function updateSearchLayout(layout) {
+    searchLayout = layout || 'grid'
+    const grid = $('#search-grid')
+    const icon = $('#search-layout-icon')
+    if (grid) grid.classList.toggle('list-view', searchLayout === 'list')
+    if (icon) icon.textContent = searchLayout === 'list' ? 'grid_view' : 'view_list'
+}
+
+const FLARESOLVERR_SOURCES = new Set(['kagane', 'comix', 'mangadotnet', 'manhwa18', 'manga18club', 'hentaiakane'])
+
+async function doSearch(isAppend = false) {
+    const thisSearch = ++activeSearchSeq
     const query = ($('#search-input').value || '').trim()
     const status = $('#search-status')
+    const view = $('#search-view') || $('.view[data-view="search"]')
+    const moreWrap = $('#search-more-wrap')
+
+    // Direct URL support: instant resolve and open detail or curated list
+    if (!isAppend && (query.startsWith('http://') || query.startsWith('https://') || query.includes('.moe/') || query.includes('.com/') || query.includes('.org/') || query.includes('.io/') || query.includes('/title/') || query.includes('/series/') || query.includes('/manga/') || query.includes('/gallery/') || query.includes('/lists/'))) {
+        try {
+            const res = await call('search', query)
+            // Curated List URL (e.g. https://chikari.moe/lists/461-my-manhwa-list)
+            if (res?.is_list && res?.list) {
+                if (status) status.hidden = true
+                const listData = res.list
+                const series = res.results || listData.series || []
+                toast(`Found list: "${listData.title}" (${series.length} series)`)
+                const confirmDownload = confirm(`Download all chapters from all ${series.length} manga in "${listData.title}"?`)
+                if (confirmDownload) {
+                    toast(`Enqueuing all ${series.length} series for download…`)
+                    const dlRes = await call('download_list', query)
+                    showDownloadToast(`Downloading List: ${listData.title}`, `${dlRes?.enqueued || series.length} series enqueued`, listData.cover)
+                    toast(`Started downloading list (${dlRes?.enqueued || series.length} series)`)
+                    refreshQueue()
+                } else {
+                    renderSearchResults(series, false)
+                }
+                return
+            }
+
+            if (res?.url && res?.source) {
+                if (status) status.hidden = true
+                openDetail(res.url, res.source)
+                return
+            }
+        } catch (e) {
+            console.debug('Direct URL search fallback:', e)
+        }
+    }
+
+    // Parse potential @source prefix from query or filter
+    let targetSrc = ''
+    const matchPrefix = query.match(/^@([a-zA-Z0-9._-]+)\s*/i) || query.match(/^([a-zA-Z0-9._-]+):\s*/i)
+    if (matchPrefix) {
+        targetSrc = matchPrefix[1].toLowerCase()
+    } else {
+        targetSrc = ($('#search-source')?.value || '').trim().toLowerCase()
+    }
+
+    if (!isAppend) {
+        currentSearchPage = 1
+        currentSearchTotal = 0
+        loadedSearchUrls.clear()
+        // Immediately erase previous results for clean new source population
+        $('#search-grid').innerHTML = ''
+        if (moreWrap) moreWrap.hidden = true
+    } else {
+        currentSearchPage += 1
+    }
+
+    if (view) view.classList.remove('search-centered')
+
     status.hidden = false
-    // An empty box with a genre or sort chosen is "show me something", which
-    // is what Api.search does when the query is blank.
-    status.textContent = query ? `Searching for “${query}”…` : 'Browsing…'
-    $('#search-grid').innerHTML = ''
-    // Api.search takes a *dict*. Passing the source id as a bare string made
-    // every filtered search die on "'str' object has no attribute 'get'".
-    const res = await call('search', query, {
-        source: $('#search-source').value || '',
-        sort: $('#srt-sort').value || '',
-        order: $('#srt-order').value || 'Descending',
-        status: $('#srt-status').value || '',
-        type: $('#srt-type').value || '',
-        genres: [...chosenGenres],
-        genre_match: $('#srt-match').value || 'all',
-    })
-    const results = res?.results || []
-    status.textContent = res?.ok === false
-        ? `Search failed: ${res.error}`
-        : `${results.length} result${results.length === 1 ? '' : 's'}`
-          + (query ? ` for “${query}”` : '')
-    $('#search-grid').innerHTML = results.map(r => {
-        const art = coverAttrs(r.cover, r.source)
-        return `
-        <div class="card" data-manga="${esc(r.url)}" data-source="${esc(r.source || '')}">
-          <div class="thumb" style="${art.style}"${art.data}>${art.fallback ? '<span class="mi">image</span>' : ''}</div>
-          <div class="meta">
-            <div class="name">${esc(r.title)}</div>
-            <div class="sub">${esc(r.source_name || r.source || '')}</div>
+    const isProtected = targetSrc && FLARESOLVERR_SOURCES.has(targetSrc)
+
+    let loadingTitle = ''
+    if (isAppend) {
+        loadingTitle = `Loading more ${query ? `results for “${esc(query)}”` : 'trending titles'} (page ${currentSearchPage})`
+    } else if (targetSrc) {
+        loadingTitle = `Searching <strong>${esc(targetSrc)}</strong>…${isProtected ? ' (resolving Cloudflare protection if needed)' : ''}`
+    } else if (query) {
+        loadingTitle = `Searching enabled sources for “${esc(query)}”…`
+    } else {
+        loadingTitle = `Browsing trending titles across sources…`
+    }
+
+    if (!isAppend) {
+        status.innerHTML = `
+        <div class="search-math-wave-container">
+          <div class="search-wave-orb">
+            <div class="wave-ring ring-1"></div>
+            <div class="wave-ring ring-2"></div>
+            <div class="wave-ring ring-3"></div>
+            <div class="orb-core"><span class="mi spin-icon">sync</span></div>
           </div>
+          <div class="search-math-frequencies">
+            <span class="freq-bar"></span>
+            <span class="freq-bar"></span>
+            <span class="freq-bar"></span>
+            <span class="freq-bar"></span>
+            <span class="freq-bar"></span>
+            <span class="freq-bar"></span>
+            <span class="freq-bar"></span>
+          </div>
+          <div class="search-wave-title">${loadingTitle}</div>
+          <div class="search-wave-math-formula">λ = v / f · ∫ sin(ωt + φ) dt</div>
         </div>`
-    }).join('')
-    hydrateCovers($('#search-grid'))
+    } else {
+        const spinIcon = `<span class="mi spin-icon" style="display:inline-block;animation:spin 1s linear infinite;vertical-align:middle;margin-right:6px">sync</span>`
+        status.innerHTML = `${spinIcon}${loadingTitle}…`
+    }
+
+    const res = await call('search', query, {
+        source: $('#search-source')?.value || '',
+        sort: $('#srt-sort')?.value || '',
+        order: $('#srt-order')?.value || 'Descending',
+        status: $('#srt-status')?.value || '',
+        type: $('#srt-type')?.value || '',
+        genres: [...chosenGenres],
+        genre_match: $('#srt-match')?.value || 'all',
+        page: currentSearchPage,
+    })
+
+    // If another search was started while this one was fetching, ignore stale response
+    if (thisSearch !== activeSearchSeq) return
+
+    const rawResults = res?.results || []
+
+    // Deduplicate against already loaded URLs to prevent duplicating old results
+    const freshResults = rawResults.filter(r => {
+        if (!r || !r.url) return false
+        if (loadedSearchUrls.has(r.url)) return false
+        loadedSearchUrls.add(r.url)
+        return true
+    })
+
+    currentSearchTotal += freshResults.length
+
+    if (res?.ok === false) {
+        const errMsg = String(res.error || '')
+        if (errMsg.toLowerCase().includes('cloudflare') || errMsg.toLowerCase().includes('flaresolverr')) {
+            status.innerHTML = `<span class="mi" style="color:var(--accent);vertical-align:middle;margin-right:4px">shield</span> Cloudflare challenge detected for ${esc(targetSrc || 'source')}. <small style="color:var(--text-3)">(Ensure FlareSolverr is running on port 8191)</small>`
+        } else {
+            status.textContent = `Search failed: ${res.error}`
+        }
+    } else if (currentSearchTotal === 0) {
+        if (isProtected) {
+            status.innerHTML = `<span class="mi" style="vertical-align:middle;margin-right:4px">info</span> No results found on <strong>${esc(targetSrc)}</strong>. <small style="color:var(--text-3)">(If this source is behind Cloudflare, start FlareSolverr to bypass)</small>`
+        } else {
+            status.textContent = `0 results found${query ? ` for “${query}”` : ''}`
+        }
+    } else {
+        status.textContent = `${currentSearchTotal} result${currentSearchTotal === 1 ? '' : 's'}`
+            + (query ? ` for “${query}”` : '')
+    }
+
+    if (freshResults.length > 0) {
+        const newCardsHtml = freshResults.map(r => {
+            const art = coverAttrs(r.cover, r.source)
+            return `
+            <div class="card" data-manga="${esc(r.url)}" data-source="${esc(r.source || '')}">
+              <div class="thumb" style="${art.style}"${art.data}>${art.fallback ? '<span class="mi">image</span>' : ''}</div>
+              <div class="meta">
+                <div class="name">${esc(r.title)}</div>
+                <div class="sub">${esc(r.source_name || r.source || '')}</div>
+              </div>
+            </div>`
+        }).join('')
+
+        if (isAppend) {
+            $('#search-grid').insertAdjacentHTML('beforeend', newCardsHtml)
+        } else {
+            $('#search-grid').innerHTML = newCardsHtml
+        }
+
+        hydrateCovers($('#search-grid'))
+    }
+
+    if (moreWrap) {
+        if (freshResults.length > 0) {
+            moreWrap.hidden = false
+            const loadBtn = $('#search-load-more')
+            if (loadBtn) {
+                loadBtn.disabled = false
+                loadBtn.innerHTML = '<span class="mi">expand_circle_down</span>Load More Results'
+            }
+        } else if (isAppend || rawResults.length === 0) {
+            moreWrap.hidden = false
+            const loadBtn = $('#search-load-more')
+            if (loadBtn) {
+                loadBtn.disabled = true
+                loadBtn.innerHTML = '<span class="mi">check_circle</span>No More Results'
+            }
+        } else {
+            moreWrap.hidden = true
+        }
+    }
 }
 
 /* ── HeroUI islands ───────────────────────────────────────────────────── */
@@ -411,7 +724,7 @@ async function doSearch() {
  * Everything degrades: if the bundle is missing, `window.ReaderMUI` is
  * undefined and the plain <select> or <input> underneath keeps working. */
 
-const UI = () => window.ReaderMUI
+const UI = () => window.MangasurfUI || window.ReaderMUI
 
 /** Replace a native control with a HeroUI one, keeping the original in sync. */
 function heroSelect(nativeSelector, { label, placeholder } = {}) {
@@ -464,8 +777,6 @@ function heroSlider(nativeSelector, { label, format } = {}) {
 function mountHeroIslands() {
     if (!UI()) return
     // The search refinements are the controls that most want a real combo box:
-    // long lists, keyboard filtering, and a popover that is not the platform's.
-    heroSelect('#search-source', { label: 'Source', placeholder: 'All sources' })
     heroSelect('#srt-sort', { label: 'Sort' })
     heroSelect('#srt-order', { label: 'Order' })
     heroSelect('#srt-status', { label: 'Status' })
@@ -502,6 +813,22 @@ const HOTLINK_PROTECTED = new RegExp(
         'manhuatop\\.org',
         'pstatic\\.net',
         'webtoons\\.com',
+        'gold-usergeneratedcontent\\.net',
+        'hitomi\\.la',
+        'kstatic\\.to',
+        'shadowabyss\\.com',
+        'r2d2storage\\.com',
+        'resmk\\.org',
+        'qvzre\\.org',
+        'qvzra\\.org',
+        'chikari\\.moe',
+        'witchtoons\\.net',
+        'hiperdex\\.com',
+        'hiperdex\\.tv',
+        'kuramanga\\.com',
+        'kurahentai\\.com',
+        'mangak\\.io',
+        'madaradex\\.org',
     ].join('|') + ')$', 'i')
 
 function needsProxy(url) {
@@ -516,9 +843,19 @@ const coverCache = new Map()
 
 async function resolveCover(url, source) {
     if (coverCache.has(url)) return coverCache.get(url)
+    try {
+        const stored = sessionStorage.getItem(`cv:${url}`)
+        if (stored) {
+            coverCache.set(url, stored)
+            return stored
+        }
+    } catch {}
     const res = await call('proxy_cover', url, source || undefined)
-    const data = res?.ok ? res.data : ''
-    coverCache.set(url, data)
+    const data = res?.data || ''
+    if (data) {
+        coverCache.set(url, data)
+        try { sessionStorage.setItem(`cv:${url}`, data) } catch {}
+    }
     return data
 }
 
@@ -541,11 +878,17 @@ function hydrateCovers(root = document) {
                     }
                 })
             }
-        }, { rootMargin: '300px' })
+        }, { rootMargin: '600px 0px' })
     }
     for (const el of root.querySelectorAll('[data-cover-url]')) {
         coverObserver.observe(el)
     }
+}
+
+function bgUrl(url) {
+    if (!url) return ''
+    const safeUrl = String(url).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    return `background-image:url('${safeUrl}')`
 }
 
 /** The style + dataset a thumbnail needs, proxying only where required. */
@@ -559,7 +902,7 @@ function coverAttrs(url, source) {
             fallback: true,
         }
     }
-    return { style: `background-image:url('${esc(url)}')`, data: '', fallback: false }
+    return { style: bgUrl(url), data: '', fallback: false }
 }
 
 /* ── pages sidebar ────────────────────────────────────────────────────── */
@@ -833,14 +1176,32 @@ function renderDetail(info) {
     $('#d-people').textContent = [...new Set(people)].join(', ')
 
     const tags = []
-    if (info.source_name) tags.push([info.source_name, 'flat'])
-    if (info.status) tags.push([info.status, 'flat'])
-    for (const tag of (info.tags || []).slice(0, 14)) {
-        tags.push([typeof tag === 'string' ? tag : (tag.name || ''), 'flat'])
+    if (info.source_name) tags.push([info.source_name, 'source-tag', 'source'])
+    if (info.status) tags.push([info.status, 'status-tag', 'status'])
+    for (const tag of (info.tags || []).slice(0, 18)) {
+        const name = typeof tag === 'string' ? tag : (tag.name || '')
+        if (name) tags.push([name, 'genre-tag', 'genre'])
     }
     $('#d-tags').innerHTML = tags
         .filter(([label]) => label)
-        .map(([label, cls]) => `<span class="chip ${cls}">${esc(label)}</span>`).join('')
+        .map(([label, cls, type]) =>
+            `<button type="button" class="chip ${cls} tag-chip clickable-tag" data-tag="${esc(label)}" data-type="${type}" title="Search manga by ${type}: ${esc(label)}">${esc(label)}</button>`
+        ).join('')
+
+    $('#d-tags').querySelectorAll('.clickable-tag').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault()
+            e.stopPropagation()
+            const tagVal = btn.dataset.tag
+            if (!tagVal) return
+            showView('search')
+            const searchInput = $('#search-input')
+            if (searchInput) {
+                searchInput.value = tagVal
+            }
+            doSearch()
+        })
+    })
 
     const desc = $('#d-desc')
     desc.textContent = info.description || 'No description.'
@@ -1088,24 +1449,919 @@ function chosenChapterNames() {
 }
 
 async function startDetailDownload(queueOnly) {
-    const chapters = chosenChapterNames()
-    const bundle = detail.bundle === 'n'
-        ? Math.max(2, Number($('#d-bundle-n').value) || 10)
-        : Number(detail.bundle) || 0
-    const options = {
-        url: detail.url,
-        source: detail.source || undefined,
-        chapters,
-        output_dir: $('#d-out').value || undefined,
-        bundle,
+    if (detail.isStartingDownload) return
+    detail.isStartingDownload = true
+
+    const btnDl = $('#d-download')
+    const btnQ = $('#d-queue')
+    if (btnDl) btnDl.disabled = true
+    if (btnQ) btnQ.disabled = true
+
+    try {
+        const chapters = chosenChapterNames()
+        const bundle = detail.bundle === 'n'
+            ? Math.max(2, Number($('#d-bundle-n').value) || 10)
+            : Number(detail.bundle) || 0
+        const chosenFormat = $('#d-format button.on')?.dataset?.format || state.settings?.format || 'cbz'
+        const options = {
+            url: detail.url,
+            title: detail.info?.title || '',
+            cover: detail.info?.cover || '',
+            source: detail.source || undefined,
+            chapters: chapters.length ? chapters : undefined,
+            selection: chapters.length ? chapters : 'all',
+            output_dir: $('#d-out').value || undefined,
+            format: chosenFormat,
+            bundle,
+        }
+        const res = await call(queueOnly ? 'queue_add' : 'start_download', options)
+        if (res?.ok === false) {
+            toast(res.error || 'Could not start')
+            return
+        }
+        toast(queueOnly ? 'Added to the queue' : 'Download started')
+        refreshQueue()
+    } finally {
+        setTimeout(() => {
+            detail.isStartingDownload = false
+            if (btnDl) btnDl.disabled = false
+            if (btnQ) btnQ.disabled = false
+        }, 1200)
     }
-    const res = await call(queueOnly ? 'queue_add' : 'start_download', options)
-    if (res?.ok === false) return toast(res.error || 'Could not start')
-    toast(queueOnly ? 'Added to the queue' : 'Download started')
-    refreshQueue()
+}
+
+/* ── floating download notification toast ────────────────────────── */
+let dlToastTimer = null
+
+function showDownloadToast(title, chapterName, coverUrl) {
+    const card = $('#download-toast-card')
+    if (!card) return
+    const titleEl = $('#dl-toast-title')
+    const chEl = $('#dl-toast-chapter')
+    const thumbEl = $('#dl-toast-thumb')
+
+    if (titleEl) titleEl.textContent = title || 'Manga'
+    if (chEl) chEl.textContent = chapterName ? `Chapter: ${chapterName}` : 'Downloading…'
+    if (thumbEl) {
+        if (coverUrl) {
+            thumbEl.style.backgroundImage = `url("${coverUrl}")`
+            thumbEl.innerHTML = ''
+        } else {
+            thumbEl.style.backgroundImage = ''
+            thumbEl.innerHTML = '<span class="mi">download</span>'
+        }
+    }
+
+    card.hidden = false
+    card.style.opacity = '1'
+    card.style.transform = 'translateY(0)'
+
+    clearTimeout(dlToastTimer)
+    dlToastTimer = setTimeout(() => {
+        card.style.opacity = '0'
+        card.style.transform = 'translateY(24px)'
+        setTimeout(() => { card.hidden = true }, 300)
+    }, 3500)
+}
+
+/* ── 3D Depth Library Carousel ────────────────────────────────────── */
+let carouselIndex = 0
+let carouselBooks = []
+
+function getBookReadingProgress(book) {
+    if (!book) return { percent: 0, readChapters: 0, totalChapters: 0, statusText: 'Unread' }
+    const items = book.items || []
+    if (!items.length) return { percent: 0, readChapters: 0, totalChapters: 0, statusText: '0 Chapters' }
+
+    let readCount = 0
+    let totalFraction = 0
+
+    for (const it of items) {
+        if (it.read) {
+            readCount += 1
+            totalFraction += 1.0
+        } else if (it.position) {
+            const frac = it.position.fraction || 0
+            if (frac >= 0.85) {
+                readCount += 1
+                totalFraction += 1.0
+            } else if (frac > 0) {
+                totalFraction += frac
+            }
+        }
+    }
+
+    const pct = Math.min(100, Math.round((totalFraction / items.length) * 100))
+    let statusText = 'Unread'
+    if (pct >= 100) statusText = 'Completed'
+    else if (pct > 0) statusText = `Reading (Ch ${readCount}/${items.length})`
+
+    return {
+        percent: pct,
+        readChapters: readCount,
+        totalChapters: items.length,
+        statusText,
+    }
+}
+
+function sortCarouselBooks(books, sortMode) {
+    const list = [...(books || [])]
+    if (sortMode === 'progress') {
+        list.sort((a, b) => getBookReadingProgress(b).percent - getBookReadingProgress(a).percent)
+    } else if (sortMode === 'size') {
+        list.sort((a, b) => (b.items?.length || b.chapters || 0) - (a.items?.length || a.chapters || 0))
+    } else if (sortMode === 'source') {
+        list.sort((a, b) => String(a.source_name || a.source || '').localeCompare(String(b.source_name || b.source || '')))
+    } else if (sortMode === 'title') {
+        list.sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
+    } else {
+        list.sort((a, b) => String(b.last_download || b.added || '').localeCompare(String(a.last_download || a.added || '')))
+    }
+    return list
+}
+
+function renderCarousel(books) {
+    const sortMode = $('#carousel-sort')?.value || 'downloaded'
+    carouselBooks = sortCarouselBooks(books, sortMode)
+    const wrap = $('#lib-carousel-wrap')
+    if (!wrap) return
+
+    const mode = state.settings?.lib_display_mode || 'carousel'
+    if (mode === 'grid' || mode === 'list' || carouselBooks.length === 0) {
+        wrap.hidden = true
+        return
+    }
+
+    wrap.hidden = false
+    if (carouselIndex >= carouselBooks.length) carouselIndex = Math.max(0, carouselBooks.length - 1)
+    const curBook = carouselBooks[carouselIndex]
+    if (!curBook) return
+
+    const track = $('#carousel-track')
+    if (track) {
+        const visibleIndices = []
+        for (let i = 0; i < carouselBooks.length; i++) {
+            const diff = i - carouselIndex
+            if (Math.abs(diff) <= 3) visibleIndices.push(i)
+        }
+
+        track.innerHTML = visibleIndices.map(idx => {
+            const b = carouselBooks[idx]
+            const diff = idx - carouselIndex
+            let cls = 'carousel-card'
+            if (diff === 0) cls += ' active'
+            else if (diff === -1) cls += ' prev-1'
+            else if (diff === 1) cls += ' next-1'
+            else if (diff === -2) cls += ' prev-2'
+            else if (diff === 2) cls += ' next-2'
+            else if (diff === -3) cls += ' prev-3'
+            else if (diff === 3) cls += ' next-3'
+
+            const art = coverAttrs(b.cover, b.source)
+            const style = art.style || (b.cover ? bgUrl(b.cover) : '')
+            return `<div class="${cls}" data-carousel-idx="${idx}" style="${style}" ${art.data}></div>`
+        }).join('')
+        hydrateCovers(track)
+    }
+
+    // Dots or counter pill
+    const dotsWrap = $('#carousel-dots')
+    const counterPill = $('#carousel-counter-pill')
+    if (carouselBooks.length <= 20) {
+        if (counterPill) counterPill.hidden = true
+        if (dotsWrap) {
+            dotsWrap.hidden = false
+            dotsWrap.innerHTML = carouselBooks.map((_, idx) => `
+                <span class="carousel-dot ${idx === carouselIndex ? 'active' : ''}" data-carousel-dot="${idx}"></span>
+            `).join('')
+        }
+    } else {
+        if (dotsWrap) dotsWrap.hidden = true
+        if (counterPill) {
+            counterPill.hidden = false
+            counterPill.textContent = `${String(carouselIndex + 1).padStart(2, '0')} / ${String(carouselBooks.length).padStart(2, '0')}`
+        }
+    }
+
+    // Info panel underneath
+    const titleEl = $('#carousel-title')
+    if (titleEl) titleEl.textContent = curBook.title || 'Untitled'
+
+    const srcBadge = $('#carousel-source-badge')
+    if (srcBadge) srcBadge.textContent = curBook.source_name || curBook.provider || curBook.source || 'Local Library'
+
+    const prog = getBookReadingProgress(curBook)
+
+    const chText = $('#carousel-chapters-text')
+    if (chText) {
+        chText.textContent = `${prog.readChapters} / ${prog.totalChapters} Chapters Read · ${curBook.items?.length || 0} Files on Disk`
+    }
+
+    const statusBadge = $('#carousel-status-badge')
+    if (statusBadge) statusBadge.textContent = prog.statusText
+
+    // Progress Bar
+    const pctEl = $('#carousel-progress-pct')
+    if (pctEl) pctEl.textContent = `${prog.percent}%`
+    const fillEl = $('#carousel-progress-bar-fill')
+    if (fillEl) fillEl.style.width = `${prog.percent}%`
+
+    // Description
+    const descEl = $('#carousel-description')
+    if (descEl) descEl.textContent = curBook.description || 'No description available for this series. Click Edit Description to add series summary.'
+    const descInput = $('#carousel-desc-input')
+    if (descInput) descInput.value = curBook.description || ''
+
+    // Tags
+    const tagsEl = $('#carousel-footer-tags')
+    if (tagsEl) {
+        const tags = curBook.tags || curBook.genres || []
+        tagsEl.innerHTML = tags.slice(0, 10).map(t => `<span class="carousel-tag-pill">${escapeHtml(t)}</span>`).join('')
+    }
+}
+
+function wireCarousel() {
+    $('#carousel-sort')?.addEventListener('change', () => {
+        carouselIndex = 0
+        renderCarousel(libraryCache)
+    })
+
+    $('#carousel-immersive-toggle')?.addEventListener('click', () => {
+        const wrap = $('#lib-carousel-wrap')
+        const icon = $('#carousel-immersive-icon')
+        if (wrap && icon) {
+            const isSplit = wrap.classList.toggle('immersive-split')
+            icon.textContent = isSplit ? 'fullscreen_exit' : 'fullscreen'
+            toast(isSplit ? 'Immersive Theatre Mode enabled' : 'Standard Carousel view')
+        }
+    })
+
+    $('#carousel-prev')?.addEventListener('click', () => {
+        if (carouselBooks.length === 0) return
+        carouselIndex = (carouselIndex - 1 + carouselBooks.length) % carouselBooks.length
+        renderCarousel(carouselBooks)
+    })
+
+    $('#carousel-next')?.addEventListener('click', () => {
+        if (carouselBooks.length === 0) return
+        carouselIndex = (carouselIndex + 1) % carouselBooks.length
+        renderCarousel(carouselBooks)
+    })
+
+    $('#carousel-track')?.addEventListener('click', e => {
+        const card = e.target.closest('[data-carousel-idx]')
+        if (!card) return
+        const idx = Number(card.dataset.carouselIdx)
+        if (isNaN(idx)) return
+        if (idx === carouselIndex) {
+            // Clicked the active center cover -> Open in reader immediately
+            const curBook = carouselBooks[carouselIndex]
+            if (curBook) {
+                const first = (curBook.items || [])[0]
+                if (first?.path) openPath(first.path)
+                else if (curBook.url) openDetail(curBook.url, curBook.source)
+            }
+        } else {
+            // Clicked a side card -> Slide and animate to that card
+            carouselIndex = idx
+            renderCarousel(carouselBooks)
+        }
+    })
+
+    $('#carousel-dots')?.addEventListener('click', e => {
+        const dot = e.target.closest('[data-carousel-dot]')
+        if (!dot) return
+        const idx = Number(dot.dataset.carouselDot)
+        if (!isNaN(idx)) {
+            carouselIndex = idx
+            renderCarousel(carouselBooks)
+        }
+    })
+
+    $('#carousel-read-btn')?.addEventListener('click', () => {
+        const curBook = carouselBooks[carouselIndex]
+        if (!curBook) return
+        const first = (curBook.items || [])[0]
+        if (first?.path) openPath(first.path)
+        else if (curBook.url) openDetail(curBook.url, curBook.source)
+    })
+
+    $('#carousel-detail-btn')?.addEventListener('click', () => {
+        const curBook = carouselBooks[carouselIndex]
+        if (curBook?.url) openDetail(curBook.url, curBook.source)
+    })
+
+    $('#carousel-folder-btn')?.addEventListener('click', () => {
+        const curBook = carouselBooks[carouselIndex]
+        if (curBook?.directory) call('open_folder', curBook.directory)
+        else toast('No folder path found')
+    })
+
+    // Edit description
+    $('#carousel-edit-desc-btn')?.addEventListener('click', () => {
+        const wrap = $('#carousel-edit-desc-wrap')
+        const descEl = $('#carousel-description')
+        if (wrap && descEl) {
+            wrap.hidden = false
+            descEl.hidden = true
+        }
+    })
+
+    $('#carousel-cancel-desc-btn')?.addEventListener('click', () => {
+        const wrap = $('#carousel-edit-desc-wrap')
+        const descEl = $('#carousel-description')
+        if (wrap && descEl) {
+            wrap.hidden = true
+            descEl.hidden = false
+        }
+    })
+
+    $('#carousel-save-desc-btn')?.addEventListener('click', async () => {
+        const curBook = carouselBooks[carouselIndex]
+        const val = ($('#carousel-desc-input')?.value || '').trim()
+        if (!curBook) return
+        curBook.description = val
+        const descEl = $('#carousel-description')
+        if (descEl) descEl.textContent = val || 'No description available for this series.'
+        $('#carousel-edit-desc-wrap').hidden = true
+        if (descEl) descEl.hidden = false
+        toast('Description saved')
+    })
+}
+
+/* ── Search Suggestions Dropdown ──────────────────────────────────── */
+let suggestTimer = null
+let activeSuggestionIdx = -1
+
+function wireSearchSuggestions() {
+    const input = $('#search-input')
+    const panel = $('#search-suggestions')
+    if (!input || !panel) return
+
+    input.addEventListener('input', () => {
+        clearTimeout(suggestTimer)
+        const val = input.value.trim()
+        if (!val || val.length < 2) {
+            panel.hidden = true
+            panel.innerHTML = ''
+            return
+        }
+        suggestTimer = setTimeout(async () => {
+            try {
+                const res = await call('suggest_query', val)
+                const suggestions = res?.suggestions || []
+                const history = (res?.items || []).map(h => ({
+                    type: 'history',
+                    label: h,
+                    value: h,
+                    icon: 'history',
+                    category: 'Recent',
+                }))
+                const combined = [...history, ...suggestions].slice(0, 8)
+                if (combined.length === 0) {
+                    panel.hidden = true
+                    panel.innerHTML = ''
+                    return
+                }
+                activeSuggestionIdx = -1
+                panel.innerHTML = combined.map((s, idx) => `
+                    <div class="suggestion-item" data-suggest-idx="${idx}" data-suggest-val="${escapeHtml(s.value)}" data-suggest-url="${escapeHtml(s.url || '')}" data-suggest-source="${escapeHtml(s.source || '')}">
+                        <span class="mi suggestion-icon">${escapeHtml(s.icon || 'search')}</span>
+                        <span class="suggestion-label">${escapeHtml(s.label)}</span>
+                        <span class="suggestion-category">${escapeHtml(s.category || '')}</span>
+                    </div>
+                `).join('')
+                panel.hidden = false
+            } catch (e) {
+                console.debug('Search suggestions error:', e)
+            }
+        }, 140)
+    })
+
+    input.addEventListener('keydown', e => {
+        if (panel.hidden) return
+        const items = [...panel.querySelectorAll('.suggestion-item')]
+        if (items.length === 0) return
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            activeSuggestionIdx = (activeSuggestionIdx + 1) % items.length
+            items.forEach((it, i) => it.classList.toggle('selected', i === activeSuggestionIdx))
+            if (activeSuggestionIdx >= 0) input.value = items[activeSuggestionIdx].dataset.suggestVal
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            activeSuggestionIdx = (activeSuggestionIdx - 1 + items.length) % items.length
+            items.forEach((it, i) => it.classList.toggle('selected', i === activeSuggestionIdx))
+            if (activeSuggestionIdx >= 0) input.value = items[activeSuggestionIdx].dataset.suggestVal
+        } else if (e.key === 'Escape') {
+            panel.hidden = true
+        }
+    })
+
+    panel.addEventListener('click', e => {
+        const item = e.target.closest('.suggestion-item')
+        if (!item) return
+        const val = item.dataset.suggestVal
+        const url = item.dataset.suggestUrl
+        const source = item.dataset.suggestSource
+        panel.hidden = true
+        if (url && source) {
+            openDetail(url, source)
+        } else if (val) {
+            input.value = val
+            doSearch(false)
+        }
+    })
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.search-wrap')) {
+            panel.hidden = true
+        }
+    })
 }
 
 /* ── bookmarks ────────────────────────────────────────────────────────── */
+
+/* ── servers & opds hub ─────────────────────────────────────────── */
+
+let serverStatusTimer = null
+let srvLogsCursor = 0
+let srvLogFilter = 'all'
+
+async function refreshServersStatus() {
+    try {
+        const res = await call('get_servers_status')
+        if (!res || res.ok === false) return
+        renderServersHub(res)
+    } catch (e) {
+        console.debug('Failed to fetch servers status:', e)
+    }
+}
+
+function renderServersHub(data) {
+    if (!data) return
+    const srv = data.server || {}
+    const opds = data.opds || {}
+    const isWebRunning = !!srv.running
+    const isOpdsRunning = !!opds.running
+
+    // 1. LAN Web Server UI
+    const webCard = $('#srv-card-web')
+    if (webCard) webCard.classList.toggle('online', isWebRunning)
+
+    const webPill = $('#srv-web-pill')
+    if (webPill) {
+        webPill.className = `srv-pill ${isWebRunning ? 'online' : 'offline'}`
+        const txt = webPill.querySelector('.pill-text')
+        if (txt) txt.textContent = isWebRunning ? 'Online' : 'Offline'
+    }
+
+    const webInput = $('#srv-web-url-input')
+    if (webInput) {
+        webInput.value = srv.url || (srv.host_ip ? `http://${srv.host_ip}:${srv.port || 8577}/?token=${srv.token || ''}` : `http://localhost:${srv.port || 8577}`)
+    }
+
+    const webTsBox = $('#srv-web-ts-box')
+    const webTsInput = $('#srv-web-ts-input')
+    if (webTsBox && webTsInput) {
+        if (srv.tailscale_url) {
+            webTsBox.hidden = false
+            webTsInput.value = srv.tailscale_url
+        } else {
+            webTsBox.hidden = true
+        }
+    }
+
+    const webUptime = $('#srv-web-uptime')
+    if (webUptime) webUptime.textContent = isWebRunning ? (srv.uptime || 'Active') : 'Offline'
+
+    const webDevs = $('#srv-web-clients-count')
+    if (webDevs) {
+        const c = srv.active_devices_count || 0
+        webDevs.textContent = `${c} Active Device${c === 1 ? '' : 's'}`
+    }
+
+    const btnToggleWeb = $('#btn-toggle-server')
+    if (btnToggleWeb) {
+        if (isWebRunning) {
+            btnToggleWeb.className = 'btn danger srv-action-toggle'
+            btnToggleWeb.innerHTML = '<span class="mi">stop</span><span>Stop Server</span>'
+        } else {
+            btnToggleWeb.className = 'btn primary srv-action-toggle'
+            btnToggleWeb.innerHTML = '<span class="mi">play_arrow</span><span>Start Server</span>'
+        }
+    }
+
+    // 2. OPDS Catalog UI
+    const opdsCard = $('#srv-card-opds')
+    if (opdsCard) opdsCard.classList.toggle('online', isOpdsRunning)
+
+    const opdsPill = $('#srv-opds-pill')
+    if (opdsPill) {
+        opdsPill.className = `srv-pill ${isOpdsRunning ? 'online' : 'offline'}`
+        const txt = opdsPill.querySelector('.pill-text')
+        if (txt) txt.textContent = isOpdsRunning ? 'Online' : 'Offline'
+    }
+
+    const opdsInput = $('#srv-opds-url-input')
+    if (opdsInput) {
+        opdsInput.value = opds.url || (opds.host_ip ? `http://${opds.host_ip}:${opds.port || 8578}/opds` : `http://localhost:${opds.port || 8578}/opds`)
+    }
+
+    const opdsTsBox = $('#srv-opds-ts-box')
+    const opdsTsInput = $('#srv-opds-ts-input')
+    if (opdsTsBox && opdsTsInput) {
+        if (opds.tailscale_url) {
+            opdsTsBox.hidden = false
+            opdsTsInput.value = opds.tailscale_url
+        } else {
+            opdsTsBox.hidden = true
+        }
+    }
+
+    const opdsTitles = $('#srv-opds-titles-count')
+    if (opdsTitles) opdsTitles.textContent = `${opds.titles_count || 0} Titles`
+
+    const opdsDevs = $('#srv-opds-clients-count')
+    if (opdsDevs) {
+        const c = opds.active_devices_count || 0
+        opdsDevs.textContent = `${c} Active Reader${c === 1 ? '' : 's'}`
+    }
+
+    const opdsUptime = $('#srv-opds-uptime')
+    if (opdsUptime) opdsUptime.textContent = isOpdsRunning ? (opds.uptime || 'Active') : 'Offline'
+
+    const btnToggleOpds = $('#btn-toggle-opds')
+    if (btnToggleOpds) {
+        if (isOpdsRunning) {
+            btnToggleOpds.className = 'btn danger srv-action-toggle'
+            btnToggleOpds.innerHTML = '<span class="mi">stop</span><span>Stop OPDS</span>'
+        } else {
+            btnToggleOpds.className = 'btn primary srv-action-toggle'
+            btnToggleOpds.innerHTML = '<span class="mi">play_arrow</span><span>Start OPDS</span>'
+        }
+    }
+
+    // 3. Rail and Summary Badges
+    const anyRunning = isWebRunning || isOpdsRunning
+    const totalActive = data.total_active_devices || 0
+
+    const railBadge = $('#rail-server-badge')
+    if (railBadge) {
+        if (anyRunning) {
+            railBadge.hidden = false
+            railBadge.textContent = totalActive > 0 ? totalActive : 'ON'
+            railBadge.title = `Servers Online (${totalActive} active device${totalActive === 1 ? '' : 's'})`
+        } else {
+            railBadge.hidden = true
+        }
+    }
+
+    const summaryBadge = $('#servers-summary-badge')
+    if (summaryBadge) {
+        if (anyRunning) {
+            summaryBadge.textContent = `• Online (${totalActive} active)`
+            summaryBadge.style.color = '#10b981'
+        } else {
+            summaryBadge.textContent = '• Offline'
+            summaryBadge.style.color = 'var(--text-3)'
+        }
+    }
+
+    // 4. Connected Devices
+    renderConnectedDevices(data.devices || [])
+}
+
+function renderConnectedDevices(devices) {
+    const badge = $('#srv-total-devices-badge')
+    if (badge) badge.textContent = devices.length
+
+    const emptyBox = $('#srv-empty-devices')
+    const grid = $('#srv-devices-grid')
+    if (!emptyBox || !grid) return
+
+    if (!devices || devices.length === 0) {
+        emptyBox.hidden = false
+        grid.hidden = true
+        grid.innerHTML = ''
+        return
+    }
+
+    emptyBox.hidden = true
+    grid.hidden = false
+
+    grid.innerHTML = devices.map(d => `
+        <div class="srv-device-card" data-device-id="${escapeHtml(d.id)}">
+          <div class="srv-device-top">
+            <div class="srv-device-id">
+              <div class="srv-device-icon"><span class="mi">${escapeHtml(d.icon || 'smartphone')}</span></div>
+              <div>
+                <div class="srv-device-name">${escapeHtml(d.name || 'Remote Device')}</div>
+                <div style="font-size:11px;color:var(--text-3)">${escapeHtml(d.ip)} ${d.is_tailscale ? '• Tailscale' : (d.is_localhost ? '• Localhost' : '• LAN')}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="srv-device-status-dot ${d.is_active ? 'active' : ''}"></span>
+              <span style="font-size:11px;font-weight:var(--fw-semi);color:${d.is_active ? '#10b981' : 'var(--text-3)'}">${escapeHtml(d.status_label || (d.is_active ? 'Active' : 'Idle'))}</span>
+            </div>
+          </div>
+          <div class="srv-device-meta">
+            <span class="srv-device-badge">${escapeHtml(d.service || 'LAN Reader')}</span>
+            <span>${d.requests_count || 1} reqs • ${escapeHtml(d.data_transferred || '0 B')}</span>
+          </div>
+          <div class="srv-device-footer">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px" title="${escapeHtml(d.last_endpoint || '/')}">${escapeHtml(d.last_endpoint || '/')}</span>
+            <span>${d.last_seen_formatted ? escapeHtml(d.last_seen_formatted.split(' ')[1]) : ''}</span>
+          </div>
+        </div>
+    `).join('')
+}
+
+let activeQRWifiUrl = ''
+let activeQRTailscaleUrl = ''
+
+function updateQRDisplay(type) {
+    const url = type === 'tailscale' && activeQRTailscaleUrl ? activeQRTailscaleUrl : activeQRWifiUrl
+    const urlInput = $('#srv-qr-url-text')
+    if (urlInput) urlInput.value = url
+
+    const target = $('#srv-qr-svg-target')
+    if (target && window.QRCode?.createSVG) {
+        target.innerHTML = window.QRCode.createSVG(url, { size: 210, margin: 2 })
+    } else if (target) {
+        target.textContent = url
+    }
+}
+
+function openServerQR(title, subtitle, wifiUrl, tsUrl = '') {
+    const modal = $('#srv-qr-modal')
+    if (!modal) return
+    const titleEl = $('#srv-qr-title span:last-child')
+    if (titleEl) titleEl.textContent = title
+    const subEl = $('#srv-qr-subtitle')
+    if (subEl) subEl.textContent = subtitle
+
+    activeQRWifiUrl = wifiUrl || ''
+    activeQRTailscaleUrl = tsUrl || ''
+
+    const tabWifi = $('#tab-qr-wifi')
+    const tabTs = $('#tab-qr-tailscale')
+    if (tabWifi) tabWifi.classList.add('on')
+    if (tabTs) {
+        tabTs.classList.remove('on')
+        tabTs.style.display = activeQRTailscaleUrl ? 'inline-flex' : 'none'
+    }
+
+    updateQRDisplay('wifi')
+    modal.hidden = false
+}
+
+async function pollServerLogs() {
+    try {
+        const res = await call('get_server_logs', { service: srvLogFilter, since: srvLogsCursor })
+        if (!res || !res.ok) return
+        srvLogsCursor = res.cursor || srvLogsCursor
+        const consoleBox = $('#srv-console-box')
+        if (!consoleBox || !res.lines || res.lines.length === 0) return
+
+        for (const line of res.lines) {
+            const div = document.createElement('div')
+            div.className = `srv-log-line ${line.level || 'info'}`
+            div.innerHTML = `
+                <span class="t">${escapeHtml(line.time || '')}</span>
+                <span class="lvl">${escapeHtml(line.level || 'INFO')}</span>
+                <span class="srv-tag">${escapeHtml(line.service || 'server')}</span>
+                <span class="msg">${escapeHtml(line.text || '')}</span>
+            `
+            consoleBox.appendChild(div)
+        }
+        while (consoleBox.children.length > 200) {
+            consoleBox.removeChild(consoleBox.firstChild)
+        }
+        consoleBox.scrollTop = consoleBox.scrollHeight
+    } catch (e) {
+        console.debug('Log poll failed:', e)
+    }
+}
+
+function wireServersHub() {
+    // 1. LAN Server Controls
+    $('#btn-toggle-server')?.addEventListener('click', async () => {
+        const isRunning = $('#srv-card-web')?.classList.contains('online')
+        if (isRunning) {
+            toast('Stopping LAN server…')
+            const res = await call('stop_server')
+            toast(res?.ok ? 'LAN server stopped' : (res?.error || 'Could not stop server'))
+        } else {
+            const port = Number($('#set-server-port')?.value || 8577)
+            toast('Starting LAN server…')
+            const res = await call('start_server', { port })
+            toast(res?.ok ? 'LAN server started' : (res?.error || 'Could not start server'))
+        }
+        await refreshServersStatus()
+    })
+
+    $('#btn-restart-server')?.addEventListener('click', async () => {
+        toast('Restarting LAN server…')
+        const res = await call('restart_server')
+        toast(res?.ok ? 'LAN server restarted' : (res?.error || 'Could not restart server'))
+        await refreshServersStatus()
+    })
+
+    $('#btn-copy-web-url')?.addEventListener('click', () => {
+        const val = $('#srv-web-url-input')?.value
+        if (val) {
+            navigator.clipboard.writeText(val)
+            toast('LAN URL copied to clipboard')
+        }
+    })
+
+    $('#btn-open-web-url')?.addEventListener('click', () => {
+        const val = $('#srv-web-url-input')?.value
+        if (val) {
+            call('open_url', { url: val }).catch(() => window.open(val, '_blank'))
+        }
+    })
+
+    $('#btn-copy-web-ts')?.addEventListener('click', () => {
+        const val = $('#srv-web-ts-input')?.value
+        if (val) {
+            navigator.clipboard.writeText(val)
+            toast('Tailscale URL copied to clipboard')
+        }
+    })
+
+    $('#btn-qr-server')?.addEventListener('click', () => {
+        const wifi = $('#srv-web-url-input')?.value
+        const ts = $('#srv-web-ts-input')?.value
+        if (wifi) {
+            openServerQR('Pair Phone / Tablet', 'Scan with your camera to open Mangasurf on your phone or mobile browser.', wifi, ts)
+        }
+    })
+
+    // 2. OPDS Catalog Controls
+    $('#btn-toggle-opds')?.addEventListener('click', async () => {
+        const isRunning = $('#srv-card-opds')?.classList.contains('online')
+        if (isRunning) {
+            toast('Stopping OPDS catalog…')
+            const res = await call('stop_opds')
+            toast(res?.ok ? 'OPDS catalog stopped' : (res?.error || 'Could not stop OPDS'))
+        } else {
+            const port = Number($('#set-opds-port')?.value || 8578)
+            toast('Starting OPDS catalog…')
+            const res = await call('start_opds', { port })
+            toast(res?.ok ? 'OPDS catalog started' : (res?.error || 'Could not start OPDS'))
+        }
+        await refreshServersStatus()
+    })
+
+    $('#btn-restart-opds')?.addEventListener('click', async () => {
+        toast('Restarting OPDS catalog…')
+        const res = await call('restart_opds')
+        toast(res?.ok ? 'OPDS catalog restarted' : (res?.error || 'Could not restart OPDS'))
+        await refreshServersStatus()
+    })
+
+    $('#btn-copy-opds-url')?.addEventListener('click', () => {
+        const val = $('#srv-opds-url-input')?.value
+        if (val) {
+            navigator.clipboard.writeText(val)
+            toast('OPDS Feed URL copied to clipboard')
+        }
+    })
+
+    $('#btn-copy-opds-ts')?.addEventListener('click', () => {
+        const val = $('#srv-opds-ts-input')?.value
+        if (val) {
+            navigator.clipboard.writeText(val)
+            toast('Tailscale OPDS URL copied to clipboard')
+        }
+    })
+
+    $('#btn-qr-opds')?.addEventListener('click', () => {
+        const wifi = $('#srv-opds-url-input')?.value
+        const ts = $('#srv-opds-ts-input')?.value
+        if (wifi) {
+            openServerQR('OPDS Catalog Feed', 'Add this catalog URL in Readest, Panels, KyBook, Aldiko, or Thorium.', wifi, ts)
+        }
+    })
+
+    // 3. QR Modal & Devices Controls
+    $('#srv-qr-tabs')?.addEventListener('click', e => {
+        const tab = e.target.closest('.tab')
+        if (!tab) return
+        for (const t of $$('#srv-qr-tabs .tab')) t.classList.toggle('on', t === tab)
+        const type = tab.dataset.qrType || 'wifi'
+        updateQRDisplay(type)
+    })
+
+    $('#srv-qr-close-btn')?.addEventListener('click', () => {
+        const modal = $('#srv-qr-modal')
+        if (modal) modal.hidden = true
+    })
+
+    $('#srv-qr-modal')?.addEventListener('click', e => {
+        if (e.target === $('#srv-qr-modal')) $('#srv-qr-modal').hidden = true
+    })
+
+    $('#btn-copy-qr-url')?.addEventListener('click', () => {
+        const val = $('#srv-qr-url-text')?.value
+        if (val) {
+            navigator.clipboard.writeText(val)
+            toast('URL copied to clipboard')
+        }
+    })
+
+    $('#btn-refresh-devices')?.addEventListener('click', async () => {
+        toast('Refreshing connected devices…')
+        await refreshServersStatus()
+    })
+
+    $('#btn-clear-devices')?.addEventListener('click', async () => {
+        const res = await call('clear_server_devices', { inactive_only: true })
+        toast(`Cleared inactive devices (${res?.removed || 0} removed)`)
+        await refreshServersStatus()
+    })
+
+    // 4. Rail Jump Button
+    $('#rail-server-btn')?.addEventListener('click', () => {
+        showView('settings')
+        const srvTab = $(`#settings-nav-tabs .tab[data-set-target="servers-group"]`)
+        if (srvTab) srvTab.click()
+    })
+
+    // 5. Settings Form fields
+    $('#set-server-token')?.addEventListener('change', e =>
+        call('set_server_config', { token: e.target.value, server_token: e.target.value }))
+
+    $('#server-token-gen')?.addEventListener('click', async () => {
+        const res = await call('generate_server_token')
+        const token = res?.token || res?.server_token
+        if (token) {
+            const input = $('#set-server-token')
+            if (input) input.value = token
+            toast('New access token generated')
+            await refreshServersStatus()
+        }
+    })
+
+    $('#set-server-port')?.addEventListener('change', e => {
+        const p = Number(e.target.value)
+        call('set_server_config', { port: p, server_port: p })
+    })
+
+    $('#set-server-autostart')?.addEventListener('change', e =>
+        call('set_server_config', { autostart: e.target.checked }))
+
+    $('#set-server-verbose')?.addEventListener('change', e =>
+        call('set_server_config', { verbose: e.target.checked, server_verbose: e.target.checked }))
+
+    $('#set-opds-port')?.addEventListener('change', e => {
+        const p = Number(e.target.value)
+        call('set_opds_config', { port: p, opds_port: p })
+    })
+
+    $('#set-opds-autostart')?.addEventListener('change', e =>
+        call('set_opds_config', { autostart: e.target.checked, opds_autostart: e.target.checked }))
+
+    $('#set-opds-cover-root')?.addEventListener('change', e =>
+        call('set_opds_config', { cover_root: e.target.value, opds_cover_root: e.target.value }))
+
+    $('#set-opds-cover-browse')?.addEventListener('click', async () => {
+        const res = await call('choose_folder')
+        const dir = res?.path || res?.folder
+        if (dir) {
+            const input = $('#set-opds-cover-root')
+            if (input) input.value = dir
+            call('set_opds_config', { cover_root: dir, opds_cover_root: dir })
+        }
+    })
+
+    // 6. Log Console Tabs & Controls
+    $('#srv-log-tabs')?.addEventListener('click', e => {
+        const tab = e.target.closest('.tab')
+        if (!tab) return
+        for (const t of $$('#srv-log-tabs .tab')) t.classList.toggle('on', t === tab)
+        srvLogFilter = tab.dataset.srvLog || 'all'
+        srvLogsCursor = 0
+        const box = $('#srv-console-box')
+        if (box) box.innerHTML = ''
+        pollServerLogs()
+    })
+
+    $('#btn-clear-srv-logs')?.addEventListener('click', () => {
+        const box = $('#srv-console-box')
+        if (box) box.innerHTML = ''
+        toast('Log console cleared')
+    })
+
+    // 7. Polling Timer
+    clearInterval(serverStatusTimer)
+    serverStatusTimer = setInterval(() => {
+        refreshServersStatus()
+        pollServerLogs()
+    }, 3500)
+}
 
 let markCache = []
 
@@ -1194,7 +2450,7 @@ function wireMarks() {
 const chosenGenres = new Set()
 
 async function refreshGenres() {
-    const source = $('#search-source').value || undefined
+    const source = $('#search-source')?.value || undefined
     const res = await call('get_genres', source)
     const genres = (res?.genres || []).map(g => (typeof g === 'string' ? { name: g } : g))
     const box = $('#genre-chips')
@@ -1215,11 +2471,75 @@ function updateGenreCount() {
         ? `${chosenGenres.size} selected` : ''
 }
 
+async function refreshQuickSources() {
+    const res = await call('get_source_config')
+    const sources = res?.sources || []
+    const chips = $('#quick-sources-chips')
+    if (!chips) return
+    const activeCount = sources.filter(s => s.enabled).length
+    const countEl = $('#src-active-count')
+    if (countEl) countEl.textContent = `${activeCount} of ${sources.length} active`
+
+    chips.innerHTML = sources.map(s => {
+        const on = s.enabled ? 'on' : 'off'
+        return `<button type="button" class="chip source-toggle-chip ${on}" data-id="${esc(s.id)}" title="Click to ${s.enabled ? 'disable' : 'enable'} ${esc(s.name || s.id)}">
+            <span class="dot ${s.enabled ? 'on' : ''}"></span>
+            <span>${esc(s.name || s.id)}</span>
+        </button>`
+    }).join('')
+
+    chips.querySelectorAll('.source-toggle-chip').forEach(btn => {
+        btn.addEventListener('click', async e => {
+            e.preventDefault()
+            const id = btn.dataset.id
+            const isCurrentlyOn = btn.classList.contains('on')
+            const newState = !isCurrentlyOn
+            btn.classList.toggle('on', newState)
+            btn.classList.toggle('off', !newState)
+            btn.querySelector('.dot')?.classList.toggle('on', newState)
+
+            await call('toggle_source', id, newState)
+            await fillSources()
+            await refreshQuickSources()
+            if ($('#source-list')) {
+                const refreshed = await call('get_source_config')
+                renderSourceRanks(refreshed?.sources || [])
+            }
+            toast(`${btn.textContent.trim()} ${newState ? 'enabled' : 'disabled'}`)
+        })
+    })
+}
+
+function addCustomGenre(tag) {
+    const clean = String(tag || '').trim()
+    if (!clean) return
+    chosenGenres.add(clean)
+    const box = $('#genre-chips')
+    if (box) {
+        const existing = box.querySelector(`[data-genre="${clean}"]`)
+        if (existing) {
+            existing.classList.add('on')
+        } else {
+            const btn = document.createElement('button')
+            btn.type = 'button'
+            btn.className = 'chip on custom-chip'
+            btn.dataset.genre = clean
+            btn.textContent = clean
+            box.prepend(btn)
+        }
+    }
+    updateGenreCount()
+    doSearch()
+}
+
 function wireRefine() {
     $('#search-more').addEventListener('click', () => {
         const panel = $('#refine')
         panel.hidden = !panel.hidden
-        if (!panel.hidden && !$('#genre-chips').children.length) refreshGenres()
+        if (!panel.hidden) {
+            if (!$('#genre-chips').children.length) refreshGenres()
+            refreshQuickSources()
+        }
     })
     $('#genre-chips').addEventListener('click', e => {
         const chip = e.target.closest('[data-genre]')
@@ -1235,7 +2555,55 @@ function wireRefine() {
         for (const chip of $$('#genre-chips .chip')) chip.classList.remove('on')
         updateGenreCount()
     })
-    $('#search-source').addEventListener('change', () => {
+
+    // Custom genre enter & add button
+    const customInp = $('#custom-genre-input')
+    const customBtn = $('#custom-genre-add-btn')
+    const handleAddCustom = () => {
+        const val = (customInp?.value || '').trim()
+        if (val) {
+            addCustomGenre(val)
+            customInp.value = ''
+        }
+    }
+    customBtn?.addEventListener('click', handleAddCustom)
+    customInp?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleAddCustom()
+        }
+    })
+
+    // Load more button
+    $('#search-load-more')?.addEventListener('click', async e => {
+        e.preventDefault()
+        const loadBtn = $('#search-load-more')
+        if (loadBtn) {
+            loadBtn.disabled = true
+            loadBtn.innerHTML = '<span class="mi">sync</span>Loading…'
+        }
+        await doSearch(true)
+    })
+
+    $('#src-enable-all')?.addEventListener('click', async () => {
+        const res = await call('get_source_config')
+        for (const s of (res?.sources || [])) {
+            if (!s.enabled) await call('toggle_source', s.id, true)
+        }
+        await fillSources()
+        await refreshQuickSources()
+        toast('All sources enabled')
+    })
+    $('#src-disable-all')?.addEventListener('click', async () => {
+        const res = await call('get_source_config')
+        for (const s of (res?.sources || [])) {
+            if (s.enabled) await call('toggle_source', s.id, false)
+        }
+        await fillSources()
+        await refreshQuickSources()
+        toast('All sources disabled')
+    })
+    $('#search-source')?.addEventListener('change', () => {
         if (!$('#refine').hidden) refreshGenres()
     })
 }
@@ -1337,21 +2705,104 @@ function wireFilters() {
 
 /* ── queue ────────────────────────────────────────────────────────────── */
 
+let queuePollTimer = null
+
+function renderSparkline(history) {
+    if (!history || history.length < 2) return ''
+    const maxVal = Math.max(1024, ...history)
+    const points = history.map((val, idx) => {
+        const x = (idx / (history.length - 1)) * 110
+        const y = 26 - ((val / maxVal) * 22)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+    return `
+    <div class="q-sparkline" title="Live transfer speed graph">
+      <svg width="110" height="28" viewBox="0 0 110 28">
+        <polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${points}" />
+      </svg>
+    </div>`
+}
+
 async function refreshQueue() {
     const res = await call('get_queue')
     const items = res?.queue || res?.items || []
     $('#queue-empty').hidden = !!items.length
-    $('#queue-list').innerHTML = items.map(j => `
-        <div class="row">
-          <div class="rmain">
-            <div class="rname">${esc(j.title || j.name || 'Job')}</div>
-            <div class="rsub">${esc(j.status || j.state || '')} ${j.chapter ? '· ' + esc(j.chapter) : ''}</div>
+
+    const cartCount = (res?.cart || []).length || (res?.queued || 0)
+    const cartBar = $('#cart-bar')
+    if (cartBar) {
+        if (cartCount > 0) {
+            cartBar.hidden = false
+            const sub = $('#cart-bar-sub')
+            if (sub) sub.textContent = `${cartCount} item${cartCount === 1 ? '' : 's'} in cart ready to download`
+        } else {
+            cartBar.hidden = true
+        }
+    }
+
+    $('#queue-list').innerHTML = items.map(j => {
+        const pct = Math.round((j.progress || 0) * 100)
+        const art = coverAttrs(j.cover, j.source)
+        const spark = renderSparkline(j.history || [])
+        return `
+        <div class="queue-card-expanded" data-job-id="${esc(j.id || '')}">
+          <div class="q-top">
+            <div class="rthumb" style="${art.style}"${art.data}>
+              ${art.fallback ? '<span class="mi">download</span>' : ''}
+            </div>
+            <div class="rmain">
+              <div class="q-header-row">
+                <div class="rname">${esc(j.title || 'Download')}</div>
+                <span class="qstatus ${j.status === 'running' ? 'active' : ''}">${esc(j.status || 'running')}</span>
+              </div>
+              <div class="q-metrics-row">
+                <span class="q-metric"><span class="mi">menu_book</span>${esc(j.chapter || 'Downloading…')}</span>
+                <span class="q-metric"><span class="mi">speed</span>${esc(j.speed_text || '0 KB/s')}</span>
+                <span class="q-metric"><span class="mi">schedule</span>ETA ${esc(j.eta_text || '--')}</span>
+                <span class="q-metric"><span class="mi">data_usage</span>${esc(j.downloaded_text || '0 B')}</span>
+              </div>
+            </div>
+            ${spark}
+            <div class="rpct">${pct}%</div>
           </div>
-          <div class="rpct">${Math.round((j.progress || 0) * 100)}%</div>
-        </div>`).join('')
+          <div class="qbar-track">
+            <div class="qbar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`
+    }).join('')
+    hydrateCovers($('#queue-list'))
+
+    const activeCount = items.filter(j => j.status === 'running' || j.status === 'queued').length
     const badge = $('#queue-badge')
-    badge.hidden = !items.length
-    badge.textContent = String(items.length)
+    if (badge) {
+        badge.hidden = !activeCount
+        badge.textContent = String(activeCount)
+    }
+
+    // Auto-poll while downloads are running
+    clearTimeout(queuePollTimer)
+    if (activeCount > 0) {
+        queuePollTimer = setTimeout(refreshQueue, 1200)
+    }
+}
+
+// Live engine events from python backend (GUI & LAN Server)
+window.onEngineEvents = function(events) {
+    if (!Array.isArray(events)) events = [events]
+    for (const ev of events) {
+        if (!ev) continue
+        if (ev.type === 'job_started' || ev.type === 'plan' || ev.type === 'progress' ||
+            ev.type === 'chapter_done' || ev.type === 'chapter_failed' ||
+            ev.type === 'finished' || ev.type === 'done' || ev.type === 'error' || ev.type === 'stopped') {
+            refreshQueue()
+        }
+        if (ev.type === 'finished' || ev.type === 'done') {
+            refreshLibrary()
+            if (ev.result?.title) {
+                toast(`Download complete: ${ev.result.title}`)
+            }
+        }
+    }
 }
 
 /* ── sliders ──────────────────────────────────────────────────────────── */
@@ -1430,17 +2881,34 @@ function tiles(target, items) {
     el.hidden = !items.length
 }
 
+const STAT_GRADIENTS = [
+    'linear-gradient(90deg, #38bdf8, #818cf8)',
+    'linear-gradient(90deg, #a855f7, #ec4899)',
+    'linear-gradient(90deg, #10b981, #06b6d4)',
+    'linear-gradient(90deg, #fbbf24, #f97316)',
+    'linear-gradient(90deg, #f43f5e, #fb7185)',
+    'linear-gradient(90deg, #6366f1, #3b82f6)',
+    'linear-gradient(90deg, #14b8a6, #22c55e)',
+    'linear-gradient(90deg, #e11d48, #c026d3)',
+]
+
 function bars(target, rows) {
     const el = $(target)
     if (!el) return
     const peak = Math.max(1, ...rows.map(r => r[1]))
-    el.innerHTML = rows.length ? rows.map(([label, value, note]) => `
+    el.innerHTML = rows.length ? rows.map(([label, value, note], idx) => {
+        const grad = STAT_GRADIENTS[idx % STAT_GRADIENTS.length]
+        return `
         <div class="bar-row">
-          <span class="bl" title="${esc(label)}">${esc(label)}</span>
-          <span class="bt"><i style="width:${Math.max(2, (value / peak) * 100).toFixed(1)}%"></i></span>
+          <span class="bl" title="${esc(label)}">
+            <span class="bar-dot" style="width:8px;height:8px;border-radius:50%;background:${grad.split(',')[1].trim()};flex-shrink:0"></span>
+            ${esc(label)}
+          </span>
+          <span class="bt"><i style="width:${Math.max(2, (value / peak) * 100).toFixed(1)}%;--bar-grad:${grad}"></i></span>
           <span class="bv">${esc(note ?? human(value))}</span>
-        </div>`).join('')
-        : '<p class="empty">Nothing recorded yet.</p>'
+        </div>`
+    }).join('')
+    : '<p class="empty">Nothing recorded yet.</p>'
 }
 
 /* Longest and current run of consecutive days with a download. The calendar
@@ -1490,6 +2958,45 @@ async function refreshStats() {
 
     const sources = Object.entries(stats.sources || {})
         .sort((a, b) => (b[1].chapters || 0) - (a[1].chapters || 0))
+
+    const totalSrcChapters = sources.reduce((n, s) => n + (s[1].chapters || 0), 0)
+    const totalSrcBytes = sources.reduce((n, s) => n + (s[1].bytes || 0), 0)
+    const topSource = sources[0] ? (sources[0][1].name || sources[0][0]) : 'None'
+
+    tiles('#stats-sources-strip', [
+        [String(sources.length), 'Active Providers', true],
+        [human(totalSrcChapters), 'Total Chapters'],
+        [humanBytes(totalSrcBytes), 'Data Streamed'],
+        [topSource, 'Top Provider'],
+    ])
+
+    const peakCh = Math.max(1, ...sources.map(s => s[1].chapters || 0))
+    const sGrid = $('#stats-sources-grid')
+    if (sGrid) {
+        sGrid.innerHTML = sources.map(([id, row], idx) => {
+            const grad = STAT_GRADIENTS[idx % STAT_GRADIENTS.length]
+            const ch = row.chapters || 0
+            const pct = Math.round((ch / Math.max(1, totalSrcChapters)) * 100)
+            return `
+            <div class="source-stat-card">
+              <div class="src-stat-top">
+                <div class="src-stat-name">
+                  <span class="mi" style="color:var(--accent)">lan</span>
+                  <strong>${esc(row.name || id)}</strong>
+                </div>
+                <span class="src-stat-pct" style="color:${grad.split(',')[1].trim()}">${pct}%</span>
+              </div>
+              <div class="src-stat-bar-bg">
+                <div class="src-stat-bar-fill" style="width:${Math.max(3, (ch / peakCh) * 100)}%;background:${grad}"></div>
+              </div>
+              <div class="src-stat-footer">
+                <span>${human(ch)} chapters</span>
+                <span>${humanBytes(row.bytes || 0)}</span>
+              </div>
+            </div>`
+        }).join('')
+    }
+
     bars('#stats-sources', sources.map(([id, row]) =>
         [row.name || id, row.chapters || 0,
          `${human(row.chapters || 0)} ch · ${humanBytes(row.bytes || 0)}`]))
@@ -1622,16 +3129,22 @@ function renderSourceRanks(rows) {
         const id = li.dataset.id
 
         li.querySelector('input[type=checkbox]').addEventListener('change', async e => {
-            const res = await call('toggle_source', id, e.target.checked)
-            renderSourceRanks(res?.sources || rows)
+            const isChecked = e.target.checked
+            const res = await call('toggle_source', id, isChecked)
+            const updated = res?.sources || (await call('get_source_config'))?.sources || []
+            renderSourceRanks(updated)
             fillSources()
+            toast(`${id} ${isChecked ? 'enabled' : 'disabled'}`)
         })
 
-        for (const btn of li.querySelectorAll('[data-move]'))
+        for (const btn of li.querySelectorAll('[data-move]')) {
             btn.addEventListener('click', async () => {
                 const res = await call('move_source', id, parseInt(btn.dataset.move, 10))
-                renderSourceRanks(res?.sources || rows)
+                const updated = res?.sources || (await call('get_source_config'))?.sources || []
+                renderSourceRanks(updated)
+                fillSources()
             })
+        }
 
         li.addEventListener('dragstart', () => li.classList.add('dragging'))
         li.addEventListener('dragend', async () => {
@@ -1639,7 +3152,9 @@ function renderSourceRanks(rows) {
             for (const child of list.children) child.classList.remove('drag-over')
             const order = [...list.children].map(c => c.dataset.id)
             const res = await call('reorder_sources', order)
-            renderSourceRanks(res?.sources || rows)
+            const updated = res?.sources || (await call('get_source_config'))?.sources || []
+            renderSourceRanks(updated)
+            fillSources()
         })
         li.addEventListener('dragover', e => {
             e.preventDefault()
@@ -1651,6 +3166,52 @@ function renderSourceRanks(rows) {
             list.insertBefore(dragging, after ? li.nextSibling : li)
         })
         li.addEventListener('dragleave', () => li.classList.remove('drag-over'))
+    }
+}
+
+/* ── library & folders ────────────────────────────────────────────────── */
+
+async function refreshLibraryFolders() {
+    const res = await call('get_library_folders')
+    const outDir = res?.output_dir || ''
+    const folders = res?.folders || []
+    const list = $('#lib-folders-list')
+    if (list) {
+        let itemsHtml = ''
+        if (outDir) {
+            itemsHtml += `
+            <li class="folder-item">
+              <div class="folder-info">
+                <span class="mi">folder</span>
+                <span class="folder-path" title="Default Download Directory">${esc(outDir)} <small style="color:var(--accent);font-weight:600">(Primary Downloads)</small></span>
+              </div>
+              <div class="folder-actions">
+                <button class="btn sm ghost" data-scan-folder="${esc(outDir)}" type="button" title="Rescan this folder"><span class="mi">sync</span>Scan</button>
+              </div>
+            </li>`
+        }
+        for (const folder of folders) {
+            itemsHtml += `
+            <li class="folder-item">
+              <div class="folder-info">
+                <span class="mi">folder_special</span>
+                <span class="folder-path" title="${esc(folder)}">${esc(folder)}</span>
+              </div>
+              <div class="folder-actions">
+                <button class="btn sm ghost" data-scan-folder="${esc(folder)}" type="button" title="Rescan this folder"><span class="mi">sync</span>Scan</button>
+                <button class="btn sm ghost" data-remove-folder="${esc(folder)}" type="button" title="Remove this monitored folder" style="color:var(--danger)"><span class="mi">delete</span></button>
+              </div>
+            </li>`
+        }
+        if (!itemsHtml) {
+            itemsHtml = '<p class="folder-empty-note">No library folders configured yet.</p>'
+        }
+        list.innerHTML = itemsHtml
+    }
+    const summary = $('#lib-folders-summary')
+    if (summary) {
+        const total = (outDir ? 1 : 0) + folders.length
+        summary.textContent = `${total} path${total === 1 ? '' : 's'}`
     }
 }
 
@@ -1745,11 +3306,14 @@ async function openPath(path) {
     if (res.kind === 'pages') {
         await mv.open({ pages: res.pages })
     } else {
-        // Packaged file: hand it to the foliate-js engine, then pull the page
-        // list back out so the manga renderer still drives layout.
+        // Packaged file: hand it to the foliate-js engine, streaming instant
+        // HTTP ranges so a 500MB CBZ opens in milliseconds without full download.
         try {
             const { makeBook } = await import('../foliate/view.js')
-            const file = await fetchAsFile(res.url, res.title)
+            const ext = res.format || (res.path ? res.path.split('.').pop() : 'cbz')
+            const baseName = res.title || 'book'
+            const filename = baseName.toLowerCase().endsWith('.' + ext.toLowerCase()) ? baseName : `${baseName}.${ext}`
+            const file = await openRemoteBookFile(res.url, filename)
             const book = await makeBook(file)
             await mv.open(book)
         } catch (e) {
@@ -1776,26 +3340,75 @@ async function openPath(path) {
     }
 }
 
+function makeHttpRangeFile(url, size, name) {
+    const token = typeof location !== 'undefined' && location.search ? new URLSearchParams(location.search).get('token') : ''
+    const headers = token ? { 'X-Mangasurf-Token': token, 'X-ReaderM-Token': token } : {}
+
+    return {
+        name: name || 'book.cbz',
+        type: 'application/vnd.comicbook+zip',
+        size: size,
+        slice(start = 0, end = size) {
+            const actualStart = start < 0 ? Math.max(0, size + start) : start
+            const actualEnd = Math.min(size, end < 0 ? Math.max(0, size + end) : end)
+            const sliceLength = Math.max(0, actualEnd - actualStart)
+
+            return {
+                size: sliceLength,
+                type: 'application/octet-stream',
+                slice(s = 0, e = sliceLength) {
+                    return this
+                },
+                async arrayBuffer() {
+                    if (sliceLength === 0) return new ArrayBuffer(0)
+                    const rangeHeader = `bytes=${actualStart}-${actualEnd - 1}`
+                    const res = await fetch(url, {
+                        headers: {
+                            ...headers,
+                            Range: rangeHeader
+                        }
+                    })
+                    if (res.status === 206 || res.status === 200) {
+                        return await res.arrayBuffer()
+                    }
+                    throw new Error(`Range request failed: HTTP ${res.status}`)
+                }
+            }
+        }
+    }
+}
+
+async function openRemoteBookFile(url, name) {
+    const token = typeof location !== 'undefined' && location.search ? new URLSearchParams(location.search).get('token') : ''
+    const headers = token ? { 'X-Mangasurf-Token': token, 'X-ReaderM-Token': token } : {}
+
+    try {
+        const headRes = await fetch(url, { method: 'HEAD', headers })
+        const len = headRes.headers.get('Content-Length')
+        const acceptRanges = headRes.headers.get('Accept-Ranges')
+        const size = len ? parseInt(len, 10) : 0
+
+        if (headRes.ok && size > 0 && acceptRanges === 'bytes') {
+            return makeHttpRangeFile(url, size, name)
+        }
+    } catch (e) {
+        console.debug('Fast HEAD range check failed, falling back:', e)
+    }
+
+    return await fetchAsFile(url, name)
+}
+
 async function fetchAsFile(url, name, attempts = 3) {
-    /* "Failed to fetch" on a book that is plainly there.
-     *
-     * A bare fetch() reports that for *any* transport hiccup, and it never
-     * looked at res.ok either -- so a 403 or a 503 arrived as a Blob holding
-     * an error page, which then failed to parse as a zip and read as a
-     * corrupt book. Reported as intermittent, "sometimes works after a
-     * while", which is exactly the shape of an unretried transient.
-     *
-     * The asset server is on loopback, so a retry costs nothing and a short
-     * backoff clears the case where it is still binding its port.
-     */
+    const token = typeof location !== 'undefined' && location.search ? new URLSearchParams(location.search).get('token') : ''
+    const headers = token ? { 'X-Mangasurf-Token': token, 'X-ReaderM-Token': token } : {}
     let last = null
     for (let attempt = 1; attempt <= attempts; attempt++) {
         try {
-            const res = await fetch(url, { cache: 'no-store' })
+            const res = await fetch(url, { cache: 'no-store', headers })
             if (!res.ok) throw new Error(`server said ${res.status}`)
             const blob = await res.blob()
             if (!blob.size) throw new Error('the file came back empty')
-            return new File([blob], name || 'book.cbz', { type: blob.type })
+            return new File([blob], name || 'book.cbz', { type: blob.type || 'application/vnd.comicbook+zip' })
         } catch (err) {
             last = err
             if (attempt < attempts) {
@@ -1956,11 +3569,179 @@ function wire() {
 
     $('#lib-filter').addEventListener('input', renderLibrary)
     $('#lib-refresh').addEventListener('click', refreshLibrary)
-    $('#search-go').addEventListener('click', doSearch)
-    $('#search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch() })
+    $('#lib-scan-header-btn')?.addEventListener('click', async () => {
+        const btn = $('#lib-scan-header-btn')
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="mi">sync</span>Scanning…' }
+        const res = await call('scan_library_folders')
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">sync</span>Scan Folders' }
+        const found = res?.discovered ?? 0
+        const total = res?.total_series ?? 0
+        toast(`Library scanned: ${total} series indexed (${found} new)`)
+        await refreshLibrary()
+        await refreshLibraryFolders()
+    })
+
+    $('#search-layout-btn')?.addEventListener('click', () => {
+        const next = searchLayout === 'grid' ? 'list' : 'grid'
+        updateSearchLayout(next)
+        pushSettings({ search_layout: next })
+        toast(`Search view: ${next === 'list' ? 'List' : 'Grid'}`)
+    })
+
+    $('#search-go').addEventListener('click', () => doSearch(false))
+    $('#search-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            doSearch(false)
+        }
+    })
+    $('#search-input').addEventListener('input', e => {
+        const val = e.target.value.trim()
+        const heroBox = $('#search-hero')
+        if (val.length > 0) {
+            heroBox?.classList.add('query-active')
+            searchWave?.setOpacity(0)
+        } else {
+            heroBox?.classList.remove('query-active')
+            searchWave?.setOpacity(1)
+        }
+    })
     $('#queue-clear').addEventListener('click', async () => { await call('queue_clear'); refreshQueue() })
     $('#queue-pause').addEventListener('click', async () => {
         const r = await call('set_queue_paused', true); toast(r?.ok ? 'Queue paused' : 'Could not pause'); refreshQueue()
+    })
+    $('#btn-cart-download-all')?.addEventListener('click', async () => {
+        toast('Starting all downloads in cart…')
+        await call('set_queue_paused', false)
+        refreshQueue()
+    })
+    $('#btn-cart-clear-all')?.addEventListener('click', async () => {
+        await call('queue_clear')
+        toast('Cart cleared')
+        refreshQueue()
+    })
+    $('#d-cart-btn')?.addEventListener('click', async () => {
+        await startDetailDownload(true)
+        toast('Added series to Cart for bulk download')
+    })
+
+    // ── custom card context menu (Library & Marks) ──
+    let activeContextManga = null
+    const contextMenu = $('#card-context-menu')
+
+    const closeContextMenu = () => {
+        if (contextMenu) contextMenu.hidden = true
+        activeContextManga = null
+    }
+
+    document.addEventListener('contextmenu', e => {
+        const card = e.target.closest('#library-grid .card, #marks-grid .card')
+        if (!card || !contextMenu) return
+        e.preventDefault()
+        activeContextManga = {
+            key: card.dataset.key || card.dataset.manga || card.dataset.directory || '',
+            url: card.dataset.manga || '',
+            directory: card.dataset.directory || '',
+            openPath: card.dataset.open || '',
+            source: card.dataset.source || '',
+            title: card.dataset.title || card.querySelector('.name')?.textContent || 'Manga',
+            cardEl: card,
+        }
+        $('#cmenu-title').textContent = activeContextManga.title
+        
+        const x = Math.min(e.clientX, window.innerWidth - 270)
+        const y = Math.min(e.clientY, window.innerHeight - 340)
+        contextMenu.style.left = `${Math.max(10, x)}px`
+        contextMenu.style.top = `${Math.max(10, y)}px`
+        contextMenu.hidden = false
+    })
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#card-context-menu')) closeContextMenu()
+    })
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeContextMenu()
+    })
+
+    $('#cmenu-read')?.addEventListener('click', async () => {
+        const item = activeContextManga
+        closeContextMenu()
+        if (!item) return
+        if (item.openPath) { openPath(item.openPath); return }
+        const lib = await call('get_library_entry', item.url)
+        const entry = lib?.entry || lib
+        const first = (entry?.items || [])[0]
+        if (first?.path) openPath(first.path)
+        else openDetail(item.url, item.source)
+    })
+
+    $('#cmenu-info')?.addEventListener('click', () => {
+        const item = activeContextManga
+        closeContextMenu()
+        if (item?.url) openDetail(item.url, item.source)
+    })
+
+    $('#cmenu-folder')?.addEventListener('click', async () => {
+        const item = activeContextManga
+        closeContextMenu()
+        if (!item) return
+        const lib = await call('get_library_entry', item.url)
+        const dir = lib?.entry?.directory || lib?.directory
+        if (dir) call('open_folder', dir)
+        else toast('Folder path not found')
+    })
+
+    $('#cmenu-colors')?.addEventListener('click', async e => {
+        const btn = e.target.closest('[data-color]')
+        if (!btn || !activeContextManga) return
+        const color = btn.dataset.color || ''
+        const item = activeContextManga
+        closeContextMenu()
+        await call('set_book_color', item.url, color)
+        if (item.cardEl) {
+            if (color) {
+                item.cardEl.setAttribute('data-card-color', color)
+                item.cardEl.style.setProperty('--card-color', color)
+            } else {
+                item.cardEl.removeAttribute('data-card-color')
+                item.cardEl.style.removeProperty('--card-color')
+            }
+        }
+        toast(color ? 'Color tag set' : 'Color tag cleared')
+    })
+
+    $('#cmenu-sync-meta')?.addEventListener('click', async () => {
+        closeContextMenu()
+        const res = await call('rebuild_library_metadata')
+        toast(`Metadata synced for ${res?.total_series || 0} series`)
+        await refreshLibrary()
+    })
+
+    $('#cmenu-del-meta')?.addEventListener('click', async () => {
+        const item = activeContextManga
+        closeContextMenu()
+        if (!item) return
+        const key = item.key || item.url || item.directory || item.openPath
+        if (!key && !item.title) return
+        libraryCache = libraryCache.filter(b => b.url !== key && b.key !== key && b.directory !== key && b.title !== item.title)
+        renderLibrary()
+        await call('delete_library_entry', key, false)
+        toast(`Removed "${item.title}" from library records`)
+        await refreshLibrary()
+    })
+
+    $('#cmenu-del-all')?.addEventListener('click', async () => {
+        const item = activeContextManga
+        closeContextMenu()
+        if (!item) return
+        const key = item.key || item.url || item.directory || item.openPath
+        if (!key && !item.title) return
+        if (!confirm(`Are you sure you want to permanently delete "${item.title}" and all its files from disk?`)) return
+        libraryCache = libraryCache.filter(b => b.url !== key && b.key !== key && b.directory !== key && b.title !== item.title)
+        renderLibrary()
+        await call('delete_library_entry', key, true)
+        toast(`Deleted "${item.title}" and files from disk`)
+        await refreshLibrary()
     })
 
     // open anything with data-open, anywhere
@@ -2074,6 +3855,44 @@ function wire() {
         findTimer = setTimeout(() => findInBook(q), 300)
     })
 
+    // ---- settings: collapse toggle
+    let allSettingsCollapsed = false
+    $('#settings-collapse-toggle')?.addEventListener('click', () => {
+        allSettingsCollapsed = !allSettingsCollapsed
+        for (const g of $$('.view[data-view="settings"] .set-group')) {
+            g.open = !allSettingsCollapsed
+        }
+        const btn = $('#settings-collapse-toggle')
+        if (btn) {
+            btn.innerHTML = allSettingsCollapsed
+                ? '<span class="mi">unfold_more</span>Expand all'
+                : '<span class="mi">unfold_less</span>Collapse all'
+        }
+    })
+
+    // ---- settings: quick navigation tabs
+    $('#settings-nav-tabs')?.addEventListener('click', e => {
+        const tab = e.target.closest('.tab')
+        if (!tab) return
+        const targetId = tab.dataset.setTarget
+        for (const other of $$('#settings-nav-tabs .tab')) {
+            other.classList.toggle('on', other === tab)
+        }
+        if (targetId === 'all') {
+            for (const g of $$('.view[data-view="settings"] .set-group')) g.open = true
+            return
+        }
+        const targetGroup = $(`#${targetId}`)
+        if (targetGroup) {
+            targetGroup.open = true
+            targetGroup.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    })
+    $('#r-panel-collapse')?.addEventListener('click', () => {
+        $('#r-panel').hidden = true
+        $('#r-settings')?.classList.remove('on')
+    })
+
     // ---- settings: appearance
     $('#set-corners').addEventListener('change', e => setCorners(e.target.checked))
     // The frame is chosen when pywebview creates the window, so this cannot
@@ -2081,8 +3900,8 @@ function wire() {
     $('#set-titlebar')?.addEventListener('change', e => {
         pushSettings({ custom_titlebar: e.target.checked })
         toast(e.target.checked
-            ? 'Custom titlebar on — restart ReaderM to see it'
-            : 'Native window frame — restart ReaderM to see it')
+            ? 'Custom titlebar on — restart Mangasurf to see it'
+            : 'Native window frame — restart Mangasurf to see it')
     })
     $('#set-matrix').addEventListener('change', e => setMatrix(e.target.checked))
     $('#set-animations').addEventListener('change', e => setAnimations(e.target.checked))
@@ -2090,6 +3909,31 @@ function wire() {
         label: raw => (Number(raw) === 0 ? 'Auto' : String(raw)),
         apply: raw => setColumns(raw),
     })
+
+    $('#set-layout-padding')?.addEventListener('change', e => {
+        document.documentElement.setAttribute('data-padding', e.target.value || 'normal')
+        pushSettings({ layout_padding: e.target.value })
+        toast(`Margins set to ${e.target.value}`)
+    })
+
+    $('#set-layout-density')?.addEventListener('change', e => {
+        document.documentElement.setAttribute('data-density', e.target.value || 'comfortable')
+        pushSettings({ layout_density: e.target.value })
+        toast(`Density set to ${e.target.value}`)
+    })
+
+    $('#set-search-wave')?.addEventListener('change', e => {
+        const on = e.target.checked
+        pushSettings({ search_wave_enabled: on })
+        if (on) {
+            searchWave?.start()
+            searchWave?.setOpacity(1)
+        } else {
+            searchWave?.setOpacity(0)
+            searchWave?.stop()
+        }
+    })
+
     $('#r-theme').addEventListener('change', e => setTheme(e.target.value))
     $('#r-accent').addEventListener('change', e => setAccent(e.target.value))
     $('#r-corners').addEventListener('change', e => setCorners(e.target.checked))
@@ -2126,13 +3970,18 @@ function wire() {
     // ---- settings: sources
     $('#sources-reset').addEventListener('click', async () => {
         const res = await call('reset_source_config')
-        renderSourceRanks(res?.sources || [])
+        const updated = res?.sources || (await call('get_source_config'))?.sources || []
+        renderSourceRanks(updated)
+        fillSources()
         toast('Source order reset')
     })
     $('#set-dedupe').addEventListener('change', e => pushSettings({ dedupe_results: e.target.checked }))
     $('#set-interleave').addEventListener('change', e => pushSettings({ interleave_results: e.target.checked }))
     $('#set-downloaded').addEventListener('change', e => pushSettings({ downloaded_results: e.target.value }))
-    $('#set-default-source').addEventListener('change', e => pushSettings({ default_source: e.target.value }))
+    $('#set-default-source').addEventListener('change', e => {
+        pushSettings({ default_source: e.target.value })
+        toast(`Default source set to ${e.target.value}`)
+    })
     $('#set-language').addEventListener('change', e => pushSettings({ language: e.target.value }))
     $('#set-scanlator').addEventListener('change', e => pushSettings({ scanlator: e.target.value }))
     $('#set-interleave-browse').addEventListener('change', e =>
@@ -2172,13 +4021,20 @@ function wire() {
 
     // ---- settings: lock
     $('#set-lock-enabled').addEventListener('change', async e => {
-        if (!e.target.checked) {
+        const isChecked = e.target.checked
+        if (!isChecked) {
             await call('lock_disable')
             toast('Password lock turned off')
+            $('#lock-fields').hidden = true
+            $('#lock-actions').hidden = true
+            await refreshLock()
+        } else {
+            $('#lock-fields').hidden = false
+            $('#lock-actions').hidden = false
+            const stateEl = $('#lock-state')
+            if (stateEl) stateEl.textContent = 'Enter password below and click Set password'
+            $('#set-lock-pass')?.focus()
         }
-        $('#lock-fields').hidden = !e.target.checked
-        $('#lock-actions').hidden = !e.target.checked
-        refreshLock()
     })
     $('#lock-save').addEventListener('click', async () => {
         const password = $('#set-lock-pass').value
@@ -2186,7 +4042,7 @@ function wire() {
         const res = await call('lock_set', password, $('#set-lock-hint').value)
         toast(res?.ok ? 'Password set' : (res?.error || 'Could not set the password'))
         $('#set-lock-pass').value = ''
-        refreshLock()
+        await refreshLock()
     })
     $('#set-lock-start').addEventListener('change', e =>
         call('lock_options', { lock_on_start: e.target.checked }))
@@ -2197,32 +4053,176 @@ function wire() {
     $('#lock-unlock').addEventListener('click', tryUnlock)
     $('#lock-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock() })
 
-    // ---- settings: servers
-    $('#set-server-token').addEventListener('change', e =>
-        call('set_server_config', { server_token: e.target.value }))
-    $('#server-token-gen').addEventListener('click', async () => {
-        const res = await call('generate_server_token')
-        const token = res?.token || res?.server_token
-        if (token) { $('#set-server-token').value = token; toast('New token generated') }
+    // ---- settings: servers & opds hub
+    wireServersHub()
+
+    // ---- settings: library & folders & database
+    $('#lib-page-prev')?.addEventListener('click', () => {
+        currentLibPage -= 1
+        renderLibrary()
     })
-    $('#set-server-port').addEventListener('change', e =>
-        call('set_server_config', { server_port: Number(e.target.value) }))
-    $('#set-server-verbose').addEventListener('change', e =>
-        call('set_server_config', { server_verbose: e.target.checked }))
-    $('#set-opds-port').addEventListener('change', e =>
-        call('set_opds_config', { opds_port: Number(e.target.value) }))
-    $('#set-opds-autostart').addEventListener('change', e =>
-        call('set_opds_config', { opds_autostart: e.target.checked }))
-    $('#set-opds-cover-root').addEventListener('change', e =>
-        call('set_opds_config', { opds_cover_root: e.target.value }))
-    $('#set-opds-cover-browse').addEventListener('click', async () => {
+    $('#lib-page-next')?.addEventListener('click', () => {
+        currentLibPage += 1
+        renderLibrary()
+    })
+    $('#lib-page-numbers')?.addEventListener('click', e => {
+        const btn = e.target.closest('.lib-page-btn')
+        if (!btn) return
+        const p = Number(btn.dataset.page)
+        if (p) {
+            currentLibPage = p
+            renderLibrary()
+        }
+    })
+    $('#set-lib-paginate')?.addEventListener('change', e => {
+        pushSettings({ lib_paginate: e.target.checked })
+        currentLibPage = 1
+        renderLibrary()
+    })
+    $('#set-lib-page-size')?.addEventListener('change', e => {
+        pushSettings({ lib_page_size: Number(e.target.value) })
+        currentLibPage = 1
+        renderLibrary()
+    })
+
+    $('#set-lib-display-mode')?.addEventListener('change', e => {
+        pushSettings({ lib_display_mode: e.target.value })
+        renderLibrary()
+    })
+    $('#set-db-enabled')?.addEventListener('change', e =>
+        pushSettings({ db_enabled: e.target.checked }))
+    $('#set-db-sfw-enabled')?.addEventListener('change', e =>
+        pushSettings({ db_sfw_enabled: e.target.checked }))
+    $('#set-db-nsfw-enabled')?.addEventListener('change', e =>
+        pushSettings({ db_nsfw_enabled: e.target.checked }))
+
+    // FlareSolverr Controls
+    const updateFlareSolverrStatus = async () => {
+        try {
+            const res = await call('flaresolverr_status')
+            const badge = $('#flaresolverr-status-badge')
+            if (badge) {
+                const isConn = res?.status === 'connected'
+                badge.className = `srv-pill ${isConn ? 'online' : 'offline'}`
+                const txt = badge.querySelector('.status-txt')
+                if (txt) txt.textContent = isConn ? `Connected (${res.version || 'v3'})` : 'Offline'
+            }
+        } catch (e) {
+            console.debug('FlareSolverr status check failed:', e)
+        }
+    }
+
+    $('#btn-flaresolverr-test')?.addEventListener('click', async () => {
+        const url = ($('#set-flaresolverr-url')?.value || '').trim()
+        toast('Testing FlareSolverr connection…')
+        const res = await call('flaresolverr_test', url)
+        toast(res?.message || (res?.ok ? 'Connected' : 'Offline'))
+        await updateFlareSolverrStatus()
+    })
+
+    $('#btn-flaresolverr-toggle')?.addEventListener('click', async () => {
+        await updateFlareSolverrStatus()
+        toast('FlareSolverr status refreshed')
+    })
+
+    $('#set-flaresolverr-url')?.addEventListener('change', e => {
+        call('set_flaresolverr_config', { url: e.target.value })
+    })
+
+    // Password / Token reveal toggle & copy
+    $('#btn-toggle-token-reveal')?.addEventListener('click', () => {
+        const input = $('#set-server-token')
+        const icon = $('#token-reveal-icon')
+        if (input && icon) {
+            const isPass = input.type === 'password'
+            input.type = isPass ? 'text' : 'password'
+            icon.textContent = isPass ? 'visibility_off' : 'visibility'
+        }
+    })
+
+    $('#btn-copy-token-main')?.addEventListener('click', () => {
+        const val = $('#set-server-token')?.value
+        if (val) {
+            navigator.clipboard.writeText(val)
+            toast('Access Token / Password copied to clipboard')
+        }
+    })
+
+    $('#lib-scan-now-btn')?.addEventListener('click', async () => {
+        const btn = $('#lib-scan-now-btn')
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="mi">sync</span>Scanning…' }
+        const res = await call('scan_library_folders')
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">sync</span>Scan Folders Now' }
+        const found = res?.discovered ?? 0
+        const total = res?.total_series ?? 0
+        const statusEl = $('#lib-scan-status')
+        if (statusEl) statusEl.textContent = `Scanned ${res?.folders?.length || 1} folders: ${total} series indexed (${found} new)`
+        toast(`Library scan complete: ${total} series (${found} new)`)
+        await refreshLibrary()
+        await refreshLibraryFolders()
+    })
+
+    $('#lib-add-folder-browse')?.addEventListener('click', async () => {
         const res = await call('choose_folder')
         const dir = res?.path || res?.folder
         if (dir) {
-            $('#set-opds-cover-root').value = dir
-            call('set_opds_config', { opds_cover_root: dir })
+            const input = $('#lib-add-folder-input')
+            if (input) input.value = dir
         }
     })
+
+    const handleAddFolder = async () => {
+        const input = $('#lib-add-folder-input')
+        const path = (input?.value || '').trim()
+        if (!path) return toast('Please enter a folder path')
+        const res = await call('add_library_folder', path)
+        if (res?.ok === false) return toast(res.error || 'Failed to add folder')
+        if (input) input.value = ''
+        toast(`Added folder: ${res.discovered || 0} series discovered`)
+        await refreshLibrary()
+        await refreshLibraryFolders()
+    }
+
+    $('#lib-add-folder-btn')?.addEventListener('click', handleAddFolder)
+    $('#lib-add-folder-input')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            handleAddFolder()
+        }
+    })
+
+    $('#lib-folders-list')?.addEventListener('click', async e => {
+        const scanBtn = e.target.closest('[data-scan-folder]')
+        if (scanBtn) {
+            const folderPath = scanBtn.dataset.scanFolder
+            scanBtn.disabled = true
+            const res = await call('scan_library_folders', [folderPath])
+            scanBtn.disabled = false
+            toast(`Rescanned folder: ${res?.total_series || 0} series indexed`)
+            await refreshLibrary()
+            await refreshLibraryFolders()
+            return
+        }
+
+        const removeBtn = e.target.closest('[data-remove-folder]')
+        if (removeBtn) {
+            const folderPath = removeBtn.dataset.removeFolder
+            await call('remove_library_folder', folderPath)
+            toast('Monitored folder removed')
+            await refreshLibraryFolders()
+            await refreshLibrary()
+            return
+        }
+    })
+
+    $('#set-lib-autoscan')?.addEventListener('change', e =>
+        pushSettings({ lib_autoscan: e.target.checked }))
+    $('#set-lib-autodiscover')?.addEventListener('change', e =>
+        pushSettings({ lib_autodiscover: e.target.checked }))
+
+    // ---- queue
+    $('#q-explore-btn')?.addEventListener('click', () => showView('search'))
+    $('#q-lib-btn')?.addEventListener('click', () => showView('library'))
 
     // ---- stats
     $('#stats-tabs').addEventListener('click', e => {
@@ -2560,7 +4560,7 @@ function renderStats(books, recent) {
     const items = books.reduce((n, b) => n + b.items.length, 0)
     const inProgress = recent.filter(r => (r.fraction || 0) > 0.01 && (r.fraction || 0) < 0.99).length
     const finished = recent.filter(r => (r.fraction || 0) >= 0.99).length
-    const strip = $('#stats-strip')
+    const strip = $('#stats-strip') || $('#stats-totals')
     const tiles = [
         [books.length, books.length === 1 ? 'Series' : 'Series'],
         [chapters, 'Chapters'],
@@ -2568,9 +4568,11 @@ function renderStats(books, recent) {
         [inProgress, 'In progress'],
         [finished, 'Finished'],
     ]
-    strip.innerHTML = tiles.map(([n, label]) =>
-        `<div class="stat"><b>${n}</b><span>${esc(label)}</span></div>`).join('')
-    strip.hidden = !books.length
+    if (strip) {
+        strip.innerHTML = tiles.map(([n, label]) =>
+            `<div class="stat"><b>${n}</b><span>${esc(label)}</span></div>`).join('')
+        strip.hidden = !books.length
+    }
 }
 
 function cycleMode() {
@@ -2630,6 +4632,14 @@ async function boot() {
     $('#set-animations').checked = s.animations !== false
     const titlebarToggle = $('#set-titlebar')
     if (titlebarToggle) titlebarToggle.checked = s.custom_titlebar !== false
+    document.documentElement.setAttribute('data-padding', s.layout_padding || 'normal')
+    document.documentElement.setAttribute('data-density', s.layout_density || 'comfortable')
+    const padSelect = $('#set-layout-padding')
+    if (padSelect) padSelect.value = s.layout_padding || 'normal'
+    const denSelect = $('#set-layout-density')
+    if (denSelect) denSelect.value = s.layout_density || 'comfortable'
+    const waveCheck = $('#set-search-wave')
+    if (waveCheck) waveCheck.checked = s.search_wave_enabled !== false
 
     // reading
     $('#set-mode').value = s.reader_mode || 'webtoon'
@@ -2699,9 +4709,28 @@ async function boot() {
     $('#set-server-token').value = s.server_token || ''
     $('#set-server-port').value = s.server_port ?? 8577
     $('#set-server-verbose').checked = !!s.server_verbose
+    const autoSrvEl = $('#set-server-autostart')
+    if (autoSrvEl) autoSrvEl.checked = !!s.server_autostart
     $('#set-opds-port').value = s.opds_port ?? 8578
     $('#set-opds-autostart').checked = !!s.opds_autostart
     $('#set-opds-cover-root').value = s.opds_cover_root || ''
+    const autoScanEl = $('#set-lib-autoscan')
+    if (autoScanEl) autoScanEl.checked = s.lib_autoscan !== false
+    const autoDiscEl = $('#set-lib-autodiscover')
+    if (autoDiscEl) autoDiscEl.checked = s.lib_autodiscover !== false
+    const libDispSelect = $('#set-lib-display-mode')
+    if (libDispSelect) libDispSelect.value = s.lib_display_mode || 'carousel'
+    const libPagCheck = $('#set-lib-paginate')
+    if (libPagCheck) libPagCheck.checked = !!s.lib_paginate
+    const libPagSize = $('#set-lib-page-size')
+    if (libPagSize) libPagSize.value = s.lib_page_size || 24
+    const dbEnCheck = $('#set-db-enabled')
+    if (dbEnCheck) dbEnCheck.checked = s.db_enabled !== false
+    const dbSfwCheck = $('#set-db-sfw-enabled')
+    if (dbSfwCheck) dbSfwCheck.checked = s.db_sfw_enabled !== false
+    const dbNsfwCheck = $('#set-db-nsfw-enabled')
+    if (dbNsfwCheck) dbNsfwCheck.checked = s.db_nsfw_enabled !== false
+
     $('#d-out').value = s.output_dir || ''
     for (const button of $$('#d-format button'))
         button.classList.toggle('on', button.dataset.format === (s.format || 'cbz'))
@@ -2725,16 +4754,17 @@ async function boot() {
     if (s.reader_zen) setZen(true)
     repaintSliders()
     await fillSources()
-    const sourceSelect = $('#set-default-source')
-    if (sourceSelect) {
-        sourceSelect.innerHTML = $('#search-source').innerHTML
-            .replace('<option value="">All sources</option>', '')
-        sourceSelect.value = s.default_source || 'mangadex'
-    }
     refreshSources()
     refreshFilters()
     refreshLock()
+    refreshLibraryFolders()
+    refreshServersStatus()
+    pollServerLogs()
+    updateSearchLayout(s.search_layout || 'grid')
+    searchWave = createSearchGridWave($('#search-wave-canvas'))
     shelves.wire()
+    wireCarousel()
+    wireSearchSuggestions()
     setupTitlebar()
     keymap.load(s)
     bindActions()
@@ -2767,7 +4797,7 @@ window.__reader = {
     renderPages, renderPagesHeader, togglePageMark, setZen, pages,
     startAutosave, stopAutosave, flushPosition,
     parseRanges, chapterNumber, detail,
-    shelves, renderLibrary,
+    shelves, renderLibrary, refreshLibraryFolders,
     keymap, renderKeysTable, renderShortcutSheet, renderKeyPresets,
     setupTitlebar, streamUrl,
     setZoom, bumpZoom,

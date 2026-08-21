@@ -1,16 +1,16 @@
-# ReaderM — command syntax
+# Mangasurf — command syntax
 
-Complete reference for the `readerm` command line. Every example here was run
+Complete reference for the `mangasurf` command line. Every example here was run
 against the real build.
 
 Four ways to drive the same engine:
 
 | | Command | Best for |
 |---|---|---|
-| **CLI** | `readerm …` | scripting, one-off downloads |
-| **Menu** | `readerm menu` | numbered prompts, nothing to memorise |
-| **TUI** | `readerm tui` | full-screen terminal app (needs `textual`) |
-| **GUI** | `readerm gui` | desktop window (needs `pywebview`) |
+| **CLI** | `mangasurf …` | scripting, one-off downloads |
+| **Menu** | `mangasurf menu` | numbered prompts, nothing to memorise |
+| **TUI** | `mangasurf tui` | full-screen terminal app (needs `textual`) |
+| **GUI** | `mangasurf gui` | desktop window (needs `pywebview`) |
 
 ---
 
@@ -36,7 +36,7 @@ Four ways to drive the same engine:
 ## The one-line version
 
 ```bash
-readerm <url>
+mangasurf <url>
 ```
 
 Paste any URL from a supported site. The source is detected, every chapter is
@@ -47,16 +47,16 @@ downloaded, and you get one CBZ. Nothing else is required.
 ## Invocation
 
 ```
-readerm [options] <url>
-readerm [options] <command> [arguments]
+mangasurf [options] <url>
+mangasurf [options] <command> [arguments]
 ```
 
-`readerm` is the installed entry point. All three of these are equivalent:
+`mangasurf` is the installed entry point. All three of these are equivalent:
 
 ```bash
-readerm search "berserk"           # installed script
-python -m readerm.cli search "berserk"
-py cli.py search "berserk"         # run the file directly, from readerm/
+mangasurf search "berserk"           # installed script
+python -m mangasurf.cli search "berserk"
+py cli.py search "berserk"         # run the file directly, from mangasurf/
 ```
 
 Running the files directly works on purpose — every module self-bootstraps its
@@ -90,15 +90,15 @@ its output, it just uses a simpler progress bar.
 ## Downloading
 
 ```bash
-readerm https://mangadex.org/title/<uuid>
-readerm https://asuracomic.net/series/emperor-of-solo-play
-readerm https://witchscans.com/manga/afterlife-diner/
+mangasurf https://mangadex.org/title/<uuid>
+mangasurf https://asuracomic.net/series/emperor-of-solo-play
+mangasurf https://witchscans.com/manga/afterlife-diner/
 ```
 
 A bare MangaDex UUID also works:
 
 ```bash
-readerm a1c7c817-4e59-43b7-9365-09675a149a6f
+mangasurf a1c7c817-4e59-43b7-9365-09675a149a6f
 ```
 
 ### Chapter selection
@@ -116,18 +116,18 @@ readerm a1c7c817-4e59-43b7-9365-09675a149a6f
 | `first` | the oldest chapter only |
 
 ```bash
-readerm <url> -c latest
-readerm <url> -c 1,5,10-20
-readerm <url> -c 50-
+mangasurf <url> -c latest
+mangasurf <url> -c 1,5,10-20
+mangasurf <url> -c 50-
 ```
 
 ### Output format and bundling
 
 ```bash
-readerm <url> -f cbz          # default
-readerm <url> -f pdf
-readerm <url> -f epub
-readerm <url> -f images       # loose image files, no archive
+mangasurf <url> -f cbz          # default
+mangasurf <url> -f pdf
+mangasurf <url> -f epub
+mangasurf <url> -f images       # loose image files, no archive
 ```
 
 `--per N` controls how chapters are grouped into files:
@@ -139,11 +139,11 @@ readerm <url> -f images       # loose image files, no archive
 | `--per 10` | one file per ten chapters |
 
 ```bash
-readerm <url> --per 10                 # one CBZ per 10 chapters
-readerm <url> -c 1-50 -f pdf           # chapters 1-50 as a single PDF
-readerm <url> --also epub              # CBZ *and* EPUB (repeatable)
-readerm <url> -f cbz --keep-images     # keep the raw pages too
-readerm <url> -o ~/Manga               # choose the output directory
+mangasurf <url> --per 10                 # one CBZ per 10 chapters
+mangasurf <url> -c 1-50 -f pdf           # chapters 1-50 as a single PDF
+mangasurf <url> --also epub              # CBZ *and* EPUB (repeatable)
+mangasurf <url> -f cbz --keep-images     # keep the raw pages too
+mangasurf <url> -o ~/Manga               # choose the output directory
 ```
 
 ### Filename templates
@@ -158,7 +158,7 @@ Placeholders: `{title}`, `{chapters}`, `{chapter}`, `{source}`, `{start}`,
 `{end}`.
 
 ```bash
-readerm <url> --per 1 --name-chapter "{title} Ch.{chapter}"
+mangasurf <url> --per 1 --name-chapter "{title} Ch.{chapter}"
 ```
 
 ### Speed and politeness
@@ -170,8 +170,8 @@ readerm <url> --per 1 --name-chapter "{title} Ch.{chapter}"
 | `--delay` | 0.5 | seconds between chapters |
 
 ```bash
-readerm <url> -w 6 --image-workers 10     # faster, heavier on the site
-readerm <url> -w 1 --delay 2              # gentle
+mangasurf <url> -w 6 --image-workers 10     # faster, heavier on the site
+mangasurf <url> -w 1 --delay 2              # gentle
 ```
 
 Please leave the defaults alone unless you have a reason. They are set to be
@@ -180,9 +180,9 @@ polite to sites that are mostly run by volunteers.
 ### Other download flags
 
 ```bash
-readerm <url> -y            # skip the confirmation prompt
-readerm <url> --plain       # plain log lines, no progress UI (good for cron)
-readerm resume              # resume whatever was interrupted
+mangasurf <url> -y            # skip the confirmation prompt
+mangasurf <url> --plain       # plain log lines, no progress UI (good for cron)
+mangasurf resume              # resume whatever was interrupted
 ```
 
 ---
@@ -190,9 +190,9 @@ readerm resume              # resume whatever was interrupted
 ## Searching and discovery
 
 ```bash
-readerm search "one piece"              # every enabled source, in parallel
-readerm search "berserk" -s mangadex    # one source
-readerm search                          # no query -> trending
+mangasurf search "one piece"              # every enabled source, in parallel
+mangasurf search "berserk" -s mangadex    # one source
+mangasurf search                          # no query -> trending
 ```
 
 ### Filters
@@ -201,74 +201,131 @@ readerm search                          # no query -> trending
 |---|---|---|
 | `--type` | `manga`, `manhwa`, `manhua`, `comic`, `novel`, `any` | lowercase |
 | `--status` | `Ongoing`, `Completed`, … | |
-| `-g`, `--genre` | any name from `readerm genres` | comma-separate for several |
+| `-g`, `--genre` | any name from `mangasurf genres` | comma-separate for several |
 | `-n`, `--limit` | a number | results **per source** |
 | `--sort` | `title`, `source`, `chapters`, `year` | |
 | `--reverse` | | flip the sort |
 
 `--type` is *derived*, not requested: almost no site accepts a type filter, so
-ReaderM infers it from the origin language and tags. Results whose type cannot
+Mangasurf infers it from the origin language and tags. Results whose type cannot
 be determined are **kept** — dropping them would erase whole sources from a
 filtered search.
 
 ```bash
-readerm search "solo" --type manhwa
-readerm search "one piece" --status Ongoing
-readerm search "blue" -g Romance
-readerm search "blue" -g "Romance,Comedy"
-readerm search "berserk" --sort chapters --reverse
+mangasurf search "solo" --type manhwa
+mangasurf search "one piece" --status Ongoing
+mangasurf search "blue" -g Romance
+mangasurf search "blue" -g "Romance,Comedy"
+mangasurf search "berserk" --sort chapters --reverse
 ```
 
 ### Output modes
 
 ```bash
-readerm search "blue" --json      # machine-readable
-readerm search "blue" --urls      # URLs only, one per line
+mangasurf search "blue" --json      # machine-readable
+mangasurf search "blue" --urls      # URLs only, one per line
 ```
 
 `--urls` is built for pipes:
 
 ```bash
-readerm search "murim" --type manhwa --urls | head -3 | xargs -n1 readerm -c 1
+mangasurf search "murim" --type manhwa --urls | head -3 | xargs -n1 mangasurf -c 1
 ```
 
 ### Acting on a result
 
 ```bash
-readerm search "berserk" --open 1        # show details for result 1
-readerm search "berserk" --download 1    # download result 1
+mangasurf search "berserk" --open 1        # show details for result 1
+mangasurf search "berserk" --download 1    # download result 1
 ```
 
 ### Browsing
 
 ```bash
-readerm trending                  # popular across every source
-readerm trending romance          # popular in one genre
-readerm trending -s mangadex      # one source
-readerm genres                    # every genre and who offers it
-readerm info <url>                # details for one series
+mangasurf trending                  # popular across every source
+mangasurf trending romance          # popular in one genre
+mangasurf trending -s mangadex      # one source
+mangasurf genres                    # every genre and who offers it
+mangasurf info <url>                # details for one series
 ```
 
 ---
 
-## Sources
+## Sources (32 Registered Scrapers)
 
 ```bash
-readerm sources                   # every site, with capabilities
+mangasurf sources                   # every site, with capabilities
 ```
+
+### Supported Scrapers
+
+| Source ID | Name | Primary Domains | Capabilities | Content |
+|---|---|---|---|---|
+| `mangadex` | MangaDex | `mangadex.org` | Search, Browse, Languages, Scanlators | Manga/Manhwa (SFW) |
+| `mangakatana` | Mangakatana | `mangakatana.com` | Search, Browse, Genres | Manga/Manhwa (SFW) |
+| `weebcentral` | Weeb Central | `weebcentral.com` | Search, Browse, Series Types | Manga/Manhwa (SFW) |
+| `kagane` | Kagane | `kagane.to`, `kstatic.to` | Search, Browse, Genres | Manga/Manhwa (SFW) |
+| `comix` | Comix | `comix.to` | Search, Browse, Genres | Manga/Manhwa (SFW) |
+| `vymanga` | VyManga | `vymanga.co`, `mangavyvy.net` | Search, Browse, Genres | Manga/Manhwa (SFW) |
+| `mangadotnet` | MangaDotNet | `manga.net` | Search, Browse | Manga/Manhwa (SFW) |
+| `mangadistrict` | MangaDistrict | `mangadistrict.com` | Search, Browse, Genres | Manhwa/Webtoons (SFW) |
+| `hitomi` | Hitomi.la | `hitomi.la`, `gold-usergeneratedcontent.net` | Search, Browse, Nozomi binary index | Doujinshi/Hentai (18+) |
+| `simplyhentai` | Simply-Hentai | `simply-hentai.com` | Search, Multi-tag combinations | Hentai (18+) |
+| `natomanga` | Natomanga | `natomanga.com` | Search, Browse | Manga/Manhwa (SFW) |
+| `asurascans` | Asura Scans | `asuracomic.net` | Search, Browse | Manhwa/Action (SFW) |
+| `flamecomics` | Flame Comics | `flamecomics.me` | Search, Browse | Manhwa/Action (SFW) |
+| `demonicscans` | Demonic Scans | `demonicscans.org` | Search, Browse | Manhwa/Action (SFW) |
+| `madarascans` | Madara Scans | `madarascans.com` | Search, Browse | Manhwa/Webtoons (SFW) |
+| `omegascans` | Omega Scans | `omegascans.org` | Search, Browse | Manhwa/Webtoons (SFW) |
+| `manhwaread` | ManhwaRead | `manhwaread.com` | Search, Browse | Manhwa/Webtoons (SFW) |
+| `madaranet` | Madara Network | Aggregate | Search, Browse | Manhwa/Webtoons (SFW) |
+| `witchscans` | Witchtoons | `witchtoons.net`, `witchscans.com` | Search, Browse, RSS feeds | Manhua/Webtoons (SFW) |
+| `writerscans` | WriterScans | `writerscans.com` | Search, Browse | Manhwa/Action (SFW) |
+| `webtoons` | Webtoons | `webtoons.com` | Search, Browse | Official Webtoons (SFW) |
+| `mangadass` | Mangadass | `mangadass.com` | Search, Browse | Manga/Manhwa (SFW) |
+| `manhwa18` | Manhwa18 | `manhwa18.com` | Search, Browse | Adult Manhwa (18+) |
+| `manga18club` | Manga18Club | `manga18.club` | Search, Browse | Adult Manhwa (18+) |
+| `hentaiakane` | HentaiAkane | `hentaiakane.com` | Search, Browse | Hentai (18+) |
+| `nhentai` | nhentai | `nhentai.to` | Search, Tag routing | Doujinshi/Hentai (18+) |
+| `chikari` | Chikari | `chikari.moe` | Search, Browse, Lists, Tag IDs | Manhwa (SFW + 18+) |
+| `kuramanga` | KuraManga | `kuramanga.com`, `shadowabyss.com` | Search, Browse, Infinite IDs | Manhwa (SFW) |
+| `kurahentai` | KuraHentai | `kurahentai.com`, `shadowabyss.com` | Search, Browse, Supabase REST | Doujinshi/Hentai (18+) |
+| `hiperdex` | Hiperdex | `hiperdex.com`, `r2d2storage.com` | Search, Browse, tRPC API | Adult Manhwa (18+) |
+| `madaradex` | MadaraDex | `madaradex.org` | Search, Browse | Adult Manhwa (18+) |
+| `mangak` | MangaK | `mangak.io`, `resmk.org` | Search, Browse, SSR Props | Manhwa (SFW) |
 
 Force one with `-s`:
 
 ```bash
-readerm search "naruto" -s natomanga
+mangasurf search "naruto" -s natomanga
+mangasurf search "solo" -s chikari
+```
+
+### Curated List Bulk Downloading
+
+Download all chapters from every manga in a curated list with a single command:
+
+```bash
+mangasurf https://chikari.moe/lists/461-my-manhwa-list
+```
+
+### Phone Server & OPDS Catalog
+
+```bash
+mangasurf server                            # LAN Web reader on :8577
+mangasurf server --port 9000 --gui          # with small control window
+mangasurf server --no-auth                  # trusted networks only
+
+mangasurf opds                              # OPDS 1.2 catalog on :8578
+mangasurf opds --port 9001 --gui            # with control window
 ```
 
 MangaDex-only options:
 
 ```bash
-readerm <url> -l fr                       # translation language
-readerm <url> --scanlator "Group Name"    # preferred group
-readerm <url> --data-saver                # smaller, compressed pages
+mangasurf <url> -l fr                       # translation language
+mangasurf <url> --scanlator "Group Name"    # preferred group
+mangasurf <url> --data-saver                # smaller, compressed pages
 ```
 
 ### Enabling, disabling and ranking
@@ -277,57 +334,60 @@ Rank decides which copy wins when a series exists on several sites; lower is
 better.
 
 ```bash
-readerm config                                  # show the table
-readerm config disable natomanga                # skip it everywhere but URLs
-readerm config enable natomanga
-readerm config up mangakatana                   # move up one place
-readerm config down mangakatana
-readerm config rank mangadex asurascans flamecomics    # set the order outright
-readerm config reset
+mangasurf config                                  # show the table
+mangasurf config disable natomanga                # skip it everywhere but URLs
+mangasurf config enable natomanga
+mangasurf config up mangakatana                   # move up one place
+mangasurf config down mangakatana
+mangasurf config rank mangadex asurascans chikari # set the order outright
+mangasurf config reset
 ```
 
 A **disabled** source is skipped everywhere except direct URLs, so a link
 someone sends you still works.
 
-### Cloudflare
+### Cloudflare & FlareSolverr
 
-Weeb Central and Setsu Scans sit behind Cloudflare and need
-[FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) on
-`localhost:8191`. Without it they fail in milliseconds and the rest of your
-search continues — they will not hold it up.
+Sources with Cloudflare Turnstile bot protection automatically route challenges
+through [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) on
+`http://localhost:8191/v1`. Start FlareSolverr in the background or configure
+its endpoint under **Settings › Sources & FlareSolverr**.
 
 ---
 
 ## Library, watching and disk
 
 ```bash
-readerm library                      # verify every entry resolves on disk
-readerm library verify
-readerm library scan ~/Manga         # re-link folders you moved
-readerm library move <url> <folder>  # relocate one series
-readerm export out.json              # or: out.csv / out.md
+mangasurf library                      # verify every entry resolves on disk
+mangasurf library verify
+mangasurf library scan ~/Manga         # re-link and index monitored folder
+mangasurf library metadata             # generate and sync manga.json metadata files
+mangasurf library relocate             # update moved directories without losing progress
+```s you moved
+mangasurf library move <url> <folder>  # relocate one series
+mangasurf export out.json              # or: out.csv / out.md
 ```
 
 ```bash
-readerm watch add <url>              # track a series
-readerm watch list
-readerm watch check                  # check everything for new chapters
-readerm watch remove <url>
+mangasurf watch add <url>              # track a series
+mangasurf watch list
+mangasurf watch check                  # check everything for new chapters
+mangasurf watch remove <url>
 ```
 
 ```bash
-readerm disk usage                   # size per series
-readerm disk dupes                   # duplicate files
-readerm disk orphans                 # files with no library entry
-readerm stats
-readerm health                       # breaker state, cache hit rates
+mangasurf disk usage                   # size per series
+mangasurf disk dupes                   # duplicate files
+mangasurf disk orphans                 # files with no library entry
+mangasurf stats
+mangasurf health                       # breaker state, cache hit rates
 ```
 
 ---
 
 ## Configuration and privacy
 
-Everything lives in `~/.readerm/`:
+Everything lives in `~/.mangasurf/`:
 
 | File | Contents |
 |---|---|
@@ -336,11 +396,11 @@ Everything lives in `~/.readerm/`:
 | `logs/` | rotating logs |
 
 ```bash
-readerm lock status
-readerm lock set        # set a passcode
-readerm lock change
-readerm lock off
-readerm history         # recent searches
+mangasurf lock status
+mangasurf lock set        # set a passcode
+mangasurf lock change
+mangasurf lock off
+mangasurf history         # recent searches
 ```
 
 ---
@@ -358,9 +418,9 @@ to a file never produces escape-code soup.
 | `TERM=dumb` | never colour |
 
 ```bash
-NO_COLOR=1 readerm sources
-FORCE_COLOR=1 readerm search "blue" | less -R
-readerm <url> --plain            # no progress bar at all; one line per event
+NO_COLOR=1 mangasurf sources
+FORCE_COLOR=1 mangasurf search "blue" | less -R
+mangasurf <url> --plain            # no progress bar at all; one line per event
 ```
 
 On Windows, ANSI is enabled through the console API automatically. Windows 10
@@ -376,11 +436,11 @@ counts. Use `--plain` in cron jobs and CI.
 ## Rebuilding CBZ covers
 
 ```bash
-readerm covers --dry-run           # show the plan, change nothing
-readerm covers                     # rebuild, taking the best-ranked cover
-readerm covers -o ~/Manga          # scan any folder you like
-readerm covers -o ~/Manga --sort-only   # just split a flat folder by series
-readerm covers --replace           # replace covers that already exist
+mangasurf covers --dry-run           # show the plan, change nothing
+mangasurf covers                     # rebuild, taking the best-ranked cover
+mangasurf covers -o ~/Manga          # scan any folder you like
+mangasurf covers -o ~/Manga --sort-only   # just split a flat folder by series
+mangasurf covers --replace           # replace covers that already exist
 ```
 
 Walks the tree, works out the series behind each `.cbz` from its filename
@@ -397,7 +457,7 @@ Filename styles understood include `Chapters 001-050`, `Ch.001-036`,
 Chainsaw Man, Case Closed, Cells at Work -- survive intact, because a marker
 only counts when a number follows it.
 
-**Smart search** (the GUI button, and what `readerm covers` now does) picks
+**Smart search** (the GUI button, and what `mangasurf covers` now does) picks
 for you: exact title match first, then your **source ranking from Settings**,
 then image size so it never settles for a list thumbnail. Measured across
 three titles, the top-ranked candidate was 6-15x smaller in pixels than the
@@ -418,12 +478,12 @@ window hides it and downloads carry on. The tray icon's context menu shows:
 * current transfer rate and ETA
 * chapters remaining and how many jobs are queued
 * one line per running download
-* **Open ReaderM** to bring the window back, **Pause queue**, and **Quit**
+* **Open Mangasurf** to bring the window back, **Pause queue**, and **Quit**
 
 The tray needs an optional dependency and a desktop session:
 
 ```bash
-pip install "readerm[tray]"
+pip install "mangasurf[tray]"
 ```
 
 Without it the toggle is disabled and explains why; the window keeps its
@@ -438,7 +498,7 @@ ordinary close-quits behaviour.
 | `130` | cancelled with Ctrl-C |
 
 ```bash
-readerm <url> -y || echo "download failed"
+mangasurf <url> -y || echo "download failed"
 ```
 
 ---
@@ -448,43 +508,43 @@ readerm <url> -y || echo "download failed"
 **Grab only what is new, quietly, from cron**
 
 ```bash
-readerm watch check --plain
+mangasurf watch check --plain
 ```
 
 **One file per chapter, into a per-series folder**
 
 ```bash
-readerm <url> --per 1 -o ~/Manga
+mangasurf <url> --per 1 -o ~/Manga
 ```
 
 **Everything a source has for one genre, as URLs**
 
 ```bash
-readerm trending romance -s toonily --urls
+mangasurf trending romance -s toonily --urls
 ```
 
 **Search, pick, download in one line**
 
 ```bash
-readerm search "solo leveling" --type manhwa --download 1 -y
+mangasurf search "solo leveling" --type manhwa --download 1 -y
 ```
 
 **Mirror a series as both CBZ and EPUB**
 
 ```bash
-readerm <url> -f cbz --also epub
+mangasurf <url> -f cbz --also epub
 ```
 
 **Slow, polite full-series archive**
 
 ```bash
-readerm <url> -w 1 --delay 2 --per 25 -o ~/Archive
+mangasurf <url> -w 1 --delay 2 --per 25 -o ~/Archive
 ```
 
 **Check what a URL is before committing**
 
 ```bash
-readerm info <url>
+mangasurf info <url>
 ```
 
 ---

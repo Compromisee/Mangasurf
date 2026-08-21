@@ -125,16 +125,17 @@ class OmegaScansSource(Source):
     # ---------------------------------------------------------- search
 
     def search(self, query: str, limit: int = 32, sort: str = None,
-               genre=None, **_):
+               genre=None, page: int = 1, **_):
         query_str = (query or "").strip()
         if not query_str:
-            return self.browse(sort=sort, genre=genre, limit=limit)
+            return self.browse(sort=sort, genre=genre, limit=limit, page=page)
 
+        page_val = max(1, int(page or _.get("page", 1) or 1))
         params = {
             "query_string": query_str,
             "search": query_str,
             "q": query_str,
-            "page": 1,
+            "page": page_val,
             "perPage": max(1, min(100, max(limit, 40))),
             "adult": "true",
             "order": self._SORTS.get(sort or "", "desc"),
@@ -144,7 +145,13 @@ class OmegaScansSource(Source):
         results = self._query(params)
 
         if query_str and results:
-            results = self.filter_and_rank(results, query_str)
+            clean = query_str.lower()
+            tokens = [t for t in re.split(r"[\s\-_:,.'\"]+", clean) if t]
+            filtered = [
+                r for r in results
+                if any(t in str(r.get("title", "")).lower() or t in str(r.get("url", "")).lower() for t in tokens)
+            ]
+            results = filtered
 
         return results[:limit]
 

@@ -119,12 +119,16 @@ class Manhwa18Source(Source):
 
     # ---------------------------------------------------------- search
 
-    def search(self, query: str, limit: int = 32, genre=None, sort=None, **_):
+    def search(self, query: str, limit: int = 32, genre=None, sort=None, page: int = 1, **_):
         query = (query or "").strip()
         if not query:
-            return self.browse(genre=genre, sort=sort, limit=limit)
+            return self.browse(genre=genre, sort=sort, limit=limit, page=page)
+        page_val = max(1, int(page or _.get("page", 1) or 1))
+        url = f"{SITE}/search?q={quote(query)}"
+        if page_val > 1:
+            url += f"&page={page_val}"
         try:
-            response = self.fetch(f"{SITE}/search?q={quote(query)}")
+            response = self.fetch(url)
         except ScrapeError as e:
             logger.error("Manhwa18 search failed: %s", e)
             return []

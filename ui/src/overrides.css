@@ -36,6 +36,10 @@
     --radius-medium: var(--r-md, 11px);
     --radius-small: var(--r-sm, 8px);
     --radius-large: var(--r-lg, 15px);
+    --white: var(--surface-2, #262632);
+    --snow: var(--surface, #1e1e28);
+    --field-background: var(--surface-2, #262632);
+    --field-foreground: var(--text, #eaeaf2);
 
     /* HeroUI swaps to its dark palette on `.dark` / `[data-theme=dark]`.
      * ReaderM's themes are called midnight/mocha/forest/..., so that selector

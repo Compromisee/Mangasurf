@@ -4,6 +4,295 @@ All notable changes to **Mangasurf**, newest first.
 
 ---
 
+## [1.7.0] — Mangasurf v1.7.0: Custom Vector Wave Icon, Multi-Platform GitHub Actions Suite & OneFile Release Pipeline
+
+### Highlights & Major Additions
+- **Brand-New Custom Vector SVG Icon**:
+  - Replaced legacy generic book icons with a custom, sleek modern **MangaSurf** brand icon (`docs/icon.svg`, `docs/icon.png`, `docs/icon.ico`, `docs/icon-1024.png`).
+  - Features a cosmic obsidian squircle container, ambient neon rim lighting, floating translucent manga action frames, sweeping fluid surf wave with electric cyan-to-magenta gradients, breaking anime foam claws, aerodynamic surfboard with racing chevrons, 4-point comic star sparkles, and specular glass gloss reflection.
+  - Exported multi-size Windows ICO (`icon.ico`), PNG masters (`icon-1024.png`, `icon.png`), and web favicons (`favicon.png`, `favicon.ico`).
+- **Complete Suite of 8 Production GitHub Actions Workflows**:
+  - **`release.yml`**: Multi-platform PyInstaller onefile builds for **Windows x64** (`.exe`), **Linux x86_64** (ELF binary & tarball), **macOS ARM64** (Apple Silicon M1/M2/M3/M4), and **macOS Intel** (`x86_64`), automatic release notes generation from changelog, SHA256 checksums generation (`SHA256SUMS.txt`), and automated GitHub release publishing.
+  - **`ci.yml`**: Multi-OS & Multi-Python test matrix across Ubuntu, Windows, macOS on Python 3.10, 3.11, 3.12, and 3.13 with pytest, flake8 linting, and web asset syntax validation.
+  - **`nightly.yml`**: Daily automated bleeding-edge onefile builds and continuous `nightly` pre-release deployment.
+  - **`source-health.yml`**: Scheduled 6-hour radar testing and uptime monitoring for all 32 scraper sources.
+  - **`pages.yml`**: Automated zero-config deployment of the animated landing page (`docs/`) to GitHub Pages.
+  - **`docker.yml`**: Multi-arch container image builder (`linux/amd64`, `linux/arm64`) publishing headless server and OPDS catalog to GitHub Container Registry (`ghcr.io/compromisee/mangasurf`).
+  - **`security.yml`**: GitHub CodeQL static code analysis, Bandit Python AST security scanner, and dependency vulnerability audits.
+  - **`pypi.yml`**: Python package build (`sdist` & `bdist_wheel`) and twine validation pipeline.
+- **High-Definition Screenshot Suite**:
+  - Rendered crisp 2560x1640 PNGs for all 11 GUI interfaces (`gui-library.png`, `gui-light.png`, `gui-search.png`, `gui-queue.png`, `gui-settings.png`, `gui-sources.png`, `gui-stats.png`, `gui-manga.png`, `gui-reader-chapters.png`, `gui-insights.png`, `gui-tools.png`), master promotional hero (`hero-bento.png`), and four 1920x1080 Textual TUI screens (`tui-search.png`, `tui-manga.png`, `tui-downloads.png`, `tui-settings.png`).
+- **Infinite Multi-Page Discovery & Scraper Pagination**:
+  - **KuraManga (`kuramanga.py`)**: Implemented ID list batching (`/search?ajax=1&ids=1&keyword=`) and batch slicing (`/search?ajax=1&pick=...`), unlocking infinite pagination past 2 loadmores across 3,900+ search and browse results.
+  - **KuraHentai (`kurahentai.py`)**: Connected to Supabase REST API (`/rest/v1/hentai`) with offset-limit pagination (`order=id.desc&offset=...`), supporting endless gallery search and browsing across thousands of titles.
+  - **Hiperdex (`hiperdex.py`)**: Enabled tRPC `search.query` pagination across all search and browse pages.
+- **Universal CDN Cover Proxying (KuraManga, Hiperdex, MangaK, KuraHentai)**:
+  - Registered all CDN domains (`shadowabyss.com`, `r2d2storage.com`, `resmk.org`, `qvzre.org`) into the scraper domain registry and added session `Referer` fallbacks in `proxy_cover()`.
+- **Root Directory Deletion Protection**:
+  - Protected roots registry (`output_dir`, `library_folders`, `~`, `/`); deleting a library entry now strictly removes only specific series archive files, completely protecting master directories and parent folders.
+- **Witchtoons Accurate Series Routing**:
+  - Rebuilt `witchscans.py` metadata parser to extract series metadata directly from HTML JSON-LD and RSS feeds, ensuring every series routes to its exact individual page with accurate titles, descriptions, and chapters.
+- **Mobile Carousel Memory & Crash Fix**:
+  - Optimized carousel track to only render visible perspective cards ($\pm 3$ cards), reducing DOM nodes from 200+ heavy 3D elements to 7 cards.
+  - Added responsive mobile styles (`@media (max-width: 640px)`) preventing WebKit GPU memory tab crashes on phone servers.
+- **Interactive Click-to-Read & All-Around Card Glow**:
+  - Clicking the centered active cover card in the carousel immediately opens the reader to start reading (`openPath()`).
+  - Added 360-degree luminous drop-shadow aura around the active card with spring physics (`cubic-bezier(0.34, 1.45, 0.64, 1)`).
+- **Comprehensive Organizing Documentation in `MD/AGENT.md`**:
+  - Added Section 11 documenting file & JSON storage paths (`library.json`, `config.json`, `history.json`, `positions.json`, `annotations.json`, `manga.json`), the 32-source scraper registry, and maintenance tools.
+- **Updated High-Resolution Screenshots Suite**:
+  - Rendered updated 2560x1640 PNG screenshots across all GUI interfaces (`gui-library.png`, `gui-search.png`, `gui-queue.png`, `gui-settings.png`, `gui-stats.png`, `gui-sources.png`).
+
+---
+
+## [1.6.9] — Mangasurf v1.6.9: Curated List Bulk Downloading, Chikari List Parsing & 100-Test Milestone
+
+### Highlights & Additions
+- **Chikari.moe Curated List Bulk Downloading**:
+  - Full support for downloading entire curated user lists (e.g. `https://chikari.moe/lists/461-my-manhwa-list`).
+  - Pasting any list URL into the omnibar parses the list via `/api/lists/{id}` and prompts for one-click bulk download across every series in the list.
+  - Automatically enqueues all chapters from every manga in the list into the concurrent queue (`Api.download_list()`).
+- **Comprehensive Scraper & UI Suite**:
+  - Passed 100/100 automated unit tests across 14 test suites verifying scrapers, security boundaries, and desktop reader interfaces.
+
+---
+
+## [1.6.8] — Mangasurf v1.6.8: Root Directory Deletion Protection, Witchtoons Dynamic Routing, Mobile Carousel Optimization & Staggered Animations
+
+### Highlights & Fixes
+- **Root Directory Deletion Protection**:
+  - Fixed safety vulnerability where deleting a series file inside a root/shared folder previously called `rmtree` on the parent directory.
+  - Added protected roots registry (`output_dir`, `library_folders`, `~`, `/`); deleting a file now strictly deletes only the specific archive files (`.cbz`, `.epub`, `.pdf`, `.zip`), completely protecting the master library and parent folders.
+- **Witchtoons Accurate Series Routing**:
+  - Rebuilt `witchscans.py` metadata parser to extract series titles directly from HTML JSON-LD and RSS feeds, ensuring every series routes to its exact individual page rather than defaulting to The Assassin Son-in-Law.
+- **Mobile Carousel Memory & Crash Fix**:
+  - Optimized carousel track to only render visible perspective cards ($\pm 3$ cards), reducing DOM nodes from 200+ heavy 3D elements to 7 cards.
+  - Added responsive mobile styles (`@media (max-width: 640px)`) preventing WebKit GPU memory tab crashes on phone servers.
+- **Staggered Library Card Animations**:
+  - Added smooth card entrance physics (`@keyframes cardFadeIn`) and fluid hover lift with depth shadow across all library grid cards.
+- **Universal CDN Cover Proxying**:
+  - Configured `HOTLINK_PROTECTED` and fallback referer headers so KuraManga (`shadowabyss.com`), Hiperdex (`r2d2storage.com`), and MangaK (`resmk.org`) covers load instantly in the GUI.
+
+---
+
+## [1.6.7] — Mangasurf v1.6.7: Infinite Scraper Pagination, All-Around Card Glow, Click-to-Read & Full Hotlink Resolution
+
+### Highlights & Fixes
+- **Infinite Multi-Page Discovery across Scrapers**:
+  - **KuraManga (`kuramanga.py`)**: Integrated ID list batching (`/search?ajax=1&ids=1&keyword=`) and chunk slicing (`/search?ajax=1&pick=`), enabling infinite continuous pagination past 2 loadmores across thousands of results.
+  - **KuraHentai (`kurahentai.py`)**: Rebuilt on Supabase REST API (`/rest/v1/hentai`) with offset-limit pagination (`order=id.desc&offset=...`), supporting endless gallery search and browsing.
+  - **Hiperdex (`hiperdex.py`)**: Enabled tRPC `search.query` pagination across all search and browse pages.
+- **Full Hotlink CDN Cover Resolution in GUI**:
+  - Added `shadowabyss.com`, `r2d2storage.com`, `resmk.org`, and `qvzre.org` to frontend `HOTLINK_PROTECTED` regex in `app.js`.
+  - Added session headers and fallback proxying in `proxy_cover()`, converting all protected cover art into instant data URIs across search, browse, library, and the carousel.
+- **Carousel 360-Degree Aura Glow & Card-to-Card Physics**:
+  - Added full 360-degree luminous drop-shadow aura around the active card with smooth spring physics (`cubic-bezier(0.34, 1.45, 0.64, 1)`).
+  - Hovering adds an amplified glow and floating lift (`translateY(-6px)`).
+  - Cleaned up vertical headroom and footroom to eliminate any clipping above the counter pill.
+- **Interactive Click-to-Read**:
+  - Clicking on the active centered cover card now **immediately opens the reader to start reading the series** (`openPath()`).
+  - Clicking on any side card smoothly slides and animates to that card.
+- **Fullscreen / Immersive Split Theatre Mode**:
+  - Restructured `.carousel-split-layout` into 2 balanced columns: left column contains the active series details, dynamic progress bar, chapter range, metadata tags, editable description, and action buttons; right column houses the 3D cover carousel viewport, navigation arrows, and counter pill.
+
+---
+
+## [1.6.6] — Mangasurf v1.6.6: Card-to-Card 3D Spring Transitions, All-Around Luminous Glow, Click-to-Read & Split Theatre Layout
+
+### Highlights & Fixes
+- **Interactive Click-to-Read Carousel Cards**:
+  - Clicking on the active centered cover card now **immediately opens the reader to read the series** (`openPath()`).
+  - Clicking on any side card smoothly slides and animates to that card.
+- **All-Around Luminous 3D Card Glow & Zero Clipping**:
+  - Rebuilt active card aura with 360-degree luminous drop-shadow (`box-shadow: 0 0 36px color-mix(in srgb, var(--accent) 60%, transparent), 0 0 16px var(--accent)`).
+  - Hovering on any card adds a floating elevation and amplified glow (`translateY(-6px)`).
+  - Increased spacing above the details panel and between the counter pill, eliminating all bottom clipping.
+- **Card-to-Card 3D Spring Physics**:
+  - Configured fluid card-to-card animation transitions with spring easing curve (`cubic-bezier(0.34, 1.45, 0.64, 1)`), cleanly disabled when animation settings are toggled off.
+- **Fixed Fullscreen / Immersive Split Theatre Mode**:
+  - Re-architected `.carousel-split-layout` into 2 balanced columns: left column contains the active series details, progress meter, and action buttons; right column houses the 3D cover carousel viewport and navigation arrows.
+
+---
+
+## [1.6.5] — Mangasurf v1.6.5: Carousel Zero-Clipping, Universal CDN Proxy, Infinite Multi-Page Discovery & Folder Indexing
+
+### Highlights & Fixes
+- **Carousel Bottom Overflow & Card Outline Spacing**:
+  - Eliminated bottom clipping above the counter pill by moving the details panel down with `margin-top: 24px` and padding the viewport `350px`.
+  - Added "Carousel Only (Immersive Mode)" option in Settings › Library Layout to allow using pure carousel view.
+  - Enabled infinite looping when navigating past the edges.
+- **Universal CDN Cover Proxying (KuraManga, KuraHentai, Hiperdex, MangaK)**:
+  - Registered all CDN domains (`shadowabyss.com`, `r2d2storage.com`, `resmk.org`, `qvzre.org`) into the scraper domain registry and added intelligent `Referer` fallbacks in `proxy_cover()`, fixing blank covers across search, browse, and carousel.
+- **Multi-Page Pagination across Scrapers**:
+  - Enabled multi-page pagination on `Hiperdex` (`search.query`), `KuraManga` (`/search?ajax=1&page=`), and `KuraHentai` (`/?page=` and `/tag/{slug}/?page=`).
+- **External Folder Scanning Fix**:
+  - Upgraded `scan_library_folders()` in `readerm/library.py` to index both parent directories and individual series folders with multiple CBZ/ZIP chapter archives.
+- **Chikari.moe Custom Tags & NSFW Unblock**:
+  - Integrated `/api/tags` resolution for over 1,900 custom tags and enabled `adult=true` querying so all adult/NSFW titles are returned when Safe Mode is off.
+- **Live Server Traffic & Activity Console Streaming**:
+  - Added global server log channels in `server.py` and `opdsserve.py` capturing every HTTP stream request and OPDS feed call with formatted level badges (`INFO`, `CALL`, `WARN`, `ERROR`), timestamps, and autoscroll.
+
+---
+
+## [1.6.4] — Mangasurf v1.6.4: Immersive Split Theatre Carousel, Multi-Source Pagination, Scraper Referer Proxying & Data Architecture Reference
+
+### Highlights & New Additions
+- **Carousel Zero-Overflow & 7-Card Overlapping Cascade**:
+  - Eliminated bottom cut-off and vertical clipping on carousel cover cards. Configured viewport height (`350px`) with 210×305px cards and generous padding.
+  - Multi-card overlapping 3D cascade (`prev-3`, `prev-2`, `prev-1`, `active`, `next-1`, `next-2`, `next-3`) with center elevation on top (`z-index: 20`, `translateZ(130px)`), realistic depth shadows, and smooth hover lift animations.
+- **Carousel Immersive Split Theatre Mode**:
+  - Added dedicated toggle button (`#carousel-immersive-toggle`) to activate 50/50 split theatre view: left side shows prominent title, dynamic progress bar, chapter range, metadata tags, editable description, and action buttons; right side displays the 3D cover carousel.
+- **Carousel Multi-Criteria Sorting Engine**:
+  - Added sorting dropdown (`#carousel-sort`) to sort library carousel by **Recent Downloads**, **Reading Progress**, **Chapter Count / Size**, **Source Provider**, and **Alphanumeric (A-Z)**.
+- **Library Pagination Engine**:
+  - Added Library Pagination settings (`#set-lib-paginate`, `#set-lib-page-size`: 12, 24, 36, 48 items/page) and interactive pagination bar (`#lib-pagination`).
+- **Scraper Referer & Image Proxy Fixes**:
+  - **MangaK (`mangak.py`)**: Added `cover_needs_referer = True` for `rx.resmk.org` and `rx.qvzre.org` image proxying.
+  - **Hiperdex (`hiperdex.py`)**: Fixed `cover_needs_referer = True` and added infinite multi-page browsing via tRPC.
+  - **KuraManga & KuraHentai (`kuramanga.py`, `kurahentai.py`)**: Fixed `shadowabyss.com` cover proxying and enabled multi-page search and browse pagination.
+  - **Chikari (`chikari.py`)**: Integrated custom tags resolution via `/api/tags` mapping and unblocked adult/NSFW results.
+- **Comprehensive Organizing Documentation in `MD/AGENT.md`**:
+  - Added complete Section 11 documenting file & JSON storage paths (`library.json`, `config.json`, `history.json`, `positions.json`, `annotations.json`, `manga.json`), the 32-source scraper registry, and maintenance tools.
+
+---
+
+## [1.6.3] — Mangasurf v1.6.3: Scraper Fixes, Chikari NSFW Unblock, Hiperdex Multi-Page & Title Sanitization
+
+### Highlights & Fixes
+- **KuraManga & Hiperdex Cover Proxying**: Set `cover_needs_referer = True` and injected proper `Referer` and session headers so `shadowabyss.com` and `r2d2storage.com` covers load smoothly without 403 Forbidden errors.
+- **Chikari.moe Adult / NSFW Results Unblocked**: Added `adult=true` search and browse parameter merging on `chikari.moe` API so all NSFW and 18+ titles are returned when Safe Mode is disabled.
+- **Hiperdex Multi-Page Chapter Image Extraction**: Fixed slug extraction bug in `reader.chapterPages` on `hiperdex.py` that truncated series slugs, restoring full multi-page chapter extraction (10-150+ pages per chapter).
+- **MadaraDex Title Sanitization**: Cleaned up title parsing in `madaradex.py` to strip out `18+` and `Uncensored` badges from card titles, correctly extracting real series titles.
+- **MangaK Full Operational Pipeline**: Fixed `mangak.io` browse and chapter extraction by mapping Next.js SSR props (`items`, `ssrItems`, `trendingItems`, `popularItems`) and correctly sorting chapters in oldest-first order.
+
+---
+
+## [1.6.2] — Mangasurf v1.6.2: Carousel 3D Cascade, Reading Progress Engine, FlareSolverr Manager & Zero Overflow
+
+### Highlights & Fixes
+- **Carousel 3D Depth Overlapping Cascade & Zero Overflow**:
+  - Redesigned 3D Library Carousel with 7 visible overlapping cascading cards (`prev-3`, `prev-2`, `prev-1`, `active`, `next-1`, `next-2`, `next-3`).
+  - Active card is prominently elevated on top (`z-index: 20`, `scale(1.16)`, `translateZ(140px)`), with side cards stepping down in scale, depth, and z-index.
+  - Eliminated vertical overflow: cards fit comfortably inside a 320px viewport with generous 28px padding.
+  - Fixed blank/white carousel covers by piping cover art through `coverAttrs()` and `hydrateCovers()`.
+- **Dynamic Reading Progress Bar**:
+  - Carousel info panel dynamically computes actual reading progress across all chapters (`readCount / totalChapters * 100%`) from reader positions and mark logs, displaying reading status (`Reading (Ch 12/45)` vs `Completed`).
+- **Default Descriptions from Source Website / manga.json**:
+  - Enhanced `readerm/reader/books.py` to pull series descriptions from `manga.json` / site metadata so every downloaded series has its real description.
+- **Removed Servers Button from Sidebar**:
+  - Removed duplicate Servers rail button from sidebar, consolidating all controls in `Settings › Servers & OPDS Hub`.
+- **FlareSolverr Service Manager in Settings**:
+  - Added FlareSolverr status widget in `Settings › Sources & FlareSolverr` with real-time test connection ping and URL configuration.
+- **Fail-Safe Server & OPDS Stop Logic**:
+  - Enhanced `stop_server` and `stop_opds` in Gui Api with robust socket shutdowns and thread cleanup so servers never get stuck.
+  - Added Access Token / Password reveal eye button and copy button in Settings.
+- **QR Code Modal Interface Switcher (Wi-Fi vs Tailscale)**:
+  - Added tabbed interface in `#srv-qr-modal` allowing instant switching between Local Wi-Fi (LAN) and Tailscale VPN URLs with real-time SVG QR code re-rendering.
+- **Archive Cover Auto-Extraction**:
+  - `existing_cover()` in `readerm/covers.py` automatically extracts page 1 from `.cbz` / `.zip` archives into `cover.jpg` when no loose cover exists.
+
+---
+
+## [1.6.1] — Mangasurf v1.6.1: Immersive 3D Carousel, Full-Width Search, Bottom Shelves, QR Switcher & Referer Proxy
+
+### Highlights & Fixes
+- **Search Bar Full-Width Input Layout**: Fixed search input failing to expand and leaving empty space. Configured `.search-wrap` and `input[type="search"]` with `width: 100% !important; flex: 1;` so the search box stretches across the entire container with 40px icon padding.
+- **Horizontal Shelves Bar at Bottom of Library**: Replaced vertical shelf tree sidebar with an animated, horizontal scrollable shelf pill bar (`#horizontal-shelves-bar`) at the bottom of the library, showing shelf counts, custom colors, lock states, and "New Shelf" creation.
+- **Removed Stats Bar from Top of Library**: Cleaned up the top of the Library view by removing `#stats-strip`. Moved and enriched all statistics into the Stats page.
+- **Immersive Full-Width 3D Carousel**: Expanded the 3D Depth Library Carousel to span the entire screen width with 380px viewport height, 220x330px cover cards, 3D perspective depth scaling, glowing active cards, smooth animations, progress bar, chapter range, and inline editable series description.
+- **Rail Active Button Highlighting Fix**: Fixed both Settings and Servers buttons highlighting simultaneously when clicking the Servers rail button. `showView("servers")` now activates only `#rail-server-btn`.
+- **QR Code Modal Interface Switcher (Wi-Fi vs. Tailscale)**: Added tabbed interface in `#srv-qr-modal` allowing instant switching between Local Wi-Fi (LAN) and Tailscale VPN URLs with real-time SVG QR code re-rendering.
+- **Vibrant Stats Sources Tab**: Redesigned the Stats Sources tab with multi-colored gradient progress bars, provider badges, percentage breakdown, and active provider KPI ribbon.
+- **KuraManga & KuraHentai Cover Referer Proxy**: Added `cover_needs_referer = True` to `KuraMangaSource` and `KuraHentaiSource` so `shadowabyss.com` CDN images are proxied with proper `Referer` headers, fixing blank covers in search.
+- **Archive Cover Auto-Extraction**: Enhanced `existing_cover()` in `readerm/covers.py` to extract page 1 from `.cbz` / `.zip` archives into `cover.jpg` when no loose cover exists, guaranteeing 100% cover visibility in library.
+
+---
+
+## [1.6.0] — Mangasurf v1.6.0: 32 Scrapers, 3D Library Carousel, Cart Bulk Downloading, Offline Database & Suggestions
+
+### Highlights & New Additions
+- **6 New Integrated Scrapers (32 Registered Sources Total)**:
+  - **Chikari (`chikari.py`)**: SvelteKit REST API scraper with structured JSON search (`/api/search`), full metadata (`/api/series/{slug}`), chapter listings, and direct CDN image extraction (`cdn.chikari.moe`).
+  - **KuraManga (`kuramanga.py`)**: AJAX JSON search engine (`/search?ajax=1&keyword=`), natural chapter extraction, and high-speed `shadowabyss.com` image downloads.
+  - **KuraHentai (`kurahentai.py`)**: Gallery scraper for Hentai Manga & Doujinshi with full-resolution page image streaming from `hentai.shadowabyss.com`.
+  - **Hiperdex (`hiperdex.py`)**: tRPC API integration (`/api/trpc/`) with session tokens and `x-cfg-auth` signing, high-speed chapter parsing, and `r2d2storage.com` CDN image downloads.
+  - **MadaraDex (`madaradex.py`)**: Madara theme scraper with `https://madaradex.org/title/<slug>/`, AJAX chapter pagination, and `cdn.madaradex.org` images.
+  - **MangaK (`mangak.py`)**: Next.js SSR scraper (`mangak.io`) with structured `__NEXT_DATA__` props, instant search results (`ssrItems`), and direct CDN pages (`rx.qvzre.org`).
+- **3D Depth Cover Carousel for Library**:
+  - Prominent interactive 3D cover carousel at the top of the Library view with realistic perspective scaling, depth shadow, and active card prominence.
+  - Navigation via forward/backward buttons, clickable dots / counter pill (`XX / XX`), keyboard left/right arrow keys, and touch swipe.
+  - Underneath information panel: Prominent Title, reading progress bar and percentage (`85% Completed`), chapter range (`Chapters 01 - 50`), series status badge, genres tags, editable/customizable description with instant save, and action buttons ("Read Now", "Details", "Show in Folder").
+  - Privacy and folder lock integration: Locked folder items are automatically filtered from the carousel unless unlocked.
+  - Configurable Library Display Mode in Settings (`3D Carousel + Grid`, `Grid Only`, `List Rows`).
+- **Bulk Downloading & Cart System**:
+  - Added dedicated **Add to Cart** (`#d-cart-btn`) button next to Download in the series detail page.
+  - Added **Bulk Download Cart Bar** in the Queue view with live item counter and one-click "Download All Cart Items" button to start multi-series downloads concurrently.
+- **URL Support in Search Bar**:
+  - Pasting any series URL from all 32 sources (or arbitrary webtoon domains) into the search bar auto-detects the source and opens the manga detail page directly.
+- **Intelligent Real-Time Search Suggestions**:
+  - Live floating suggestions dropdown under the omnibar as the user types, surfacing matching series titles, source prefixes (`@chikari`, `@mangadex`, `@kuramanga`), and genre tags (`#action`, `#romance`, `#isekai`).
+- **Offline Manga & Hentai Database Integration**:
+  - Built-in indexed local database for thousands of SFW and Hentai/NSFW manga/manhwa titles, providing instant offline search and autocomplete suggestions.
+  - Configurable toggles in Settings to enable/disable database integration, SFW index, and NSFW/Hentai index.
+- **Floating Live Download Notification Card**:
+  - Luminous floating toast card displaying the manga cover thumbnail, chapter name, title, and animated status pill whenever a download begins or progresses.
+
+---
+
+## [1.5.1] — Mangasurf v1.5.1: Complete Fix Suite, Witchtoons JSON API, Tray Stability & Concurrency Guard
+
+### Completed Fixes & Enhancements
+- **Tray Restore Crash Resolved**: Fixed cross-thread UI exceptions when unhiding or restoring the desktop window from system tray by safeguarding `window.show()` and `window.restore()` calls with platform checks and state validation.
+- **Search FlareSolverr Concurrency Extended**: Increased search concurrency timeout from 12s to 30s (`search_timeout` configurable), granting FlareSolverr sufficient time to solve Cloudflare Turnstile challenges across protected scrapers.
+- **Witchtoons Live Scraper Architecture**: Rewritten `readerm/sources/witchscans.py` to target live `witchtoons.net` infrastructure. Integrated direct JSON search (`/api/search?q=`), JSON browsing (`/api/series?`), RSS feed chapter parsing (`/series/comic/<slug>/feed.xml`), and high-resolution signed WebP image extraction (`/uploads/comic-pages/<slug>/<ch>/page-<n>.webp?sig=...`).
+- **Double Download Duplicate Prevention**: Added double-click locking and in-flight request debouncing in the manga detail UI (`#d-download`, `#d-queue`), paired with duplicate checks in `start_download()` and `add_to_cart()` to prevent duplicate jobs for the same series.
+- **Delete All (Folder and Files) Permanent Removal**: Fixed card metadata mapping (`data-key`, `data-directory`, `data-manga`, `data-open`) in library grid so right-click context menu permanently removes the entire series directory and all archive files from disk with `shutil.rmtree()`, removes metadata from `library.json`, and cleans up the UI.
+- **Search Bar Layout & Icon Buttons**: Refined search tools box padding with dedicated icon-only Search (`#search-go`) and Refine (`#search-more`) action buttons and 36px left icon padding on search inputs.
+- **Search Results Sequencing & Load More**: Sequenced search requests (`activeSearchSeq`) and deduplicated URLs (`loadedSearchUrls`) ensuring instant refresh on empty/non-empty queries and infinite pagination.
+- **Uncollapsed Live Queue Cards**: Live network throughput sparkline graphs, active downloading chapter indicators, real-time speed meters (`MB/s`), ETA timers, and downloaded byte sizes.
+- **Queue Cleanup**: Automatically clears completed jobs from active queue rendering upon completion.
+
+---
+
+## [1.5.0] — Mangasurf v1.5.0: 26 Scrapers, Live Queue Overhaul, 3D Wave Visualizer & Metadata Sync
+
+### Highlights & Fixes
+- **GUI Server & OPDS Control Hub (Live Status & Device Tracking)**:
+  - **Start/Stop/Restart from GUI**: One-click controls in the GUI settings and navigation rail to start, stop, or restart the LAN Web Server and OPDS 1.2 Catalog without restarting the desktop application.
+  - **Live Server Status Updates**: Real-time pulsing online/offline indicators, uptime counters, active connections, and dynamic local LAN / localhost / Tailscale VPN URL resolvers with 1-click clipboard copy and browser launcher.
+  - **Connected Devices & Active Sessions Monitor**: Real-time tracking of all phones, tablets, e-readers, and desktop clients accessing Mangasurf. Identifies device models (Apple iPhone, iPad, Google Pixel, etc.), OS, browser/app (Readest, Panels, Aldiko, Safari, Chrome), IP addresses, connection type (LAN vs. Tailscale), request counts, transferred data sizes, and last active endpoints.
+  - **Instant Phone Pairing via QR Code**: Built-in zero-dependency SVG QR Code generator modal allowing phone cameras to scan and connect to the web reader or OPDS catalog immediately.
+  - **Live Traffic & Activity Console**: Embedded terminal viewer in GUI settings streaming live HTTP calls, chapter stream requests, and security challenges with filtering.
+  - **Autostart Controls**: Independent options to autostart the LAN Web Server and/or OPDS Catalog on Mangasurf launch.
+- **26 Integrated High-Speed Scrapers**:
+  - **SimplyHentai (`simplyhentai.py`)**: Added support for Simply-Hentai Next.js API, multi-tag combinations (`/tag/<tag1>/tag-1-<tag2>`), and full-resolution images.
+  - **Witchtoons (`witchscans.py`)**: Updated Witchscans scraper to official Witchtoons architecture (`witchtoons.com` / `witchscans.com`).
+  - **Hitomi.la (`hitomi.py`)**: Implemented Nozomi binary uint32 index streaming and modern `gg.js` dynamic math for high-speed AVIF/WebP image rendering.
+  - **MangaDistrict (`mangadistrict.py`)**: Full Madara search, browse, AJAX chapter loading, and image parsing.
+  - **Nhentai (`nhentai.py`)**: Upgraded to `SongOfTheFallen` architecture with direct tag routing, multi-category tag container parsing, and endless 25-gallery pagination.
+  - **VyManga (`vymanga.py`)**: Fixed browse and search endpoints across live mirrors (`mangavyvy.net`, `mangavyvy.com`, `vymanga.net`).
+- **Live Queue Overhaul (Uncollapsed)**:
+  - Fixed background downloads not appearing in queue by mapping active concurrent jobs (`self._jobs`) and cart items (`self._cart`) to `get_queue()`.
+  - Added `window.onEngineEvents` for real-time progress updates across GUI and LAN server.
+  - Uncollapsed queue item cards displaying live speed meters, ETA timers, downloaded byte sizes, active chapter labels, and SVG network throughput sparkline graphs.
+  - Automatic removal of completed jobs after finish.
+- **Visuals & Search Upgrades**:
+  - **3D Fullscreen Perspective Wave Canvas**: Dynamic undulating 3D perspective grid wave in centered search hero that smoothly fades out on query input.
+  - **Search Layout Toggle**: One-click Grid $\leftrightarrow$ List view toggle button in search bar tools box.
+  - **Centered Icon Search Buttons**: Clean, compact icon-only Search (`#search-go`) and Refine (`#search-more`) buttons.
+  - **Mathematical Wave Search Loader**: Centered harmonic frequency visualizer with pulsing core orb, radar rings, and mathematical formula pill.
+- **Library & Metadata Enhancements**:
+  - **Automatic `manga.json` Metadata**: Writes rich series metadata on download and reads it on disk scan so no series displays as "local".
+  - **Metadata Sync Tool**: CLI command `mangasurf library metadata` and context menu action to generate/sync `manga.json` for all folders.
+  - **Custom Context Menu**: Right-click menu for Library and Marks cards (Read, Details, Folder, 7 Color Tags, Sync Metadata, Delete Metadata Only, Delete Everything with Files).
+  - **Circular Progress Ring in Continue Reading**: Clean series title on bold first line, chapter range on sub-line, and SVG radial percentage meter.
+  - **Customizable Layout Padding & Margins**: Added dropdowns in Settings for screen padding (Compact, Normal, Spacious, Wide) and card density.
+- **Windows & Server Reliability**:
+  - **Windows Log Rotation Fix**: Implemented `SafeRotatingFileHandler` to catch `PermissionError: [WinError 32]` lock contention on Windows without crashing logging.
+  - **Server Streaming Auth Fix**: Added `mangasurf_token` session cookies and query parameter tokens so local covers and page streams never return 401 Unauthorized on mobile/LAN clients.
+
+---
+
 ## [1.2.0] — Mangasurf Unified Release: High-Speed Multi-Source Scrapers, Omnibar & Verified Engine
 
 ### Highlights & Architecture
@@ -30,6 +319,9 @@ All notable changes to **Mangasurf**, newest first.
   - **VyManga** (`vymanga_downloader`): adult warning bypass, chapter list parsing, vertical reader image extraction.
   - **MangaDotNet** (`mangadotnet_downloader`): Nuxt-style packed API search unpacker, chapter list parser, direct CDN extraction.
   - **Plus 18 additional sources**: MangaDex, AsuraScans, FlameComics, DemonicScans, MadaraScans, OmegaScans, ManhwaRead, MadaraNet, Natomanga, WitchScans, WriterScans, Webtoons, Mangadass, Manhwa18, Manga18Club, HentaiAkane, Nhentai.
+- **Search Relevance Engine (`filter_and_rank_query`)**:
+  - Eliminates un-filtered catalog dumps from scrapers when searching.
+  - Scored ranking (exact matches > prefix matches > token matches).
 
 ---
 

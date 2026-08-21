@@ -34,12 +34,13 @@ def format_chapter_number(value: float) -> str:
     return f"{whole:03d}.{frac}"
 
 
-def parse_selection(spec: str, chapters: list) -> list:
-    """Parse a chapter selection string against a chapter list.
+def parse_selection(spec, chapters: list) -> list:
+    """Parse a chapter selection string or list against a chapter list.
 
-    Supported syntax (chapter numbers, not indices):
+    Supported syntax:
         ""            -> all chapters
         "all"         -> all chapters
+        ["Ch 1", ...] -> specific list of chapters
         "5"           -> chapter 5
         "23.5"        -> chapter 23.5
         "1-20"        -> chapters 1 through 20 (inclusive)
@@ -51,7 +52,20 @@ def parse_selection(spec: str, chapters: list) -> list:
 
     Returns the selected chapter dicts in reading order.
     """
-    spec = (spec or "").strip().lower()
+    if not chapters:
+        return []
+
+    if isinstance(spec, (list, set, tuple)):
+        wanted_names = {c.get("name") if isinstance(c, dict) else str(c).strip() for c in spec if c}
+        if not wanted_names or "all" in wanted_names:
+            return list(chapters)
+        matched = [c for c in chapters if c.get("name") in wanted_names or str(c.get("chapter_no", "")) in wanted_names]
+        if matched:
+            return matched
+        wanted_nums = {chapter_number(n) for n in wanted_names}
+        return [c for c in chapters if chapter_number(c.get("name", "")) in wanted_nums]
+
+    spec = str(spec or "").strip().lower()
     if not spec or spec == "all":
         return list(chapters)
     if spec == "latest":

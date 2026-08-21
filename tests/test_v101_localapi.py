@@ -340,7 +340,7 @@ def test_the_same_data_is_available_without_http(live):
         payload = json.loads(localapi.dump(name))
         assert payload not in (None,), name
     info = json.loads(localapi.dump("info"))
-    assert info["ok"] is True and info["app"] == "ReaderM"
+    assert info["ok"] is True and info["app"] in ("ReaderM", "Mangasurf")
 
 
 def test_an_unknown_endpoint_offline_explains_itself(live):

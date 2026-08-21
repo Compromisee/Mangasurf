@@ -1,8 +1,8 @@
-"""A read-only description of this ReaderM install, for other programs.
+"""A read-only description of this Mangasurf install, for other programs.
 
 The point of this module is that another application -- a different reader, a
 sync script, a shell one-liner, an AI agent -- should be able to find out
-where everything is and what has been read *without* importing ReaderM,
+where everything is and what has been read *without* importing Mangasurf,
 parsing its private JSON, or guessing at paths that differ per platform.
 
 Design rules, each chosen deliberately:
@@ -338,7 +338,7 @@ def info() -> dict:
 
     return {
         "ok": True,
-        "app": "ReaderM",
+        "app": "Mangasurf",
         "version": __version__,
         "api_version": API_VERSION,
         "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),

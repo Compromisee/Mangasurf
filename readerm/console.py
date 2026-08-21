@@ -41,6 +41,7 @@ import time
 __all__ = [
     "RICH", "console", "Table", "Panel", "box", "Progress", "colour_enabled",
     "style", "strip_markup", "ACCENT", "DIM", "OK", "WARN", "ERR", "HEAD",
+    "SOURCE_COLORS", "format_source_badge", "format_colored_tag", "TAG_PALETTE",
 ]
 
 #: Semantic styles, used everywhere instead of raw colour names so the palette
@@ -51,6 +52,101 @@ OK = "bright_green"
 WARN = "yellow"
 ERR = "bright_red"
 HEAD = "bold bright_white"
+
+#: Vibrant per-source color identities for modern CLI & TUI display
+SOURCE_COLORS = {
+    "mangadex": "bold #ff6740",
+    "weebcentral": "bold #38bdf8",
+    "mangakatana": "bold #34d399",
+    "kagane": "bold #c084fc",
+    "comix": "bold #facc15",
+    "vymanga": "bold #f472b6",
+    "mangadotnet": "bold #22d3ee",
+    "asurascans": "bold #a78bfa",
+    "flamecomics": "bold #fb7185",
+    "natomanga": "bold #4ade80",
+    "demonicscans": "bold #f87171",
+    "madara": "bold #e879f9",
+    "madaranet": "bold #e879f9",
+    "madarascans": "bold #d946ef",
+    "omegascans": "bold #fb923c",
+    "manhwaread": "bold #60a5fa",
+    "witchscans": "bold #818cf8",
+    "writerscans": "bold #a3e635",
+    "webtoons": "bold #2dd4bf",
+    "mangadass": "bold #38bdf8",
+    "manhwa18": "bold #f43f5e",
+    "manga18club": "bold #e11d48",
+    "hentaiakane": "bold #fb7185",
+    "nhentai": "bold #ec4899",
+}
+
+TAG_PALETTE = {
+    "action": "bold white on #dc2626",
+    "martial arts": "bold white on #b91c1c",
+    "shounen": "bold white on #ea580c",
+    "adventure": "bold white on #d97706",
+    "fantasy": "bold white on #7c3aed",
+    "isekai": "bold white on #9333ea",
+    "magic": "bold white on #6366f1",
+    "reincarnation": "bold white on #8b5cf6",
+    "romance": "bold white on #db2777",
+    "drama": "bold white on #e11d48",
+    "shoujo": "bold white on #f43f5e",
+    "josei": "bold white on #be123c",
+    "comedy": "bold black on #facc15",
+    "slice of life": "bold white on #16a34a",
+    "school life": "bold white on #059669",
+    "sci-fi": "bold white on #0891b2",
+    "mystery": "bold white on #0d9488",
+    "psychological": "bold white on #4f46e5",
+    "supernatural": "bold white on #6d28d9",
+    "thriller": "bold white on #991b1b",
+    "horror": "bold white on #7f1d1d",
+    "historical": "bold white on #78350f",
+    "webtoon": "bold white on #2563eb",
+    "manhwa": "bold white on #3b82f6",
+    "manhua": "bold white on #0284c7",
+    "ecchi": "bold white on #f43f5e",
+    "hentai": "bold white on #e11d48",
+    "adult": "bold white on #be123c",
+    "smut": "bold white on #9f1239",
+}
+
+_DYNAMIC_TAG_COLORS = [
+    "bold white on #4f46e5",
+    "bold white on #0891b2",
+    "bold white on #059669",
+    "bold white on #d97706",
+    "bold white on #db2777",
+    "bold white on #7c3aed",
+    "bold white on #2563eb",
+    "bold white on #ea580c",
+    "bold white on #0d9488",
+    "bold white on #9333ea",
+]
+
+
+def format_source_badge(source_id: str, name: str = None) -> str:
+    """Return a stylized, color-coded badge for a source ID."""
+    sid = str(source_id or "").strip().lower()
+    label = name or sid.capitalize() or "Unknown"
+    style_spec = SOURCE_COLORS.get(sid, "bold bright_cyan")
+    return f"[{style_spec}]{label}[/]"
+
+
+def format_colored_tag(tag_name: str) -> str:
+    """Format a manga genre tag with category-specific or dynamic vibrant pill style."""
+    cleaned = str(tag_name or "").strip()
+    if not cleaned:
+        return ""
+    key = cleaned.lower()
+    style_spec = TAG_PALETTE.get(key)
+    if not style_spec:
+        h = sum(ord(c) for c in key) % len(_DYNAMIC_TAG_COLORS)
+        style_spec = _DYNAMIC_TAG_COLORS[h]
+    return f"[{style_spec}] {cleaned} [/]"
+
 
 
 def _want_colour(stream=None):

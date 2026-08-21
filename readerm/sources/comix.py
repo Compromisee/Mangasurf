@@ -13,14 +13,16 @@ from .base import Source, ScrapeError
 logger = logging.getLogger(__name__)
 
 SITE = "https://comix.to"
-API_BASE = "https://comix.to/api/v2"
+API_BASE = "https://api.comick.cc/v1.0"
+API_MIRRORS = ("https://api.comick.cc/v1.0", "https://api.comick.fun/v1.0", "https://api.comick.app/v1.0", "https://comix.to/api/v2")
 
 
 class ComixSource(Source):
     id = "comix"
     name = "Comix"
     base_url = SITE
-    domains = ("comix.to", "www.comix.to", "comick.app", "comick.io", "comick.live")
+    domains = ("comix.to", "www.comix.to", "comick.app", "comick.io", "comick.live", "comick.cc")
+    needs_flaresolverr = True
 
     supports_search = True
     supports_browse = True
@@ -40,8 +42,8 @@ class ComixSource(Source):
         h = super().headers()
         h.update({
             "Accept": "application/json, text/html, */*",
-            "User-Agent": "Mangasurf/2.0 (compatible; ComixDownloader/2.0)",
-            "Referer": f"{SITE}/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Referer": "https://comick.io/",
         })
         return h
 
@@ -54,20 +56,18 @@ class ComixSource(Source):
     def genres(self) -> list:
         return [{"id": name.lower(), "name": name} for name in self.GENRES]
 
-    def search(self, query: str, limit: int = 32, **_) -> list:
+    def search(self, query: str, limit: int = 32, page: int = 1, **_) -> list:
         query_str = (query or "").strip()
         if not query_str:
             return []
 
+        page_val = max(1, int(page or _.get("page", 1) or 1))
         data = None
-        for endpoint, key_name in [
-            (f"{API_BASE}/search", "q"),
-            (f"{API_BASE}/search", "query"),
-            ("https://api.comick.app/v1.0/search", "q"),
-        ]:
+        for base in API_MIRRORS:
             try:
-                data = self.fetch_json(endpoint, params={key_name: query_str, "limit": max(limit, 40)})
-                if data:
+                url = f"{base}/search"
+                data = self.fetch_json(url, params={"q": query_str, "limit": max(limit, 30), "page": page_val}, timeout=4)
+                if data and (isinstance(data, list) or data.get("data") or data.get("results")):
                     break
             except Exception:
                 continue
@@ -75,7 +75,7 @@ class ComixSource(Source):
         if not data:
             return []
 
-        items = data.get("data") or data.get("results") or (data if isinstance(data, list) else [])
+        items = data if isinstance(data, list) else (data.get("data") or data.get("results") or [])
         results = []
         for item in items:
             if not isinstance(item, dict):
@@ -85,13 +85,17 @@ class ComixSource(Source):
                 continue
             title = item.get("title") or "Unknown"
             cover = item.get("cover_url") or item.get("poster")
-            if isinstance(cover, dict):
+            if not cover and item.get("md_covers") and isinstance(item["md_covers"], list):
+                b2key = item["md_covers"][0].get("b2key")
+                if b2key:
+                    cover = f"https://meo.comick.pictures/{b2key}"
+            elif isinstance(cover, dict):
                 cover = cover.get("large") or cover.get("medium")
 
             results.append(
                 self._result(
                     title,
-                    f"{SITE}/title/{slug}",
+                    f"https://comick.io/comic/{slug}",
                     cover=cover,
                     status=item.get("status"),
                     type=item.get("country_name") or item.get("type"),

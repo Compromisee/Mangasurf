@@ -46,6 +46,7 @@ class ServerController:
         self._running = False
         self._url = ""
         self._flask = None
+        self._server_holder = {}
         self.window = None
 
         self.log.add("info", "Ready. Press Start to serve.")
@@ -54,17 +55,21 @@ class ServerController:
 
     def get_state(self):
         stored = self._cfg.load_server_settings()
+        ts = self._server.tailscale_ip()
+        port = int(self._override_port or stored["port"])
         return {
             "ok": True,
             "running": self._running,
             "url": self._url,
             "token": "" if self.no_auth else (self._override_token
                                               or stored["token"]),
-            "port": int(self._override_port or stored["port"]),
+            "port": port,
             "verbose": self.log.verbose,
             "no_auth": self.no_auth,
             "min_length": self._cfg.MIN_TOKEN_LENGTH,
             "host_ip": self._server.local_ip(),
+            "tailscale_ip": ts,
+            "tailscale_url": f"http://{ts}:{port}" if ts else "",
         }
 
     # -------------------------------------------------------- settings
@@ -141,7 +146,8 @@ class ServerController:
                     host=self.host, port=port,
                     token=self._override_token, no_auth=self.no_auth,
                     verbose=self.log.verbose, log=self.log,
-                    on_ready=on_ready)
+                    on_ready=on_ready,
+                    server_instance_holder=self._server_holder)
             except Exception as exc:
                 self.log.add("error", f"Server stopped: {exc}")
             finally:
@@ -160,19 +166,21 @@ class ServerController:
         return {"ok": True, "state": self.get_state()}
 
     def stop(self):
-        """Stop serving.
-
-        Werkzeug's dev server has no clean cross-thread shutdown once it is
-        inside serve_forever, and calling into it from another thread is how
-        you get a half-closed socket. Restarting the process is the honest
-        option, so this says so rather than pretending.
-        """
+        """Stop serving."""
         if not self._running:
             return {"ok": False, "error": "Not running"}
-        self.log.add("warn", "Close this window to stop the server.")
-        return {"ok": False,
-                "error": "Close this window to stop the server.",
-                "state": self.get_state()}
+        try:
+            if self._server_holder and self._server_holder.get("server"):
+                srv = self._server_holder["server"]
+                srv.shutdown()
+                if hasattr(srv, "server_close"):
+                    srv.server_close()
+            self._running = False
+            self.log.add("info", "Server stopped.")
+            return {"ok": True, "state": self.get_state()}
+        except Exception as exc:
+            self.log.add("error", f"Could not stop server: {exc}")
+            return {"ok": False, "error": str(exc), "state": self.get_state()}
 
     def get_log(self, since=0):
         try:
@@ -238,7 +246,7 @@ def run_server_window(host="0.0.0.0", port=None, token=None,
                                   no_auth=no_auth, verbose=verbose)
 
     window = webview.create_window(
-        "ReaderM server", html=PAGE, js_api=controller,
+        "Mangasurf server", html=PAGE, js_api=controller,
         width=760, height=680, min_size=(560, 520),
         background_color="#0b0a12")
     controller.window = window
@@ -266,7 +274,7 @@ PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ReaderM server</title>
+<title>Mangasurf server</title>
 <style>
 :root{
   --bg:#0b0a12; --panel:#16151f; --panel-2:#1c1b28; --line:#26243a;
@@ -340,7 +348,7 @@ button:disabled{opacity:.45;cursor:default}
 </head>
 <body>
 
-<h1><span class="dot" id="dot"></span> ReaderM server</h1>
+<h1><span class="dot" id="dot"></span> Mangasurf server</h1>
 
 <div class="card">
   <label>Open this on your phone</label>
@@ -377,7 +385,7 @@ button:disabled{opacity:.45;cursor:default}
 </div>
 
 <div class="warnbar" id="noauth" style="display:none">
-  Running with no access token — anyone on this network can control ReaderM.
+  Running with no access token — anyone on this network can control Mangasurf.
 </div>
 
 <div class="logwrap">

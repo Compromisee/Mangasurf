@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One window to launch any ReaderM interface.
+"""One window to launch any Mangasurf interface.
 
     python landing.py
 
@@ -11,7 +11,7 @@ The venv problem
 ----------------
 Double-clicking ``tui.py`` in a file manager, or opening a terminal from a
 launcher, does not inherit the project's virtual environment — so the child
-process gets the *system* Python, which has none of ReaderM's dependencies
+process gets the *system* Python, which has none of Mangasurf's dependencies
 and dies with ImportError. That is confusing in a way that looks like a bug
 in the app.
 
@@ -22,7 +22,7 @@ in the app.
 2. ``$VIRTUAL_ENV``, if one is active but somehow not ours;
 3. ``.venv`` / ``venv`` / ``env`` in the project folder, then in its parent,
    then its grandparent — "two layers above" covers the usual
-   ``projects/readerm-checkout/ReaderM`` nesting;
+   ``projects/mangasurf-checkout/Mangasurf`` nesting;
 4. the current interpreter, as a last resort.
 
 Whatever it picks is shown in the window, because "which Python is this
@@ -42,14 +42,14 @@ import sys
 import threading
 import time
 
-# Allow running this file directly (python readerm/landing.py, or an
+# Allow running this file directly (python mangasurf/landing.py, or an
 # IDE's "Run file"). Without this the relative imports below have no
 # parent package and raise ImportError before anything else happens.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
 #: True when running from a PyInstaller build. A frozen app has no .py
 #: files to hand to an interpreter, so every target is re-launched as the
@@ -57,7 +57,7 @@ if __package__ in (None, ""):
 FROZEN = getattr(sys, "frozen", False)
 
 if FROZEN:
-    #: The folder holding ReaderM.exe -- what the user thinks of as "the
+    #: The folder holding Mangasurf.exe -- what the user thinks of as "the
     #: app", and where a venv search would be pointless.
     HERE = os.path.dirname(os.path.abspath(sys.executable))
 else:
@@ -65,7 +65,7 @@ else:
     #: holding gui.py, tui.py and a possible .venv -- is one level up.
     HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-logger = logging.getLogger("readerm.landing")
+logger = logging.getLogger("mangasurf.landing")
 
 #: Where to look for a virtual environment, relative to the project folder.
 #: Two levels up, as requested -- a checkout is often one folder inside a
@@ -167,11 +167,11 @@ class Launcher:
     TARGETS = {
         "gui": ("Desktop app", ["gui.py"], False,
                 "The full interface: cover grid, queue, stats, tools."),
-        "menu": ("Terminal menu", ["-m", "readerm.cli", "menu"], True,
+        "menu": ("Terminal menu", ["-m", "mangasurf.cli", "menu"], True,
                  "Numbered prompts. No extra dependencies needed."),
         "tui": ("Full-screen TUI", ["tui.py"], True,
                 "Keyboard-driven, works over SSH. Needs the tui extra."),
-        "cli": ("Command line", ["-m", "readerm.cli", "--help"], True,
+        "cli": ("Command line", ["-m", "mangasurf.cli", "--help"], True,
                 "Opens a shell with the CLI help, ready to type into."),
         "server": ("Phone server", ["server.py", "--gui"], False,
                    "Serve this interface to your phone over Wi-Fi."),
@@ -294,7 +294,7 @@ class Launcher:
 
         if needs_terminal:
             command, shell_hint = terminal_command(launch_with, script_args,
-                                                   f"ReaderM {label}")
+                                                   f"Mangasurf {label}")
             if command is None:
                 message = ("No terminal emulator found. Install one, or run "
                            "this by hand:\n    "
@@ -354,7 +354,7 @@ def run_landing():
               "    pip install pywebview\n\n"
               "Or start an interface directly:\n"
               "    python gui.py        python tui.py\n"
-              "    python server.py     python -m readerm.cli menu")
+              "    python server.py     python -m mangasurf.cli menu")
         return 1
 
     # pywebview logs a full ImportError traceback for every backend it
@@ -363,7 +363,7 @@ def run_landing():
     logging.getLogger("pywebview").setLevel(logging.CRITICAL)
 
     launcher = Launcher()
-    webview.create_window("ReaderM", html=PAGE, js_api=launcher,
+    webview.create_window("Mangasurf", html=PAGE, js_api=launcher,
                           width=780, height=720, min_size=(600, 560),
                           background_color="#0b0a12")
     try:
@@ -396,16 +396,16 @@ def _direct_commands():
         name = os.path.basename(sys.executable)
         return [f"{name} gui", f"{name} menu", f"{name} tui",
                 f"{name} server", f"{name} opds", f"{name} --help"]
-    return ["python gui.py", "python -m readerm.cli menu",
+    return ["python gui.py", "python -m mangasurf.cli menu",
             "python tui.py", "python server.py", "python opdsserve.py",
-            "python -m readerm.cli --help"]
+            "python -m mangasurf.cli --help"]
 
 
 PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ReaderM</title>
+<title>Mangasurf</title>
 <style>
 :root{
   --bg:#0b0a12; --panel:#16151f; --panel-2:#1c1b28; --line:#26243a;
@@ -479,7 +479,7 @@ button.mini:hover{border-color:var(--b);color:var(--ink)}
 <header>
   <div class="mark">M</div>
   <div>
-    <h1>ReaderM</h1>
+    <h1>Mangasurf</h1>
     <div class="sub">Pick an interface</div>
   </div>
 </header>

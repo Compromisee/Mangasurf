@@ -231,11 +231,21 @@ def match_downloaded(url, chapters) -> list:
 def remove_entry(url) -> bool:
     with _lock:
         lib = _load(LIBRARY_PATH, {})
-        if _key(url) in lib:
-            del lib[_key(url)]
+        removed = False
+        k = _key(url)
+        if k in lib:
+            del lib[k]
+            removed = True
+        if url in lib:
+            del lib[url]
+            removed = True
+        for key in list(lib.keys()):
+            if _key(key) == k or lib[key].get("url") == url or lib[key].get("directory") == url or lib[key].get("title") == url:
+                del lib[key]
+                removed = True
+        if removed:
             _save(LIBRARY_PATH, lib)
-            return True
-        return False
+        return removed
 
 
 def clear_library():
@@ -529,3 +539,298 @@ def verify_entries() -> dict:
         }
         (missing if (not row["directory_ok"] or gone) else present).append(row)
     return {"ok": True, "present": present, "missing": missing}
+
+
+ARCHIVE_EXTENSIONS = {".cbz", ".cbr", ".cb7", ".epub", ".pdf", ".zip"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".bmp"}
+
+
+def scan_library_folders(roots: list = None) -> dict:
+    """Scan disk folders for manga directories and archive files (.cbz, .epub, .pdf, .zip).
+
+    Discovers new downloads or external manga collections and indexes them into
+    library.json so they appear in both the Manga reader and OPDS catalog.
+    """
+    if roots is None:
+        try:
+            from .config import load_settings
+            s = load_settings()
+            out_dir = s.get("output_dir")
+            extra_folders = s.get("library_folders") or []
+            roots = ([out_dir] if out_dir else []) + [f for f in extra_folders if f]
+        except Exception:
+            roots = []
+
+    clean_roots = []
+    for r in roots or []:
+        if r and isinstance(r, str):
+            expanded = os.path.abspath(os.path.expanduser(r.strip()))
+            if os.path.isdir(expanded) and expanded not in clean_roots:
+                clean_roots.append(expanded)
+
+    if not clean_roots:
+        return {"ok": True, "discovered": 0, "total_series": len(load_library()), "folders": []}
+
+    with _lock:
+        lib = _load(LIBRARY_PATH, {})
+        new_count = 0
+        indexed_count = 0
+
+        # Build lookup tables
+        dir_lookup = {}
+        title_lookup = {}
+        for k, v in lib.items():
+            if isinstance(v, dict):
+                d = v.get("directory")
+                if d:
+                    dir_lookup[os.path.abspath(d)] = (k, v)
+                t = (v.get("title") or "").strip().lower()
+                if t:
+                    title_lookup[t] = (k, v)
+
+        for root in clean_roots:
+            # Check if root itself is a series directory with multiple chapter archives
+            try:
+                entries_in_root = sorted(os.listdir(root))
+            except OSError:
+                continue
+
+            top_archives = [os.path.join(root, f) for f in entries_in_root
+                            if os.path.splitext(f)[1].lower() in ARCHIVE_EXTENSIONS]
+
+            # If root has multiple chapter archives, index root as a single series
+            if len(top_archives) > 1 and any(re.search(r"chapter|\bch\b|\bvol\b|\d+", os.path.basename(f), re.I) for f in top_archives):
+                series_title = os.path.basename(root).strip()
+                title_key = series_title.lower()
+                indexed_count += 1
+
+                cover_cand = None
+                for cf in entries_in_root:
+                    if cf.lower().startswith("cover.") and os.path.splitext(cf)[1].lower() in IMAGE_EXTENSIONS:
+                        cover_cand = os.path.join(root, cf)
+                        break
+
+                chapters_dict = {}
+                for arch_p in top_archives:
+                    ch_name = os.path.splitext(os.path.basename(arch_p))[0]
+                    chapters_dict[ch_name] = {"pages": 1, "date": _now()}
+
+                if title_key in title_lookup:
+                    k, entry = title_lookup[title_key]
+                    entry.setdefault("outputs", [])
+                    for ap in top_archives:
+                        if ap not in entry["outputs"]:
+                            entry["outputs"].append(ap)
+                    entry.setdefault("chapters", {}).update(chapters_dict)
+                    if cover_cand and not entry.get("cover"):
+                        entry["cover"] = cover_cand
+                else:
+                    key = _key(f"local:{series_title}")
+                    entry = lib.setdefault(key, {
+                        "title": series_title,
+                        "url": f"local:{series_title}",
+                        "source": "local",
+                        "directory": root,
+                        "cover": cover_cand,
+                        "chapters": chapters_dict,
+                        "outputs": list(top_archives),
+                        "added": _now(),
+                        "last_download": _now(),
+                    })
+                    title_lookup[title_key] = (key, entry)
+                    new_count += 1
+
+            elif len(top_archives) == 1:
+                arch_path = top_archives[0]
+                title = os.path.splitext(os.path.basename(arch_path))[0].strip()
+                title_key = title.lower()
+                indexed_count += 1
+                if title_key in title_lookup:
+                    k, entry = title_lookup[title_key]
+                    outs = entry.setdefault("outputs", [])
+                    if arch_path not in outs:
+                        outs.append(arch_path)
+                else:
+                    key = _key(f"local:{title}")
+                    entry = lib.setdefault(key, {
+                        "title": title,
+                        "url": f"local:{title}",
+                        "source": "local",
+                        "directory": root,
+                        "chapters": {title: {"pages": 1, "date": _now()}},
+                        "outputs": [arch_path],
+                        "added": _now(),
+                        "last_download": _now(),
+                    })
+                    title_lookup[title_key] = (key, entry)
+                    new_count += 1
+
+            # 2. Subdirectories in root (e.g. root/Solo Leveling/)
+            for item in entries_in_root:
+                item_path = os.path.join(root, item)
+                if not os.path.isdir(item_path) or item.startswith("."):
+                    continue
+
+                try:
+                    sub_files = sorted(os.listdir(item_path))
+                except OSError:
+                    continue
+
+                archives = [os.path.join(item_path, f) for f in sub_files
+                            if os.path.splitext(f)[1].lower() in ARCHIVE_EXTENSIONS]
+
+                sub_dirs = [os.path.join(item_path, d) for d in sub_files
+                            if os.path.isdir(os.path.join(item_path, d)) and not d.startswith(".")]
+                chapter_dirs = []
+                for sd in sub_dirs:
+                    try:
+                        pages = [f for f in os.listdir(sd)
+                                 if os.path.splitext(f)[1].lower() in IMAGE_EXTENSIONS
+                                 and not f.lower().startswith("cover.")]
+                        if pages:
+                            chapter_dirs.append((os.path.basename(sd), len(pages)))
+                    except OSError:
+                        pass
+
+                loose_pages = [f for f in sub_files
+                               if os.path.splitext(f)[1].lower() in IMAGE_EXTENSIONS
+                               and not f.lower().startswith("cover.")]
+
+                if not archives and not chapter_dirs and not loose_pages:
+                    continue
+
+                indexed_count += 1
+
+                cover_candidate = None
+                for cf in sub_files:
+                    if cf.lower().startswith("cover.") and os.path.splitext(cf)[1].lower() in IMAGE_EXTENSIONS:
+                        cover_candidate = os.path.join(item_path, cf)
+                        break
+                if not cover_candidate and loose_pages:
+                    cover_candidate = os.path.join(item_path, loose_pages[0])
+
+                # Check for metadata JSON file in this directory
+                meta_json = {}
+                for m_file in ("manga.json", "info.json", "metadata.json"):
+                    mp = os.path.join(item_path, m_file)
+                    if os.path.isfile(mp):
+                        try:
+                            with open(mp, "r", encoding="utf-8") as mfh:
+                                meta_json = json.load(mfh)
+                            break
+                        except Exception:
+                            pass
+
+                title = meta_json.get("title") or item.strip()
+                title_key = title.lower()
+                norm_dir = os.path.abspath(item_path)
+
+                entry = None
+                key = None
+                if norm_dir in dir_lookup:
+                    key, entry = dir_lookup[norm_dir]
+                elif title_key in title_lookup:
+                    key, entry = title_lookup[title_key]
+
+                if entry is None:
+                    url_val = meta_json.get("url") or f"local:{title}"
+                    key = _key(url_val)
+                    entry = lib.setdefault(key, {
+                        "title": title,
+                        "url": url_val,
+                        "source": meta_json.get("source") or "local",
+                        "source_name": meta_json.get("source_name") or meta_json.get("provider") or meta_json.get("source") or "Local",
+                        "directory": norm_dir,
+                        "chapters": {},
+                        "outputs": [],
+                        "added": _now(),
+                        "last_download": _now(),
+                    })
+                    dir_lookup[norm_dir] = (key, entry)
+                    title_lookup[title_key] = (key, entry)
+                    new_count += 1
+
+                # Update metadata fields if available
+                if meta_json.get("source") and entry.get("source") in ("local", "", None):
+                    entry["source"] = meta_json["source"]
+                if meta_json.get("source_name") or meta_json.get("provider"):
+                    entry["source_name"] = meta_json.get("source_name") or meta_json.get("provider")
+                if meta_json.get("description") and not entry.get("description"):
+                    entry["description"] = meta_json["description"]
+                if meta_json.get("tags") and not entry.get("tags"):
+                    entry["tags"] = meta_json["tags"]
+                if meta_json.get("authors") and not entry.get("authors"):
+                    entry["authors"] = meta_json["authors"]
+
+                entry["directory"] = norm_dir
+                if cover_candidate and not entry.get("cover"):
+                    entry["cover"] = cover_candidate
+                elif meta_json.get("cover") and not entry.get("cover"):
+                    entry["cover"] = meta_json["cover"]
+
+                existing_outs = entry.setdefault("outputs", [])
+                for arch_path in archives:
+                    if arch_path not in existing_outs:
+                        existing_outs.append(arch_path)
+
+                chapters_dict = entry.setdefault("chapters", {})
+                for ch_name, page_count in chapter_dirs:
+                    if ch_name not in chapters_dict:
+                        chapters_dict[ch_name] = {"pages": page_count, "date": _now()}
+
+                for arch_path in archives:
+                    arch_label = os.path.splitext(os.path.basename(arch_path))[0]
+                    if arch_label not in chapters_dict:
+                        chapters_dict[arch_label] = {"pages": 1, "date": _now()}
+
+                if loose_pages and not chapters_dict:
+                    chapters_dict[title] = {"pages": len(loose_pages), "date": _now()}
+
+        _save(LIBRARY_PATH, lib)
+        return {
+            "ok": True,
+            "discovered": indexed_count,
+            "new": new_count,
+            "total_series": len(lib),
+            "folders": clean_roots,
+        }
+
+
+def rebuild_library_metadata(roots: list = None) -> dict:
+    """Generate or update manga.json inside every series folder across all library roots."""
+    scan_res = scan_library_folders(roots)
+    written = 0
+    with _lock:
+        lib = _load(LIBRARY_PATH, {})
+        for key, entry in lib.items():
+            if not isinstance(entry, dict):
+                continue
+            directory = entry.get("directory")
+            if not directory or not os.path.isdir(directory):
+                continue
+            meta_path = os.path.join(directory, "manga.json")
+            meta = {
+                "title": entry.get("title", ""),
+                "url": entry.get("url", ""),
+                "source": entry.get("source", "local"),
+                "source_name": entry.get("source_name") or entry.get("source", "Local"),
+                "provider": entry.get("source_name") or entry.get("source", "Local"),
+                "description": entry.get("description", ""),
+                "cover": entry.get("cover", ""),
+                "status": entry.get("status", "Completed"),
+                "authors": entry.get("authors") or [],
+                "artists": entry.get("artists") or [],
+                "tags": entry.get("tags") or [],
+                "outputs": entry.get("outputs") or [],
+                "chapters": list(entry.get("chapters", {}).keys()),
+                "total_chapters": len(entry.get("chapters", {}) or {}),
+                "total_pages": sum(c.get("pages", 0) for c in (entry.get("chapters", {}) or {}).values() if isinstance(c, dict)),
+                "updated_at": _now(),
+            }
+            try:
+                with open(meta_path, "w", encoding="utf-8") as mf:
+                    json.dump(meta, mf, indent=2, ensure_ascii=False)
+                written += 1
+            except OSError:
+                pass
+    return {"ok": True, "written": written, "total_series": len(lib)}

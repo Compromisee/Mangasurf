@@ -62,10 +62,6 @@ def migrate(force: bool = False) -> dict:
     new = data_dir()
     result = {"migrated": False, "files": [], "reason": ""}
 
-    if os.path.isdir(new) and not force:
-        result["reason"] = "already set up"
-        return result
-
     copied = []
     for old in legacy_dirs():
         if not os.path.isdir(old):
@@ -94,9 +90,8 @@ def migrate(force: bool = False) -> dict:
 
 def ensure() -> str:
     new = data_dir()
-    if not os.path.isdir(new):
-        migrate()
-        os.makedirs(new, exist_ok=True)
+    migrate()
+    os.makedirs(new, exist_ok=True)
     return new
 
 

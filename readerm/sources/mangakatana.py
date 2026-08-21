@@ -116,14 +116,19 @@ class MangakatanaSource(Source):
         sort: str = None,
         status: str = None,
         search_by: str = "book_name",
+        page: int = 1,
         **_,
     ) -> list:
         query = (query or "").strip()
         if not query:
             return []
 
+        page_val = max(1, int(page or _.get("page", 1) or 1))
         by = "author" if search_by in ("author", "m_author") else "book_name"
-        url = f"{SITE}/?search={quote(query)}&search_by={by}"
+        if page_val > 1:
+            url = f"{SITE}/page/{page_val}?search={quote(query)}&search_by={by}"
+        else:
+            url = f"{SITE}/?search={quote(query)}&search_by={by}"
         if sort and sort in self._SORTS:
             url += f"&order={self._SORTS[sort]}"
         if status and status != "Any":

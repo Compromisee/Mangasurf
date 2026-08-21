@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Open a window to launch any ReaderM interface.
+"""Open a window to launch any Mangasurf interface.
 
     python landing.py
 

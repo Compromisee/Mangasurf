@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run ReaderM as a LAN server you can drive from a phone.
+"""Run Mangasurf as a LAN server you can drive from a phone.
 
     python server.py             # http://<this-pc>:8577
     python server.py --gui       # with a small control window
