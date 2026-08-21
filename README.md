@@ -4,7 +4,7 @@
 
 # Mangasurf
 
-**Download manga, manhwa and manhua from 32+ sites — and read them, in a desktop manga reader with 3D Depth Carousel, Foliate-js engine, full-screen TUI, phone server and OPDS catalog.**
+**Download manga, manhwa, and manhua from 32+ sites — and read them in a simple desktop manga reader **
 
 **[Command syntax reference -> SYNTAX.md](MD/SYNTAX.md) • [Live Documentation Website](https://compromisee.github.io/mangasurf/)**
 
