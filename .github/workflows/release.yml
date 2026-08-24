@@ -227,26 +227,26 @@ jobs:
           CHANGELOG_PATH: ${{ github.event.inputs.custom_changelog_path || 'MD/CHANGELOG.md' }}
         shell: bash
         run: |
-          python - << 'EOF'
+          # Write the code directly to a script file to avoid Bash quote interpretation issues
+          cat << 'EOF' > generate_notes.py
           import os
 
           tag_name = os.environ.get("TAG_NAME", "v0.0.0")
           clean_ver = os.environ.get("CLEAN_VERSION", "0.0.0")
           changelog = os.environ.get("CHANGELOG_PATH", "MD/CHANGELOG.md")
 
-          notes_body = f"""### What's Changed in {tag_name}
-          
-          Automated build release for target version {clean_ver}.
-          Please review the full changelog at `{changelog}` for complete details.
-          """
+          notes_body = f"### What's Changed in {tag_name}\n\nAutomated build release for target version {clean_ver}.\nPlease review the full changelog at `{changelog}` for complete details.\n"
 
-          # Sanitize output for GitHub Actions step parameters
+          # Write out to GitHub environment step output 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write("content<<EOF\n")
               f.write(notes_body)
               f.write("\nEOF\n")
           EOF
 
+          # Safely execute the generated script file
+          python generate_notes.py
+  
           if not notes_body:
               notes_body = """### What's Changed
           - **32 Registered Sources**: High-speed scrapers.
