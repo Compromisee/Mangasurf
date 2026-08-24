@@ -19,6 +19,8 @@ import argparse
 import os
 import sys
 import threading
+from mangasurf.config import load_settings
+
 
 # Allow running this file directly (python readerm/cli.py)
 if __package__ in (None, ""):
