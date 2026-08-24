@@ -444,9 +444,7 @@ def test_manhwaread_decodes_base64_chapter_data():
 
 def test_manhwaread_sends_a_referer():
     """manread.xyz answers 403 without one and 200 with the site origin."""
-    source = open(os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), "readerm", "sources",
-        "manhwaread.py"), encoding="utf-8").read()
+    source = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mangasurf", "sources","manhwaread.py"), encoding="utf-8").read()
     assert "def download_file" in source
     assert "manhwaread.com" in source
 
