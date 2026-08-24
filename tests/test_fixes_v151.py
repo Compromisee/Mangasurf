@@ -6,7 +6,7 @@ import tempfile
 import pytest
 from mangasurf.gui import Api
 from mangasurf.sources import WitchtoonsSource, WitchScansSource, search_all, get_source
-from readerm import library
+from mangasurf import library
 
 
 def test_witchtoons_source_integration():

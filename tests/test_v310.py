@@ -23,7 +23,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(path):

@@ -19,7 +19,7 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -44,7 +44,7 @@ def code(text):
 def test_nhentai_browses_popular_not_the_site_root():
     """The root page carries zero .gallery cards, so browse always came back
     empty. /popular is the real listing."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "nhentai.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "nhentai.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     assert "/popular?page=" in body
     # the old, empty endpoint must be gone
@@ -189,7 +189,7 @@ def test_new_source_implements_the_contract(source_id):
 
 def test_mangadass_avoids_the_decoy_search():
     """/?s= returns the homepage grid unchanged for every term."""
-    src = code(read(os.path.join(ROOT, "readerm", "sources", "mangadass.py")))
+    src = code(read(os.path.join(ROOT, "mangasurf", "sources", "mangadass.py")))
     body = src[src.index("def search"):src.index("def browse")]
     assert "/search?q=" in body
     assert "?s=" not in body
@@ -222,7 +222,7 @@ def test_mangadass_orders_chapters_numerically():
 
 def test_manga18club_uses_search_not_q():
     """?q= is ignored -- it returned the same 20 rows for every term."""
-    src = code(read(os.path.join(ROOT, "readerm", "sources", "manga18club.py")))
+    src = code(read(os.path.join(ROOT, "mangasurf", "sources", "manga18club.py")))
     body = src[src.index("def search"):src.index("def browse")]
     assert "search=" in body
     assert "?q=" not in body
@@ -252,14 +252,14 @@ def test_manga18club_decode_is_safe_on_junk():
 
 
 def test_manga18club_ignores_the_placeholder_image():
-    src = read(os.path.join(ROOT, "readerm", "sources", "manga18club.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "manga18club.py"))
     assert "manga18.club/1.jpg" in src
 
 
 def test_manga18club_cover_does_not_come_from_the_sidebar():
     """.story_images is the "you may also like" grid and returned another
     series' artwork."""
-    src = code(read(os.path.join(ROOT, "readerm", "sources", "manga18club.py")))
+    src = code(read(os.path.join(ROOT, "mangasurf", "sources", "manga18club.py")))
     body = src[src.index("def get_manga_info"):src.index("def get_chapters")]
     assert ".detail_avatar img" in body
     assert ".story_images" not in body
@@ -299,14 +299,14 @@ def test_hentaiakane_cards_ignore_the_sidebar_series_links():
 
 def test_hentaiakane_uses_the_plural_genres_path():
     """/genre/<slug>/ is a 404; the site uses /genres/<slug>/."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "hentaiakane.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "hentaiakane.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     assert "/genres/" in body
 
 
 def test_hentaiakane_documents_the_domain_correction():
     """The request said "hentaikane"; that domain does not resolve."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "hentaiakane.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "hentaiakane.py"))
     assert "hentaikane" in src           # the spelling is explained
     assert "NXDOMAIN" in src
 
@@ -341,6 +341,6 @@ def test_adult_sources_are_all_rating_stamped():
     for cls in SOURCE_CLASSES:
         if not getattr(cls, "adult_only", False):
             continue
-        src = read(os.path.join(ROOT, "readerm", "sources",
+        src = read(os.path.join(ROOT, "mangasurf", "sources",
                                 cls.__module__.rsplit(".", 1)[-1] + ".py"))
         assert "pornographic" in src, cls.id

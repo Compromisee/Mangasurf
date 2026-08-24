@@ -28,7 +28,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -230,7 +230,7 @@ def test_run_gui_actually_calls_the_hold():
     An earlier version of this suite exercised _hold_for_tray directly and
     still passed with the call deleted from run_gui.
     """
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def run_gui():"):]
     assert "_hold_for_tray(api, tray)" in body
 
@@ -330,7 +330,7 @@ def test_advanced_log_setting_exists():
 
 
 def test_calendar_covers_whole_weeks_and_fills_gaps():
-    from readerm import features
+    from mangasurf import features
 
     cal = features.stat_calendar(weeks=53, today="2026-07-30")
     assert len(cal["days"]) == 53 * 7
@@ -349,7 +349,7 @@ def test_calendar_levels_scale_to_the_busiest_day(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
 
     today = datetime.date.today()
@@ -371,7 +371,7 @@ def test_per_day_sources_are_recorded(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
 
     features.record_stat("mangadex", chapters=3)
@@ -390,7 +390,7 @@ def test_old_stats_without_source_days_still_count(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
 
     day = datetime.date.today().isoformat()
@@ -409,7 +409,7 @@ def test_calendar_api_returns_display_names(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import features
+    from mangasurf import features
     importlib.reload(features)
     features.record_stat("madara.toonily", chapters=2)
     features.record_stat("mangadex", chapters=1)

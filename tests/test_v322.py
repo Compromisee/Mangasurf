@@ -66,7 +66,7 @@ def post(server, method, args=None, token=True, raw=None):
     body = raw if raw is not None else json.dumps({"args": args or []}).encode()
     headers = {"Content-Type": "application/json"}
     if token:
-        headers["Cookie"] = f"readerm_token={server.token}"
+        headers["Cookie"] = f"mangasurf_token={server.token}"
     request = urllib.request.Request(url, data=body, method="POST",
                                      headers=headers)
     try:
@@ -170,7 +170,7 @@ def test_a_post_outside_the_api_prefix_is_refused_as_a_route(server):
     url = f"http://127.0.0.1:{server.port}/style.css"
     request = urllib.request.Request(
         url, data=b"{}", method="POST",
-        headers={"Cookie": f"readerm_token={server.token}"})
+        headers={"Cookie": f"mangasurf_token={server.token}"})
     try:
         response = urllib.request.urlopen(request, timeout=10)
         status, body = response.status, response.read()
@@ -267,7 +267,7 @@ def test_settings_come_back_populated(live):
 def test_the_front_end_still_declares_the_fallback():
     """If app.js stops using /_api/ this whole route is dead code, and the
     next person should be told rather than left guessing."""
-    app = open(os.path.join(ROOT, "readerm", "reader", "app", "app.js"),
+    app = open(os.path.join(ROOT, "mangasurf", "reader", "app", "app.js"),
                encoding="utf-8").read()
     assert "./_api/" in app
     assert "window.pywebview" in app

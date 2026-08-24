@@ -18,7 +18,7 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(ROOT, "readerm", "sources")
+SRC = os.path.join(ROOT, "mangasurf", "sources")
 
 #: The eleven sources v1.4.15 added. Six of them (the Madara-theme sites)
 #: were folded into the single "madaranet" aggregate in v1.4.18, so they are

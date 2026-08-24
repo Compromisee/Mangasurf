@@ -124,7 +124,7 @@ def test_resolve_member_returns_none_for_plain_ids():
 
 def test_the_gui_uses_the_shared_resolver():
     """Two copies of this logic is how the bug happened in the first place."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def _source(self"):]
     body = body[:body.index("\n    # ---")]
     assert "resolve_member" in body
@@ -155,7 +155,7 @@ def app(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
     application = server_module.create_app(token="unit-test-token")
     application.config["TESTING"] = True
@@ -396,7 +396,7 @@ def test_no_auth_mode_allows_calls(tmp_path, monkeypatch):
     sys.path.insert(0, ROOT)
     import importlib
 
-    from readerm import server as server_module
+    from mangasurf import server as server_module
     importlib.reload(server_module)
     application = server_module.create_app(token=None)
     with application.test_client() as client:
@@ -411,7 +411,7 @@ def test_local_ip_is_not_loopback_shaped(tmp_path, monkeypatch):
     which is useless to a phone."""
     monkeypatch.setenv("HOME", str(tmp_path))
     sys.path.insert(0, ROOT)
-    from readerm import server as server_module
+    from mangasurf import server as server_module
 
     address = server_module.local_ip()
     assert address.count(".") == 3

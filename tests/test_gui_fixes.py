@@ -12,7 +12,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -33,7 +33,7 @@ def isolated_home(monkeypatch):
 def test_closed_handler_returns_nothing():
     """pywebview does `return_values.add(handler())` into a *set*, so any
     handler returning a dict raises "unhashable type: 'dict'"."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     assert "window.events.closed += _on_closed" in source
     assert "window.events.closed += api.shutdown" not in source
 
@@ -76,7 +76,7 @@ def test_wrapped_handler_is_set_safe():
 
 
 def test_loaded_handler_also_returns_none():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def _on_loaded():"):]
     handler = handler[:handler.index("window.events.loaded")]
     assert not re.search(r"^\s+return\s+\S", handler, re.M)

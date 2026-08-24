@@ -177,12 +177,12 @@ def test_menu_imports_without_rich():
 
 def test_cli_help_works_without_rich():
     result = run_without_rich(
-        "import sys; sys.argv=['readerm','--help']\n"
+        "import sys; sys.argv=['mangasurf','--help']\n"
         "from mangasurf.cli import main\n"
         "try: main()\n"
         "except SystemExit: pass")
     assert result.returncode == 0, result.stderr[-800:]
-    assert "usage: readerm" in result.stdout
+    assert "usage: mangasurf" in result.stdout
 
 
 def test_sources_table_renders_without_rich():
@@ -233,10 +233,10 @@ def test_fallback_table_supports_grid():
 def test_no_module_imports_rich_at_top_level():
     """Any new hard import of Rich reintroduces the crash."""
     offenders = []
-    for name in sorted(os.listdir(os.path.join(ROOT, "readerm"))):
+    for name in sorted(os.listdir(os.path.join(ROOT, "mangasurf"))):
         if not name.endswith(".py") or name == "console.py":
             continue
-        text = read(os.path.join(ROOT, "readerm", name))
+        text = read(os.path.join(ROOT, "mangasurf", name))
         if re.search(r"(?m)^(from rich[\. ]|import rich\b)", text):
             offenders.append(name)
     assert not offenders, f"import rich directly: {offenders}"
@@ -285,7 +285,7 @@ def test_every_documented_flag_exists_in_the_parser():
 
 
 def test_every_documented_command_is_dispatched():
-    cli = read(os.path.join(ROOT, "readerm", "cli.py"))
+    cli = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     dispatch = cli[cli.index("def main("):]
     for command in ("search", "info", "trending", "genres", "sources",
                     "config", "library", "watch", "disk", "stats", "history",
@@ -314,7 +314,7 @@ def test_cli_description_is_not_stale():
     """It named four sources long after there were twenty-three."""
     from mangasurf.sources import SOURCES
 
-    cli = read(os.path.join(ROOT, "readerm", "cli.py"))
+    cli = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     assert "Natomanga and Weeb Central as CBZ" not in cli
     result = subprocess.run(
         [sys.executable, "-m", "mangasurf.cli", "--help"],
@@ -333,7 +333,7 @@ def test_tui_module_is_unchanged_and_still_guards_textual():
     """The brief was to touch the TUI only if it errored. It did not -- it
     boots, cycles tabs and lists all 23 sources with no exceptions -- so this
     only pins the guard that lets it degrade without Textual."""
-    text = read(os.path.join(ROOT, "readerm", "tui.py"))
+    text = read(os.path.join(ROOT, "mangasurf", "tui.py"))
     assert "TEXTUAL_AVAILABLE" in text
     assert "except ImportError:" in text
 
@@ -343,8 +343,8 @@ def test_tui_fallback_message_points_at_the_menu():
 
     if tui.TEXTUAL_AVAILABLE:
         pytest.skip("Textual is installed; the fallback path is not taken")
-    text = read(os.path.join(ROOT, "readerm", "tui.py"))
-    assert "readerm menu" in text
+    text = read(os.path.join(ROOT, "mangasurf", "tui.py"))
+    assert "mangasurf menu" in text
 
 
 # ======================================= v1.4.17: Madara Scans, and the name
@@ -462,7 +462,7 @@ def test_madarascans_cards_dedupe_the_double_link():
 
 def test_madarascans_browse_pages_on_the_query_not_the_path():
     """/series/page/2/ answers 200 and returns page one; ?page=2 is real."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "madarascans.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "madarascans.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     # Strip comments: the decoy path is named in one, to explain why it is
     # avoided, and matching raw text would fail on correct code.
@@ -473,14 +473,14 @@ def test_madarascans_browse_pages_on_the_query_not_the_path():
 
 def test_madarascans_search_pages_on_the_path():
     """Search is the opposite of browse here: /page/<n>/?s=<term>."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "madarascans.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "madarascans.py"))
     body = src[src.index("def search"):src.index("def browse")]
     assert "/page/{page}/?s=" in body
 
 
 def test_madarascans_avoids_the_empty_manga_path():
     """/manga/ returns a 53-byte empty document; /series/ is the catalogue."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "madarascans.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "madarascans.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     assert "/series/" in body
 

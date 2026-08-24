@@ -151,7 +151,7 @@ def test_rejected_members_are_documented_not_shipped():
     assert not any("manhwafull" in h for h in hosts)
     assert not any("zinmanga" in h for h in hosts)
 
-    doc = read(os.path.join(ROOT, "readerm", "sources", "madaranet.py"))
+    doc = read(os.path.join(ROOT, "mangasurf", "sources", "madaranet.py"))
     assert "manhwafull" in doc and "zinmanga" in doc
 
 
@@ -251,7 +251,7 @@ def test_cjk_titles_are_not_destroyed():
 
 
 def test_distinct_cjk_series_are_not_merged():
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "ワンピース", "url": "a", "source": "x"},
             {"title": "進撃の巨人", "url": "b", "source": "y"},
@@ -261,7 +261,7 @@ def test_distinct_cjk_series_are_not_merged():
 
 def test_untitled_rows_are_not_lumped_together():
     """"(Oneshot)" and "[Artist]" both normalised to "" and merged."""
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "(Oneshot)", "url": "a", "source": "x"},
             {"title": "[Artist]", "url": "b", "source": "y"},
@@ -287,7 +287,7 @@ def test_different_works_are_kept_apart():
 
 def test_word_break_variants_merge():
     """Reported as "it merges too little"."""
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "Nano Machine", "url": "a", "source": "x"},
             {"title": "Nanomachine", "url": "b", "source": "y"}]
@@ -312,7 +312,7 @@ def test_a_title_that_is_only_stopwords_survives():
 
 def test_short_keys_are_never_grouped():
     """A one- or two-character key is too weak to merge on."""
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "X", "url": "a", "source": "p"},
             {"title": "Y", "url": "b", "source": "q"},
@@ -324,7 +324,7 @@ def test_merge_backfills_missing_metadata():
     """The best-ranked copy is not always the most complete: MangaDex often
     wins on rank while reporting no chapter count, and the copy it displaced
     had both a count and a cover."""
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "Solo Leveling", "url": "a", "source": "mangadex",
              "cover": None, "chapters": None},
@@ -338,7 +338,7 @@ def test_merge_backfills_missing_metadata():
 
 
 def test_backfill_never_overwrites_the_winners_own_data():
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": "X Series", "url": "a", "source": "one",
              "cover": "good.jpg"},
@@ -350,7 +350,7 @@ def test_backfill_never_overwrites_the_winners_own_data():
 
 def test_dedupe_preserves_every_row_it_does_not_merge():
     """Nothing may vanish: total in == total across all groups out."""
-    from readerm import features
+    from mangasurf import features
 
     rows = [{"title": t, "url": str(i), "source": "s"}
             for i, t in enumerate(["ワンピース", "One Piece", "(Oneshot)",

@@ -147,7 +147,7 @@ def test_record_check_on_unwatched_series_is_safe():
 
 
 def test_check_updates_uses_the_source_layer(monkeypatch):
-    from readerm import tracking
+    from mangasurf import tracking
 
     tracking.watch("https://mangadex.org/title/x", "Watched", 10)
 
@@ -169,7 +169,7 @@ def test_check_updates_uses_the_source_layer(monkeypatch):
 
 
 def test_check_updates_skips_failing_sources(monkeypatch):
-    from readerm import tracking
+    from mangasurf import tracking
 
     tracking.watch("https://mangadex.org/title/x", "Broken", 10)
 
@@ -264,7 +264,7 @@ def test_disk_usage_on_missing_directory():
 
 
 def test_find_orphans_detects_missing_files(tmp_path):
-    from readerm import library
+    from mangasurf import library
     from mangasurf.tracking import find_orphans
 
     library.record_chapter("https://x.test/m/1", "Gone", "Chapter 1",
@@ -278,7 +278,7 @@ def test_find_orphans_detects_missing_files(tmp_path):
 
 
 def test_find_orphans_ignores_healthy_entries(tmp_path):
-    from readerm import library
+    from mangasurf import library
     from mangasurf.tracking import find_orphans
 
     output = tmp_path / "ok.cbz"

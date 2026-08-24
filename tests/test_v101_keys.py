@@ -25,7 +25,7 @@ import sys
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def node(script):
@@ -277,7 +277,7 @@ def test_the_reader_overlay_clears_the_titlebar():
 def test_a_frameless_window_is_draggable():
     """pywebview needs easy_drag as well: without it a frameless window
     cannot be moved at all on backends that ignore -webkit-app-region."""
-    gui = open(os.path.join(ROOT, "readerm", "gui", "__init__.py"),
+    gui = open(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"),
                encoding="utf-8").read()
     assert "frameless=chrome" in gui
     assert "easy_drag=chrome" in gui
@@ -294,7 +294,7 @@ def test_the_native_frame_can_be_put_back():
 def test_closing_honours_minimise_to_tray():
     """That setting exists so a 300-chapter download survives the window
     being closed. Our own close button must not bypass it."""
-    gui = open(os.path.join(ROOT, "readerm", "gui", "__init__.py"),
+    gui = open(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"),
                encoding="utf-8").read()
     block = gui[gui.index("def window_close"):]
     block = block[:block.index("\n    def ")]

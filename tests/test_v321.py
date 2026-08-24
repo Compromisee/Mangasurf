@@ -24,7 +24,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(path):
@@ -63,7 +63,7 @@ def test_the_page_can_load_its_own_assets_by_relative_url(server, asset):
     cope, or the app renders unstyled with no JavaScript."""
     base = f"http://127.0.0.1:{server.port}"
     status, body, _ = fetch(f"{base}/{asset}",
-                            {"Cookie": f"readerm_token={server.token}"})
+                            {"Cookie": f"mangasurf_token={server.token}"})
     assert status == 200, f"{asset} -> {status}"
     assert len(body) > 200, asset
 
@@ -75,7 +75,7 @@ def test_the_first_tokened_request_hands_out_a_cookie(server):
     status, _, headers = fetch(server.url("/"))
     assert status == 200
     cookie = headers.get("Set-Cookie", "")
-    assert "readerm_token=" in cookie, headers
+    assert "mangasurf_token=" in cookie, headers
     assert "HttpOnly" in cookie
     assert "SameSite=Strict" in cookie
 
@@ -84,7 +84,7 @@ def test_a_nested_import_is_authorised_by_the_cookie(server):
     """theme.css is reached by @import from style.css, and themes.js by a
     module import from app.js. Neither carries the page's token."""
     base = f"http://127.0.0.1:{server.port}"
-    jar = {"Cookie": f"readerm_token={server.token}"}
+    jar = {"Cookie": f"mangasurf_token={server.token}"}
     for nested, referer in (("theme.css", "style.css"), ("themes.js", "app.js")):
         status, _, _ = fetch(f"{base}/{nested}",
                              {**jar, "Referer": f"{base}/{referer}"})
@@ -96,7 +96,7 @@ def test_the_engine_is_reachable_from_a_page_at_the_root(server):
     "/foliate/view.js"."""
     base = f"http://127.0.0.1:{server.port}"
     status, body, _ = fetch(f"{base}/foliate/view.js",
-                            {"Cookie": f"readerm_token={server.token}"})
+                            {"Cookie": f"mangasurf_token={server.token}"})
     assert status == 200
     assert b"export" in body
 
@@ -109,7 +109,7 @@ def test_a_request_with_no_token_at_all_is_still_refused(server):
 
 def test_a_wrong_cookie_is_refused(server):
     base = f"http://127.0.0.1:{server.port}"
-    status, _, _ = fetch(f"{base}/style.css", {"Cookie": "readerm_token=nope"})
+    status, _, _ = fetch(f"{base}/style.css", {"Cookie": "mangasurf_token=nope"})
     assert status == 403
 
 
@@ -122,7 +122,7 @@ def test_the_cookie_is_only_issued_to_a_real_token(server):
 
 def test_the_root_shortcut_cannot_escape_the_asset_folder(server):
     """The "/name" fallback maps onto app/, and must not become a way out."""
-    jar = {"Cookie": f"readerm_token={server.token}"}
+    jar = {"Cookie": f"mangasurf_token={server.token}"}
     base = f"http://127.0.0.1:{server.port}"
     for attack in ("/..%2fassets.py", "/%2e%2e%2fassets.py", "/etc"):
         status, _, _ = fetch(f"{base}{attack}", jar)
@@ -130,7 +130,7 @@ def test_the_root_shortcut_cannot_escape_the_asset_folder(server):
 
 
 def test_a_missing_root_asset_is_a_clean_404(server):
-    jar = {"Cookie": f"readerm_token={server.token}"}
+    jar = {"Cookie": f"mangasurf_token={server.token}"}
     status, _, _ = fetch(f"http://127.0.0.1:{server.port}/nope.css", jar)
     assert status == 404
 
@@ -140,7 +140,7 @@ def test_a_missing_root_asset_is_a_clean_404(server):
 
 @pytest.fixture()
 def filtered(tmp_path, monkeypatch):
-    from readerm import features
+    from mangasurf import features
 
     monkeypatch.setattr(features, "FILTERS_PATH", str(tmp_path / "filters.json"))
     return features

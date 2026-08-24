@@ -21,7 +21,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(path):
@@ -32,8 +32,8 @@ def read(path):
 # ───────────────────────────────────────────────────────────────── rename
 
 
-def test_the_package_is_called_readerm():
-    assert os.path.isdir(os.path.join(ROOT, "readerm"))
+def test_the_package_is_called_mangasurf():
+    assert os.path.isdir(os.path.join(ROOT, "mangasurf"))
     assert not os.path.exists(os.path.join(ROOT, "mangadl"))
 
 
@@ -44,9 +44,9 @@ def test_the_spec_was_renamed():
 
 def test_the_console_scripts_are_renamed():
     pyproject = read(os.path.join(ROOT, "pyproject.toml"))
-    assert 'readerm = "mangasurf.cli:main"' in pyproject
-    assert 'readerm-gui = "mangasurf.gui:run_gui"' in pyproject
-    assert 'readerm-tui = "mangasurf.tui:run_tui"' in pyproject
+    assert 'mangasurf = "mangasurf.cli:main"' in pyproject
+    assert 'mangasurf-gui = "mangasurf.gui:run_gui"' in pyproject
+    assert 'mangasurf-tui = "mangasurf.tui:run_tui"' in pyproject
 
 
 def test_no_shipped_file_still_says_the_old_name():
@@ -55,7 +55,7 @@ def test_no_shipped_file_still_says_the_old_name():
     offenders = []
     skip = {".git", "__pycache__", "build", "dist", "node_modules", "foliate",
             "tests"}
-    allowed = {os.path.join(ROOT, "readerm", "paths.py")}
+    allowed = {os.path.join(ROOT, "mangasurf", "paths.py")}
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in skip]
         for name in filenames:
@@ -89,7 +89,7 @@ def test_the_module_and_the_package_metadata_agree():
     other, so that is what is checked now."""
     import re
 
-    import readerm
+    import mangasurf
 
     pyproject = open(os.path.join(ROOT, "pyproject.toml"),
                      encoding="utf-8").read()
@@ -100,11 +100,11 @@ def test_the_module_and_the_package_metadata_agree():
 # ──────────────────────────────────────────────────────────── data folder
 
 
-def test_the_data_folder_is_dot_readerm():
-    from readerm import paths
+def test_the_data_folder_is_dot_mangasurf():
+    from mangasurf import paths
 
-    assert paths.DIR_NAME == ".readerm"
-    assert paths.data_dir().endswith(".readerm")
+    assert paths.DIR_NAME == ".mangasurf"
+    assert paths.data_dir().endswith(".mangasurf")
 
 
 def test_every_module_shares_one_data_folder():
@@ -119,10 +119,10 @@ def test_every_module_shares_one_data_folder():
     users = ("config.py", "features.py", "library.py", "logs.py",
              "passlock.py", "singleton.py", "tracking.py")
     for name in users:
-        source = read(os.path.join(ROOT, "readerm", name))
+        source = read(os.path.join(ROOT, "mangasurf", name))
         assert "_ensure_data_dir()" in source, name
-        assert 'expanduser("~"), ".readerm"' not in source, f"{name} still rolls its own"
-    reader_api = read(os.path.join(ROOT, "readerm", "reader", "api.py"))
+        assert 'expanduser("~"), ".mangasurf"' not in source, f"{name} still rolls its own"
+    reader_api = read(os.path.join(ROOT, "mangasurf", "reader", "api.py"))
     assert "_ensure_data_dir()" in reader_api
 
 
@@ -148,7 +148,7 @@ def old_install(tmp_path, monkeypatch):
 
 
 def test_an_existing_install_is_migrated(old_install):
-    from readerm import paths
+    from mangasurf import paths
 
     result = paths.migrate()
     assert result["migrated"] is True
@@ -157,18 +157,18 @@ def test_an_existing_install_is_migrated(old_install):
 
 
 def test_the_library_survives_the_rename(old_install):
-    from readerm import paths
+    from mangasurf import paths
 
     paths.migrate()
-    moved = json.loads((old_install / ".readerm" / "library.json").read_text())
+    moved = json.loads((old_install / ".mangasurf" / "library.json").read_text())
     assert [e["title"] for e in moved.values()] == ["Solo Leveling"]
 
 
 def test_settings_survive_the_rename(old_install):
-    from readerm import paths
+    from mangasurf import paths
 
     paths.migrate()
-    config = json.loads((old_install / ".readerm" / "config.json").read_text())
+    config = json.loads((old_install / ".mangasurf" / "config.json").read_text())
     assert config["theme"] == "plum"
     assert config["accent"] == "rose"
 
@@ -176,26 +176,26 @@ def test_settings_survive_the_rename(old_install):
 @pytest.mark.parametrize("name", ["library.json", "config.json", "bookmarks.json",
                                   "reading.json", "lock.json", "stats.json"])
 def test_each_kind_of_state_is_carried_over(old_install, name):
-    from readerm import paths
+    from mangasurf import paths
 
     paths.migrate()
-    assert (old_install / ".readerm" / name).is_file(), name
+    assert (old_install / ".mangasurf" / name).is_file(), name
 
 
 def test_per_install_noise_is_left_behind(old_install):
     """instance.json is a live singleton handshake and logs describe a build
     that is no longer running."""
-    from readerm import paths
+    from mangasurf import paths
 
     paths.migrate()
-    new = old_install / ".readerm"
+    new = old_install / ".mangasurf"
     assert not (new / "instance.json").exists()
     assert not (new / "mangasurf.log").exists()
 
 
 def test_the_old_folder_is_kept_as_a_backup(old_install):
     """Copied, not moved, so downgrading still works."""
-    from readerm import paths
+    from mangasurf import paths
 
     paths.migrate()
     assert (old_install / ".mangadl" / "library.json").is_file()
@@ -206,9 +206,9 @@ def test_a_per_file_guard_protects_live_state(old_install):
     per-file `exists` test. The second one matters if the folder is ever
     created before migration runs -- which `ensure()` can do.
     """
-    from readerm import paths
+    from mangasurf import paths
 
-    new = old_install / ".readerm"
+    new = old_install / ".mangasurf"
     new.mkdir()
     (new / "config.json").write_text(json.dumps({"theme": "ocean"}))
     paths.migrate(force=False)
@@ -216,10 +216,10 @@ def test_a_per_file_guard_protects_live_state(old_install):
 
 
 def test_a_second_launch_does_not_re_copy(old_install):
-    from readerm import paths
+    from mangasurf import paths
 
     paths.migrate()
-    target = old_install / ".readerm" / "config.json"
+    target = old_install / ".mangasurf" / "config.json"
     target.write_text(json.dumps({"theme": "ocean"}))
     again = paths.migrate()
     assert again["migrated"] is False
@@ -231,7 +231,7 @@ def test_a_fresh_machine_just_creates_the_folder(tmp_path, monkeypatch):
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", str(home)))
-    from readerm import paths
+    from mangasurf import paths
 
     result = paths.migrate()
     assert result["migrated"] is False
@@ -243,7 +243,7 @@ def test_a_failed_migration_does_not_stop_the_app(old_install, monkeypatch):
     """An empty library is recoverable; a crash loop on launch is not."""
     import shutil
 
-    from readerm import paths
+    from mangasurf import paths
 
     def boom(*args, **kwargs):
         raise OSError("disk full")
@@ -454,7 +454,7 @@ def test_the_app_boots_clean(page):
     assert page.errors == []
 
 
-def test_the_window_is_called_readerm(page):
+def test_the_window_is_called_mangasurf(page):
     assert "ReaderM" in page.title()
 
 

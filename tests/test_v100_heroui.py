@@ -2,7 +2,7 @@
 
 HeroUI is React 19 + react-aria + Tailwind 4, which is 168 MB of node_modules.
 It is a *build-time* dependency only: `ui/build.mjs` bundles it to a single
-static pair of files under `readerm/reader/app/vendor/`, which are committed.
+static pair of files under `mangasurf/reader/app/vendor/`, which are committed.
 A pip install, a PyInstaller build and an end user all need nothing but
 Python.
 
@@ -21,7 +21,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 VENDOR = os.path.join(APP, "vendor")
 UI = os.path.join(ROOT, "ui")
 
@@ -128,7 +128,7 @@ def test_node_modules_is_not_committed():
 
 def test_the_build_writes_into_the_package():
     build = read(os.path.join(UI, "build.mjs"))
-    assert "readerm/reader/app/vendor" in build
+    assert "mangasurf/reader/app/vendor" in build
 
 
 def test_the_build_inlines_everything():
