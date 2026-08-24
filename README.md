@@ -9,8 +9,6 @@
 **[Command syntax reference -> SYNTAX.md](MD/SYNTAX.md)
 
 [![Release](https://img.shields.io/github/v/release/Compromisee/mangasurf?style=for-the-badge&color=00f5ff&logo=github)](https://github.com/Compromisee/mangasurf/releases)
-[![Build & Release](https://img.shields.io/github/actions/workflow/status/Compromisee/mangasurf/release.yml?style=for-the-badge&label=OneFile%20Builds&logo=githubactions&logoColor=white)](https://github.com/Compromisee/mangasurf/actions/workflows/release.yml)
-[![CI Tests](https://img.shields.io/github/actions/workflow/status/Compromisee/mangasurf/ci.yml?style=for-the-badge&label=CI%20Matrix&logo=pytest&logoColor=white)](https://github.com/Compromisee/mangasurf/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![PyQt / pywebview](https://img.shields.io/badge/GUI-PyQt%20%7C%20pywebview-2962FF?style=for-the-badge)](https://pywebview.flowrl.com)
 [![License](https://img.shields.io/badge/License-MIT-00875A?style=for-the-badge)](LICENSE)
