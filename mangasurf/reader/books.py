@@ -11,15 +11,18 @@ open at all. Rather than zipping folders on the fly, the reader is handed a
 page list and streams the images individually, so a chapter is readable the
 moment its first pages land.
 """
+import json
+import os
+import sys
 
 if __package__ in (None, ""):        # pragma: no cover - direct execution
     import os
     import sys
 
+
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     __package__ = "mangasurf.reader"
 
-import os
 import re
 
 from .. import library

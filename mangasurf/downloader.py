@@ -4,17 +4,6 @@ Emits structured events through a callback so both the CLI and the GUI can
 render progress however they like.
 """
 import sys
-
-# Allow running this file directly (python readerm/downloader.py, or an IDE's
-# "Run file"). Without this the relative imports below have no parent package
-# and raise ImportError before the module can do anything.
-if __package__ in (None, ""):
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
-
-
-
 import logging
 import os
 import shutil
@@ -22,6 +11,18 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from threading import Lock
+
+# Allow running this file directly (python readerm/downloader.py, or an IDE's
+# "Run file"). Without this the relative imports below have no parent package
+# and raise ImportError before the module can do anything.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import mangasurf  # noqa: F401
+    __package__ = "MangaSurf"
+
+
+
+
 
 from .packager import EXTENSIONS, PACKAGERS
 from .sources import get_source, source_for_url

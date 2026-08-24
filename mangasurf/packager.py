@@ -6,13 +6,12 @@ import os
 # and raise ImportError before the module can do anything.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "Mangasurf"
 
 
 
 import logging
-import os
 import re
 import zipfile
 

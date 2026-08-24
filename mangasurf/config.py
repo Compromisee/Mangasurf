@@ -40,17 +40,6 @@ someone sends you. ``search_enabled`` is the softer variant: keep the source
 usable but leave it out of "all sources" searches.
 """
 import sys
-
-# Allow running this file directly (python readerm/config.py, or an IDE's
-# "Run file"). Without this the relative imports below have no parent package
-# and raise ImportError before the module can do anything.
-if __package__ in (None, ""):
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
-
-
-
 import json
 import os
 import threading
@@ -58,6 +47,15 @@ import threading
 from .sources import SOURCES
 
 from .paths import ensure as _ensure_data_dir
+
+# Allow running this file directly (python readerm/config.py, or an IDE's
+# "Run file"). Without this the relative imports below have no parent package
+# and raise ImportError before the module can do anything.
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import mangasurf  # noqa: F401
+    __package__ = "MangaSurf"
+
 
 #: Created on first use, and populated from a MangaDL install if one
 #: exists -- see mangasurf.paths.migrate.

@@ -22,6 +22,7 @@ import urllib.error
 import urllib.request
 import zipfile
 import zlib
+import mangasurf
 
 import pytest
 

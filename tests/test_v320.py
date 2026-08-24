@@ -14,6 +14,7 @@ import re
 import socketserver
 import sys
 import threading
+import mangasurf
 
 import pytest
 
