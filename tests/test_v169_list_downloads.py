@@ -4,6 +4,8 @@ import pytest
 from mangasurf.gui import Api
 from mangasurf.sources.chikari import ChikariSource
 
+pytestmark = pytest.mark.network
+
 
 @pytest.mark.network
 def test_chikari_get_list_series():
