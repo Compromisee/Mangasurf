@@ -5,6 +5,7 @@ from mangasurf.gui import Api
 from mangasurf.sources.chikari import ChikariSource
 
 
+@pytest.mark.network
 def test_chikari_get_list_series():
     """Verify Chikari scraper extracts all series from a list URL."""
     src = ChikariSource()
@@ -18,6 +19,7 @@ def test_chikari_get_list_series():
     assert "title" in series[0]
 
 
+@pytest.mark.network
 def test_gui_api_download_list_and_search_routing():
     """Verify Gui Api routes list URLs and bulk enqueues them."""
     api = Api()
