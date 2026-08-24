@@ -1,6 +1,6 @@
 """Library shelves: folders for books, with tags, pins and per-folder locks.
 
-Stored at ``~/.readerm/shelves.json``. This is deliberately a *separate* file
+Stored at ``~/.mangasurf/shelves.json``. This is deliberately a *separate* file
 from ``bookmark_folders.json``: those group bookmarked **series URLs** you have
 not necessarily downloaded, while a shelf groups **books on disk** that the
 reader can open. Merging the two would mean one record trying to describe both
@@ -36,7 +36,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import base64
 import json

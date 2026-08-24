@@ -1,4 +1,4 @@
-"""python -m readerm"""
+"""python -m mangasurf"""
 
 import sys
 

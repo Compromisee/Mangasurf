@@ -22,7 +22,7 @@ import threading
 from mangasurf.config import load_settings
 
 
-# Allow running this file directly (python readerm/cli.py)
+# Allow running this file directly (python mangasurf/cli.py)
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import mangasurf  # noqa: F401
@@ -30,7 +30,7 @@ if __package__ in (None, ""):
 
 # Rich is optional. It used to be a hard import here, which meant a bare
 # clone -- no `pip install -e .` -- could not run the CLI at all: `py cli.py`
-# died with ImportError before argparse even ran. `readerm/console.py` uses
+# died with ImportError before argparse even ran. `mangasurf/console.py` uses
 # Rich when it is installed and falls back to ANSI otherwise.
 from .console import (ACCENT, DIM, ERR, HEAD, OK, RICH, WARN, Panel, Table,
                       box, console, download_progress, strip_markup)

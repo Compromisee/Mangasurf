@@ -4,7 +4,7 @@
 import multiprocessing
 import sys
 
-from readerm.gui import run_gui
+from mangasurf.gui import run_gui
 
 
 def main():

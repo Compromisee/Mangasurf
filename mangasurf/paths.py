@@ -1,6 +1,6 @@
 """Data directory resolution and migration for Mangasurf.
 
-Supports data storage at ``~/.mangasurf`` with seamless migration from ``~/.readerm``
+Supports data storage at ``~/.mangasurf`` with seamless migration from ``~/.mangasurf``
 and ``~/.mangadl``.
 """
 
@@ -9,7 +9,7 @@ if __package__ in (None, ""):
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import logging
 import os
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = "Mangasurf"
 DIR_NAME = ".mangasurf"
-LEGACY_DIR_NAMES = (".readerm", ".mangadl")
+LEGACY_DIR_NAMES = (".mangasurf", ".mangadl")
 
 MIGRATE_FILES = (
     "config.json",

@@ -1,6 +1,6 @@
 """App passcode lock.
 
-Stores a *verifier* for the passcode at ``~/.readerm/lock.json`` -- never the
+Stores a *verifier* for the passcode at ``~/.mangasurf/lock.json`` -- never the
 passcode itself. The verifier is PBKDF2-HMAC-SHA256 over a per-install random
 salt, so the stored file cannot be reversed into the original passcode and two
 users with the same passcode get different hashes.
@@ -23,7 +23,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import base64
 import hashlib

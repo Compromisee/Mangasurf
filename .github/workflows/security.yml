@@ -49,4 +49,4 @@ jobs:
 
       - name: Run Bandit Security Audit
         run: |
-          bandit -r readerm -ll -ii || true
+          bandit -r mangasurf -ll -ii || true

@@ -15,7 +15,7 @@ setup(
             "foliate/vendor/pdfjs/*",
             "foliate/vendor/pdfjs/**/*",
         ],
-        "readerm.reader": [
+        "mangasurf.reader": [
             "app/*",
             "app/**/*",
             "foliate/*",
@@ -44,8 +44,8 @@ setup(
         "console_scripts": [
             "mangasurf=mangasurf.cli:main",
             "mangasurf-gui=mangasurf.gui:run_gui",
-            "readerm=mangasurf.cli:main",
-            "readerm-gui=mangasurf.gui:run_gui",
+            "mangasurf=mangasurf.cli:main",
+            "mangasurf-gui=mangasurf.gui:run_gui",
         ],
     },
     python_requires=">=3.9",

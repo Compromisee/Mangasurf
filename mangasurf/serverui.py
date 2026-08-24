@@ -30,7 +30,7 @@ class ServerController:
     def __init__(self, host="0.0.0.0", port=None, token=None,
                  no_auth=False, verbose=None):
         from . import server as server_module
-        from readerm import servercfg
+        from mangasurf import servercfg
 
         self._server = server_module
         self._cfg = servercfg
@@ -154,7 +154,7 @@ class ServerController:
                 self._running = False
                 ready.set()
 
-        self._thread = threading.Thread(target=run, name="readerm-flask",
+        self._thread = threading.Thread(target=run, name="mangasurf-flask",
                                         daemon=True)
         self._running = True
         self._thread.start()

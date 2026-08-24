@@ -1,6 +1,6 @@
 /* build.mjs — bundle the HeroUI layer into a single static file.
  *
- * Output goes to readerm/reader/app/vendor/, which is committed. That is
+ * Output goes to mangasurf/reader/app/vendor/, which is committed. That is
  * deliberate: the packaged app must build with PyInstaller alone, and an end
  * user installing from pip or running the exe must never need Node. Node is a
  * developer tool here, nothing more.
@@ -31,7 +31,7 @@ try {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const outDir = resolve(here, "../readerm/reader/app/vendor");
+const outDir = resolve(here, "../mangasurf/reader/app/vendor");
 mkdirSync(outDir, { recursive: true });
 
 const watch = process.argv.includes("--watch");

@@ -11,7 +11,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 @pytest.fixture(autouse=True)
@@ -201,7 +201,7 @@ def test_a_pre_1_4_11_settings_file_is_migrated():
 
 def _library_with_moved_folder():
     """Record an entry, then move its folder. Returns (url, new_dir)."""
-    from readerm import library
+    from mangasurf import library
 
     old_root, new_root = tempfile.mkdtemp(), tempfile.mkdtemp()
     manga_dir = os.path.join(old_root, "Naruto")
@@ -219,7 +219,7 @@ def _library_with_moved_folder():
 
 
 def test_verify_detects_a_moved_folder():
-    from readerm import library
+    from mangasurf import library
 
     _library_with_moved_folder()
     report = library.verify_entries()
@@ -228,7 +228,7 @@ def test_verify_detects_a_moved_folder():
 
 
 def test_find_moved_entries_proposes_a_match():
-    from readerm import library
+    from mangasurf import library
 
     url, new_root = _library_with_moved_folder()
     proposals = library.find_moved_entries([new_root])
@@ -239,7 +239,7 @@ def test_find_moved_entries_proposes_a_match():
 
 def test_find_moved_entries_writes_nothing():
     """Proposals must be inert until applied, so a wrong guess is harmless."""
-    from readerm import library
+    from mangasurf import library
 
     _library_with_moved_folder()
     before = library.load_library()
@@ -248,7 +248,7 @@ def test_find_moved_entries_writes_nothing():
 
 
 def test_relocation_rewrites_directory_and_outputs():
-    from readerm import library
+    from mangasurf import library
 
     url, new_root = _library_with_moved_folder()
     library.apply_relocations(library.find_moved_entries([new_root]))
@@ -261,7 +261,7 @@ def test_relocation_rewrites_directory_and_outputs():
 
 
 def test_relocate_rejects_a_missing_folder():
-    from readerm import library
+    from mangasurf import library
 
     url, _new_root = _library_with_moved_folder()
     result = library.relocate_entry(url, "/definitely/not/here")
@@ -269,7 +269,7 @@ def test_relocate_rejects_a_missing_folder():
 
 
 def test_relocate_rejects_an_unknown_url():
-    from readerm import library
+    from mangasurf import library
 
     result = library.relocate_entry("https://nope", tempfile.mkdtemp())
     assert result["ok"] is False
@@ -278,7 +278,7 @@ def test_relocate_rejects_an_unknown_url():
 
 def test_relocation_keeps_chapters_and_metadata():
     """Re-linking must not lose download history."""
-    from readerm import library
+    from mangasurf import library
 
     url, new_root = _library_with_moved_folder()
     before = library.get_entry(url)["chapters"]
@@ -290,7 +290,7 @@ def test_relocation_keeps_chapters_and_metadata():
 
 
 def test_healthy_entries_are_not_proposed():
-    from readerm import library
+    from mangasurf import library
 
     root = tempfile.mkdtemp()
     manga_dir = os.path.join(root, "Bleach")

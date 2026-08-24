@@ -13,7 +13,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 DOCS = os.path.join(ROOT, "docs")
 SITE = os.path.join(DOCS, "index.html")
 
@@ -110,7 +110,7 @@ def test_stated_counters_match_the_repository():
     html = read(SITE)
 
     sources = len(re.findall(r"^\s+\w+Source,",
-                             read(os.path.join(ROOT, "readerm", "sources",
+                             read(os.path.join(ROOT, "mangasurf", "sources",
                                                "__init__.py")), re.M))
 
     # FEATURES.md is prose grouped by topic now, not a numbered list, so
@@ -214,7 +214,7 @@ def test_adult_sources_are_marked():
 
 def test_version_badge_matches_the_package():
     version = re.search(r'__version__ = "([^"]+)"',
-                        read(os.path.join(ROOT, "readerm", "__init__.py"))).group(1)
+                        read(os.path.join(ROOT, "mangasurf", "__init__.py"))).group(1)
     assert version in read(SITE)
 
 

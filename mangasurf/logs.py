@@ -1,7 +1,7 @@
 """File logging and crash-resume journal for Mangasurf.
 
-- Rotating log file:  ~/.readerm/logs/mangasurf.log
-- Job journals:       ~/.readerm/jobs/<id>.json  (one per interrupted job)
+- Rotating log file:  ~/.mangasurf/logs/mangasurf.log
+- Job journals:       ~/.mangasurf/jobs/<id>.json  (one per interrupted job)
 """
 
 
@@ -10,7 +10,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import json
 import logging
@@ -217,7 +217,7 @@ def export_log(dest_path: str) -> str:
 # held only B, and A could never be resumed), and whichever job finished
 # first called clear_journal() and wiped the record of the one still running.
 #
-# Now each job owns a file under ``~/.readerm/jobs/<id>.json`` and clears only
+# Now each job owns a file under ``~/.mangasurf/jobs/<id>.json`` and clears only
 # its own. The legacy single file is still read, once, and migrated.
 
 JOBS_DIR = os.path.join(BASE_DIR, "jobs")

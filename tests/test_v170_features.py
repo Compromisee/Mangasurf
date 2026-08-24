@@ -31,9 +31,9 @@ from mangasurf import library
 
 
 def test_mangasurf_package_imports():
-    """Verify mangasurf package and readerm alias both import cleanly."""
+    """Verify mangasurf package and mangasurf alias both import cleanly."""
     import mangasurf
-    import readerm
+    import mangasurf
     assert mangasurf.__version__ == "1.7.1"
     assert mangasurf.__version__ == "1.7.1"
 

@@ -36,33 +36,33 @@ def main():
     # No arguments -> the launcher window.
     if not args:
         try:
-            from readerm.landing import run_landing
+            from mangasurf.landing import run_landing
             sys.exit(run_landing())
         except ImportError:
             # pywebview missing: fall back to the desktop app, which prints
             # its own explanation, rather than dying with a traceback.
-            from readerm.gui import run_gui
+            from mangasurf.gui import run_gui
             sys.exit(run_gui())
 
     command = args[0]
 
     if command == "launcher":
-        from readerm.landing import run_landing
+        from mangasurf.landing import run_landing
         sys.exit(run_landing())
 
     if command == "gui":
-        from readerm.gui import run_gui
+        from mangasurf.gui import run_gui
         sys.exit(run_gui())
 
     if command == "server":
-        from readerm.server import main as server_main
+        from mangasurf.server import main as server_main
         sys.exit(server_main(args[1:]))
 
     if command == "opds":
-        from readerm.opdsserve import main as opds_main
+        from mangasurf.opdsserve import main as opds_main
         sys.exit(opds_main(args[1:]))
 
-    from readerm.cli import main as cli_main
+    from mangasurf.cli import main as cli_main
     sys.exit(cli_main(args))
 
 

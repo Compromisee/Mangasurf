@@ -353,7 +353,7 @@ Custom scraper plugins can be defined declaratively in `mangasurf/sources/custom
 ## 11. Tools for Organizing & Data Architecture Reference
 
 ### File & JSON Storage Locations
-All user data and configurations persist inside `~/.mangasurf/` (`readerm/paths.py`):
+All user data and configurations persist inside `~/.mangasurf/` (`mangasurf/paths.py`):
 
 | File Path | Description | Schema / Contents |
 |---|---|---|

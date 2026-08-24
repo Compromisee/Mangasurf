@@ -2,13 +2,13 @@
 
 Two additions and one bug fix:
 
-* ``readerm search`` gained ``--type``, ``--status``, ``-n/--limit``,
+* ``mangasurf search`` gained ``--type``, ``--status``, ``-n/--limit``,
   ``--sort``, ``--reverse``, ``--json``, ``--urls``, ``--open`` and
   ``--download``.
-* ``readerm menu`` is a progressive, numbered interface that needs nothing
+* ``mangasurf menu`` is a progressive, numbered interface that needs nothing
   beyond ``rich`` -- the Textual TUI is an optional extra that is frequently
   not installed.
-* ``readerm tui`` crashed with a raw ``ModuleNotFoundError`` traceback when
+* ``mangasurf tui`` crashed with a raw ``ModuleNotFoundError`` traceback when
   Textual was missing, because the friendly message lived *after* the
   module-level import.
 """
@@ -297,7 +297,7 @@ def test_missing_textual_prints_guidance_not_a_traceback():
     assert "Traceback" not in result.stderr
     assert "pip install textual" in result.stdout
     # and it points at the thing that does work without an extra install
-    assert "readerm menu" in result.stdout
+    assert "mangasurf menu" in result.stdout
 
 
 def test_cli_help_documents_the_new_syntax():
@@ -306,7 +306,7 @@ def test_cli_help_documents_the_new_syntax():
         cwd=ROOT, capture_output=True, text=True, timeout=120,
     )
     for fragment in ("--type", "--sort", "--urls", "--json",
-                     "--open", "--download", "readerm menu"):
+                     "--open", "--download", "mangasurf menu"):
         assert fragment in result.stdout, fragment
 
 
@@ -340,7 +340,7 @@ def test_menu_can_be_run_as_a_bare_file():
     """
     result = subprocess.run(
         [sys.executable, "menu.py"],
-        cwd=os.path.join(ROOT, "readerm"),
+        cwd=os.path.join(ROOT, "mangasurf"),
         capture_output=True, text=True, timeout=120,
     )
     assert "attempted relative import" not in result.stderr
@@ -352,7 +352,7 @@ def test_menu_can_be_run_as_a_bare_file():
 ])
 def test_every_relative_import_module_self_bootstraps(module):
     """Generalises the fix, so the next added module cannot repeat it."""
-    src = open(os.path.join(ROOT, "readerm", f"{module}.py"),
+    src = open(os.path.join(ROOT, "mangasurf", f"{module}.py"),
                encoding="utf-8").read()
     assert '__package__ in (None, "")' in src, f"{module}.py cannot run directly"
 
@@ -361,7 +361,7 @@ def test_no_module_using_relative_imports_is_left_unguarded():
     import re
 
     unguarded = []
-    package = os.path.join(ROOT, "readerm")
+    package = os.path.join(ROOT, "mangasurf")
     for name in sorted(os.listdir(package)):
         if not name.endswith(".py") or name.startswith("__"):
             continue
@@ -372,6 +372,6 @@ def test_no_module_using_relative_imports_is_left_unguarded():
 
 
 def test_menu_runs_the_menu_when_executed_directly():
-    src = open(os.path.join(ROOT, "readerm", "menu.py"), encoding="utf-8").read()
+    src = open(os.path.join(ROOT, "mangasurf", "menu.py"), encoding="utf-8").read()
     assert '__name__ == "__main__"' in src
     assert "run_menu()" in src

@@ -30,14 +30,14 @@ import sys
 import threading
 import time
 
-# Allow running this file directly (python readerm/opdsserve.py, or an IDE's
+# Allow running this file directly (python mangasurf/opdsserve.py, or an IDE's
 # "Run file"). Without this the relative imports below have no parent
 # package and raise ImportError before anything else happens.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
 try:
     from flask import Flask, Response, abort, request, send_file
@@ -58,7 +58,7 @@ logger = logging.getLogger("mangasurf.opdsserve")
 class OpdsLog:
     """A ring of readable lines for the control window.
 
-    Same shape as ServerLog in readerm/server.py so the window's polling
+    Same shape as ServerLog in mangasurf/server.py so the window's polling
     code is identical; kept separate because the two servers run
     independently and mixing their logs would be confusing.
     """
@@ -385,7 +385,7 @@ def create_app(token=None, log=None):
 
     @app.get("/opds/_ping")
     def ping():
-        return {"ok": True, "app": "readerm-opds",
+        return {"ok": True, "app": "mangasurf-opds",
                 "auth": bool(token),
                 "titles": len(opds.library_rows())}
 
@@ -511,7 +511,7 @@ def opds_port():
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        prog="readerm opds",
+        prog="mangasurf opds",
         description="Serve your downloaded library as an OPDS catalog, so "
                     "Readest and other readers can browse it.")
     parser.add_argument("--host", default="0.0.0.0",

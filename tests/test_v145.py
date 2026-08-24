@@ -19,7 +19,7 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -84,7 +84,7 @@ def test_decoder_ignores_whitespace():
 
 def test_source_uses_the_tolerant_decoder():
     """A raw b64decode here is what broke bulk downloads."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "manhwaread.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "manhwaread.py"))
     body = src[src.index("def get_chapter_images"):]
     assert "decode_payload" in body
     assert "base64.b64decode(payload" not in body
@@ -268,7 +268,7 @@ def test_clear_cart_empties_the_queue(monkeypatch):
 
 
 def test_concurrency_limit_is_clamped(monkeypatch):
-    from readerm import gui as guimod
+    from mangasurf import gui as guimod
 
     api = _fresh_api()
     # 0 and None are meaningless here and fall back to the default of 2
@@ -325,7 +325,7 @@ def test_stop_without_an_id_stops_everything():
 
 
 def test_a_stopped_job_is_not_reported_as_failed():
-    src = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = src[src.index("def _run_job"):src.index("def _spawn")]
     assert '"stopped"' in body
 

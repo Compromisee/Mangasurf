@@ -32,7 +32,7 @@ def stocked(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import config, library
+    from mangasurf import config, library
     importlib.reload(config)
     importlib.reload(library)
 
@@ -58,7 +58,7 @@ def stocked(tmp_path, monkeypatch):
                            directory="/nowhere", source="mangadex")
     library.record_outputs("https://x/gone", ["/nowhere/gone.cbz"])
 
-    from readerm import opds
+    from mangasurf import opds
     importlib.reload(opds)
     return tmp_path
 
@@ -67,7 +67,7 @@ def stocked(tmp_path, monkeypatch):
 def client(stocked):
     import importlib
 
-    from readerm import opdsserve
+    from mangasurf import opdsserve
     importlib.reload(opdsserve)
     app = opdsserve.create_app(token=TOKEN)
     app.config["TESTING"] = True
@@ -255,7 +255,7 @@ def test_grouping_by_letter_buckets_non_letters(stocked):
     under 岸 rather than '#'. I assumed otherwise when writing this and the
     code was right: shelving a Japanese title under '#' would be worse.
     """
-    from readerm import opds
+    from mangasurf import opds
 
     groups = opds.group_by_letter(opds.library_rows())
     assert "S" in groups and "B" in groups
@@ -270,7 +270,7 @@ def test_grouping_by_letter_buckets_non_letters(stocked):
 
 
 def test_pagination_links_appear_when_needed(stocked):
-    from readerm import opds
+    from mangasurf import opds
 
     rows = [dict(opds.library_rows()[0], id=f"urn:uuid:{i:032d}",
                  title=f"Book {i}") for i in range(opds.PAGE_SIZE * 2 + 5)]
@@ -286,7 +286,7 @@ def test_pagination_links_appear_when_needed(stocked):
 
 
 def test_a_page_holds_at_most_page_size(stocked):
-    from readerm import opds
+    from mangasurf import opds
 
     rows = [dict(opds.library_rows()[0], id=f"urn:uuid:{i:032d}",
                  title=f"Book {i}") for i in range(opds.PAGE_SIZE + 20)]
@@ -375,7 +375,7 @@ def test_ping_needs_no_auth(client):
 def test_no_auth_mode_serves_openly(stocked):
     import importlib
 
-    from readerm import opdsserve
+    from mangasurf import opdsserve
     importlib.reload(opdsserve)
     client = opdsserve.create_app(token=None).test_client()
     assert client.get("/opds").status_code == 200
@@ -404,14 +404,14 @@ def image_tree(tmp_path):
 
 def test_pages_sort_naturally(image_tree):
     """Page 2 must come before page 10, or the cover is the wrong page."""
-    from readerm import covers
+    from mangasurf import covers
 
     assert covers.images_in(str(image_tree / "Series A" / "Ch1")) == \
         ["1.jpg", "2.jpg", "10.jpg"]
 
 
 def test_scan_finds_folders_without_a_cover(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     found = {os.path.basename(r["directory"])
              for r in covers.scan_image_folders(str(image_tree))}
@@ -419,7 +419,7 @@ def test_scan_finds_folders_without_a_cover(image_tree):
 
 
 def test_raw_folders_are_skipped(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     covers.propagate_covers(str(image_tree))
     assert not (image_tree / "Series C" / "raw" / "cover.jpg").exists()
@@ -427,7 +427,7 @@ def test_raw_folders_are_skipped(image_tree):
 
 def test_covers_are_created_with_the_source_extension(image_tree):
     """A PNG written as cover.jpg is a file whose bytes contradict its name."""
-    from readerm import covers
+    from mangasurf import covers
 
     covers.propagate_covers(str(image_tree))
     assert (image_tree / "Series A" / "Ch1" / "cover.jpg").exists()
@@ -436,7 +436,7 @@ def test_covers_are_created_with_the_source_extension(image_tree):
 
 
 def test_the_first_page_is_used(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     covers.propagate_covers(str(image_tree))
     made = (image_tree / "Series A" / "Ch1" / "cover.jpg").read_bytes()
@@ -445,7 +445,7 @@ def test_the_first_page_is_used(image_tree):
 
 
 def test_existing_covers_are_left_alone(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     target = image_tree / "Series B" / "cover.jpg"
     target.write_bytes(b"ORIGINAL")
@@ -454,7 +454,7 @@ def test_existing_covers_are_left_alone(image_tree):
 
 
 def test_overwrite_replaces_them(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     target = image_tree / "Series B" / "cover.jpg"
     target.write_bytes(b"ORIGINAL")
@@ -465,7 +465,7 @@ def test_overwrite_replaces_them(image_tree):
 
 
 def test_running_twice_creates_nothing_new(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     covers.propagate_covers(str(image_tree))
     again = covers.propagate_covers(str(image_tree))
@@ -473,7 +473,7 @@ def test_running_twice_creates_nothing_new(image_tree):
 
 
 def test_dry_run_writes_nothing(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     result = covers.propagate_covers(str(image_tree), dry_run=True)
     assert result["created"], "dry run reported no work"
@@ -481,7 +481,7 @@ def test_dry_run_writes_nothing(image_tree):
 
 
 def test_an_empty_root_does_nothing(tmp_path):
-    from readerm import covers
+    from mangasurf import covers
 
     assert covers.scan_image_folders("") == []
     assert covers.propagate_covers("")["created"] == []
@@ -490,7 +490,7 @@ def test_an_empty_root_does_nothing(tmp_path):
 
 def test_set_cover_replaces_other_extensions(image_tree):
     """Two cover files with different extensions make readers disagree."""
-    from readerm import covers
+    from mangasurf import covers
 
     folder = image_tree / "Series B"
     (folder / "cover.jpg").write_bytes(b"OLD")
@@ -501,7 +501,7 @@ def test_set_cover_replaces_other_extensions(image_tree):
 
 
 def test_set_cover_rejects_non_images(image_tree):
-    from readerm import covers
+    from mangasurf import covers
 
     folder = image_tree / "Series B"
     (folder / "notes.txt").write_text("hello")
@@ -511,7 +511,7 @@ def test_set_cover_rejects_non_images(image_tree):
 
 
 def test_set_cover_reports_missing_paths(tmp_path):
-    from readerm import covers
+    from mangasurf import covers
 
     assert covers.set_cover("/no/such/dir", "/no/such.jpg")["ok"] is False
     assert covers.set_cover(str(tmp_path), "/no/such.jpg")["ok"] is False
@@ -538,7 +538,7 @@ def test_the_api_exposes_the_catalog(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import config, servercfg
+    from mangasurf import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
     import mangasurf.gui as gui
@@ -555,7 +555,7 @@ def test_the_api_exposes_the_catalog(tmp_path, monkeypatch):
 
 
 def test_autostart_is_wired_into_run_gui():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def run_gui():"):]
     assert "_maybe_start_opds" in body
     assert "opds_autostart" in body
@@ -604,7 +604,7 @@ def test_the_opds_catalog_survived_the_renumbering():
     Asserting on the version number never checked the thing it cared about.
     This does: the catalog is still importable and still builds a feed.
     """
-    from readerm import opds
+    from mangasurf import opds
 
     # It must still be able to render a feed, not merely import.
     xml = opds.feed("urn:test", "Test", entries=[], links=[])

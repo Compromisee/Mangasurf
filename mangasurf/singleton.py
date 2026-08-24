@@ -12,7 +12,7 @@ again -- is exactly what produced the duplicates.
 How it works
 ------------
 A small TCP server on the loopback interface, with its port written to
-``~/.readerm/instance.json``:
+``~/.mangasurf/instance.json``:
 
 * **The port file is the lock.** Binding a socket is atomic and the OS
   releases it when the process dies, so a killed instance never leaves a
@@ -37,7 +37,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import json
 import logging
@@ -142,7 +142,7 @@ class InstanceServer:
             logger.debug("could not write the instance file", exc_info=True)
 
         self._thread = threading.Thread(target=self._serve,
-                                        name="readerm-instance", daemon=True)
+                                        name="mangasurf-instance", daemon=True)
         self._thread.start()
         return True
 
@@ -165,7 +165,7 @@ class InstanceServer:
                         # window can block, and a blocked loop would refuse
                         # the next launch and let a duplicate through.
                         threading.Thread(target=self._safe_show,
-                                         name="readerm-show",
+                                         name="mangasurf-show",
                                          daemon=True).start()
                 except OSError:
                     continue

@@ -15,7 +15,7 @@ same ``mangasurf.gui.Api`` object the desktop app uses. So:
 * the phone never talks to a manga site — every scrape leaves the host's IP;
 * files are written to the host's disk, in the host's output folder;
 * the library, settings, history and job journals stay in the host's
-  ``~/.readerm/``;
+  ``~/.mangasurf/``;
 * closing the browser on the phone does not interrupt a download.
 
 That is the point of routing through the host rather than peer-to-peer: your
@@ -24,7 +24,7 @@ walks out of Wi-Fi range does not abort a 300-chapter job.
 
 Why the whole desktop UI, not a separate mobile one
 ---------------------------------------------------
-``readerm/gui/web`` is already a plain HTML/JS app that talks to Python over
+``mangasurf/gui/web`` is already a plain HTML/JS app that talks to Python over
 one narrow bridge — ``window.pywebview.api.<method>(...)`` returning a
 promise. ``static/bridge.js`` reimplements exactly that shape over ``fetch``,
 so the same UI runs unmodified in a phone browser. One UI to maintain, and
@@ -61,14 +61,14 @@ import sys
 import threading
 import time
 
-# Allow running this file directly (python readerm/server.py, or an
+# Allow running this file directly (python mangasurf/server.py, or an
 # IDE's "Run file"). Without this the relative imports below have no
 # parent package and raise ImportError before anything else happens.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
 try:
     from flask import Flask, Response, abort, jsonify, request, send_from_directory
@@ -361,7 +361,7 @@ def create_app(token=None, api=None, buffer=None, log=None, no_auth=False):
                     or request.args.get("token")
                     or request.args.get("t")
                     or request.cookies.get("mangasurf_token")
-                    or request.cookies.get("readerm_token")
+                    or request.cookies.get("mangasurf_token")
                     or (request.get_json(silent=True) or {}).get("_token"))
         # Constant-time: this is a shared secret in a query string, so the
         # comparison is the one part that costs nothing to get right.
@@ -651,7 +651,7 @@ def create_app(token=None, api=None, buffer=None, log=None, no_auth=False):
 
     @app.get("/api/_ping")
     def ping():
-        return jsonify({"ok": True, "app": "readerm",
+        return jsonify({"ok": True, "app": "mangasurf",
                         "auth": bool(token),
                         "authorised": authorised()})
 
@@ -903,7 +903,7 @@ def serve(host="0.0.0.0", port=None, token=None, no_auth=False,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        prog="readerm server",
+        prog="mangasurf server",
         description="Run Mangasurf as a LAN server you can drive from a phone. "
                     "All downloading happens on this computer.")
     parser.add_argument("--host", default="0.0.0.0",

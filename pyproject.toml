@@ -32,11 +32,11 @@ all = ["PyQt6>=6.5.0", "pywebview>=5.0", "textual>=0.60", "pystray>=0.19", "flas
 [project.scripts]
 mangasurf = "mangasurf.cli:main"
 mangasurf-gui = "mangasurf.gui:run_gui"
-readerm = "mangasurf.cli:main"
-readerm-gui = "mangasurf.gui:run_gui"
+mangasurf = "mangasurf.cli:main"
+mangasurf-gui = "mangasurf.gui:run_gui"
 
 [tool.setuptools.packages.find]
-include = ["mangasurf*", "readerm*"]
+include = ["mangasurf*", "mangasurf*"]
 
 [tool.setuptools.package-data]
 "mangasurf.reader" = [
@@ -48,7 +48,7 @@ include = ["mangasurf*", "readerm*"]
     "foliate/vendor/pdfjs/**/*",
     "*.md",
 ]
-"readerm.reader" = [
+"mangasurf.reader" = [
     "app/*",
     "app/**/*",
     "foliate/*",

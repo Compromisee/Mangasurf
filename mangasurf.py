@@ -9,7 +9,7 @@ def main():
     multiprocessing.freeze_support()
     args = sys.argv[1:]
     if not args or args[0] in ("gui", "--gui"):
-        from readerm.gui import run_gui
+        from mangasurf.gui import run_gui
         sys.exit(run_gui())
 
     from launcher import main as launcher_main

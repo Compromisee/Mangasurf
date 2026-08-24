@@ -1,4 +1,4 @@
-"""Application configuration, stored at ``~/.readerm/config.json``.
+"""Application configuration, stored at ``~/.mangasurf/config.json``.
 
 The file has two top-level sections::
 
@@ -48,7 +48,7 @@ from .sources import SOURCES
 
 from .paths import ensure as _ensure_data_dir
 
-# Allow running this file directly (python readerm/config.py, or an IDE's
+# Allow running this file directly (python mangasurf/config.py, or an IDE's
 # "Run file"). Without this the relative imports below have no parent package
 # and raise ImportError before the module can do anything.
 if __package__ in (None, ""):

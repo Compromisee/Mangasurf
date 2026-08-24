@@ -251,7 +251,7 @@ def test_dry_run_moves_nothing(tmp_path):
 
 def test_candidates_rank_exact_titles_first():
     """A fuzzy hit on a big catalogue is usually a different series."""
-    from readerm import covers
+    from mangasurf import covers
 
     rows = [
         {"title": "Something Else", "cover": "c1", "source": "a",
@@ -277,7 +277,7 @@ def test_candidates_rank_exact_titles_first():
 
 
 def test_candidates_skip_results_with_no_cover():
-    from readerm import covers
+    from mangasurf import covers
     import mangasurf.sources as sources_module
 
     original = sources_module.search_all
@@ -299,7 +299,7 @@ def test_candidates_of_an_empty_title_is_empty():
 
 
 def test_a_failing_search_does_not_raise():
-    from readerm import covers
+    from mangasurf import covers
     import mangasurf.sources as sources_module
 
     original = sources_module.search_all
@@ -370,7 +370,7 @@ def test_every_preview_is_proxied_not_just_referer_gated_ones():
     """The embedded browser blocks cross-origin images
     (ERR_BLOCKED_BY_RESPONSE.NotSameOrigin). Picking a cover you cannot see
     is not a choice."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def _cover_preview"):]
     body = body[:body.index("def apply_cover")]
     assert "proxy_cover" in body

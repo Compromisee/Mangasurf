@@ -278,14 +278,14 @@ def test_migration_survives_a_corrupt_legacy_file():
 def test_tui_shares_the_same_store():
     """The TUI imports these directly, so it inherits the fix."""
     source = open(os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), "readerm", "tui.py"), encoding="utf-8").read()
+        os.path.abspath(__file__))), "mangasurf", "tui.py"), encoding="utf-8").read()
     assert "from .gui import load_settings, save_settings" in source
 
 
 def test_gui_no_longer_writes_settings_by_hand():
     """A bare open()/json.dump here is the bug, not the fix."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    source = open(os.path.join(root, "readerm", "gui", "__init__.py"),
+    source = open(os.path.join(root, "mangasurf", "gui", "__init__.py"),
                   encoding="utf-8").read()
     body = source[source.index("def save_settings"):]
     body = body[:body.index("\n\n\n")]

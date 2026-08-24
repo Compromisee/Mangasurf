@@ -5,7 +5,7 @@ window and the command line all enforce the same rule. Duplicating a
 validator across three UIs is how one of them ends up accepting a four
 character token.
 
-The token lives in ``~/.readerm/config.json`` next to every other setting.
+The token lives in ``~/.mangasurf/config.json`` next to every other setting.
 Previously it was ``secrets.token_urlsafe(12)`` regenerated on each launch,
 which meant the phone had to be re-paired every time the server restarted
 and any bookmarked link stopped working. A saved token is also something the

@@ -14,7 +14,7 @@ import os
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -36,14 +36,14 @@ def read(path):
 def test_library_key_survives_url_variants(variant):
     """Five of these seven variants used to miss the library entirely, so a
     downloaded manga looked untouched when reached by a different link."""
-    from readerm import library
+    from mangasurf import library
 
     assert library._key(variant) == library._key("https://x.test/manga/a")
 
 
 def test_library_key_keeps_distinct_manga_apart():
     """Normalising must not merge two different series."""
-    from readerm import library
+    from mangasurf import library
 
     assert library._key("https://x.test/manga/a") != library._key("https://x.test/manga/b")
     assert library._key("https://x.test/m/a") != library._key("https://y.test/m/a")
@@ -61,7 +61,7 @@ def test_chapter_identity_ignores_a_changed_date():
 def test_downloaded_count_matches_the_highlighted_rows():
     """The pill counted recorded chapters while the rows matched on the exact
     label, so a changed date made the two disagree."""
-    from readerm import library
+    from mangasurf import library
 
     url = "https://x.test/manga/a"
     library.record_chapter(url, "A", "Chapter 01", pages=31)
@@ -78,7 +78,7 @@ def test_downloaded_count_matches_the_highlighted_rows():
 
 
 def test_downloaded_lookup_works_through_another_url_form():
-    from readerm import library
+    from mangasurf import library
 
     library.record_chapter("https://x.test/manga/a/", "A", "Chapter 01", pages=1)
     listed = [{"name": "Chapter 01"}]
@@ -87,7 +87,7 @@ def test_downloaded_lookup_works_through_another_url_form():
 
 def test_entry_keeps_a_usable_url():
     """The dict key is normalised, but the stored URL must stay openable."""
-    from readerm import library
+    from mangasurf import library
 
     library.record_chapter("https://x.test/manga/a", "A", "Chapter 01", pages=1)
     entry = library.get_entry("https://x.test/manga/a")
@@ -96,12 +96,12 @@ def test_entry_keeps_a_usable_url():
 
 def test_get_entry_is_used_instead_of_raw_indexing():
     """Indexing load_library() with a raw URL is the bug, not the fix."""
-    src = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     assert "load_library().get(url" not in src
 
 
 def test_manga_page_matches_on_chapter_number():
-    src = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     assert "library.match_downloaded(url, chapters)" in src
 
 
@@ -125,7 +125,7 @@ def test_series_path_drops_query_and_fragment():
 @pytest.mark.parametrize("module", ["manhwaread", "mangadass", "manhwa18",
                                     "manga18club"])
 def test_sources_use_the_shared_series_path(module):
-    src = read(os.path.join(ROOT, "readerm", "sources", module + ".py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", module + ".py"))
     assert "self.series_path(manga_url)" in src
     assert 'series_path = re.sub(r"^https?://[^/]+"' not in src
 
@@ -147,7 +147,7 @@ def test_browse_multi_intersects_per_source(monkeypatch):
     """AND must be a real intersection, and must not pair a hit from one
     source with a hit from another -- the same title has different URLs on
     different sites, so that would invent matches neither site agrees with."""
-    from readerm import sources
+    from mangasurf import sources
 
     data = {
         "Action": [
@@ -170,7 +170,7 @@ def test_browse_multi_intersects_per_source(monkeypatch):
 
 
 def test_browse_multi_any_is_a_union(monkeypatch):
-    from readerm import sources
+    from mangasurf import sources
 
     data = {
         "Action": [{"title": "A", "url": "https://s1/a", "source": "s1"}],
@@ -185,7 +185,7 @@ def test_browse_multi_any_is_a_union(monkeypatch):
 
 
 def test_browse_multi_with_one_genre_delegates(monkeypatch):
-    from readerm import sources
+    from mangasurf import sources
 
     seen = {}
 
@@ -214,7 +214,7 @@ def test_narrow_by_genres_keeps_untagged_results():
 
 def test_manhwa18_uses_the_singular_genre_path():
     """/genres/, /genre/ and /manga-genre/ are all 404 on that site."""
-    src = read(os.path.join(ROOT, "readerm", "sources", "manhwa18.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "manhwa18.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     assert "/webtoon-genre/" in body
     assert '{SITE}/genres/' not in body
@@ -224,7 +224,7 @@ def test_nhentai_falls_back_for_an_unknown_tag():
     """Shared genre labels ("action") are not nhentai tags and 404."""
     from mangasurf.sources.nhentai import NhentaiSource
 
-    src = read(os.path.join(ROOT, "readerm", "sources", "nhentai.py"))
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "nhentai.py"))
     body = src[src.index("def browse"):src.index("def genres")]
     assert "self.GENRES" in body
     assert "/search/?q=" in body

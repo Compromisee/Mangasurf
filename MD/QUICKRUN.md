@@ -45,8 +45,8 @@ pip install -r requirements.txt        # or: pip install -e .
 | CLI downloads | `pip install -e .` | `mangasurf <url>` |
 | Terminal UI | `pip install -e .` | `mangasurf tui` |
 | Desktop window | `pip install -e ".[gui]"` | `mangasurf gui` |
-| Phone / LAN server | `pip install -e ".[server]"` | `mangasurf server` (or `readerm server`) |
-| OPDS catalog | `pip install -e ".[server]"` | `mangasurf opds` (or `readerm opds`) |
+| Phone / LAN server | `pip install -e ".[server]"` | `mangasurf server` (or `mangasurf server`) |
+| OPDS catalog | `pip install -e ".[server]"` | `mangasurf opds` (or `mangasurf opds`) |
 | Everything | `pip install -e ".[all]"` | |
 
 The desktop window needs `pywebview`, which needs a system webview:

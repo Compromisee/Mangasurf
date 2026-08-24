@@ -433,7 +433,7 @@ def test_notifications_can_be_switched_off(tmp_path, monkeypatch):
 
 
 def test_close_handler_checks_the_hidden_flag():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def _on_closing():"):]
     handler = handler[:handler.index("def _on_shown():")]
     assert "_hidden_to_tray" in handler, (
@@ -441,7 +441,7 @@ def test_close_handler_checks_the_hidden_flag():
 
 
 def test_show_window_clears_the_hidden_flag():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def show_window():"):]
     handler = handler[:handler.index("def quit_app():")]
     assert "_hidden_to_tray = False" in handler

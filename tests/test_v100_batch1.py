@@ -29,7 +29,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(name):
@@ -125,7 +125,7 @@ def test_the_proxy_endpoint_returns_a_data_uri(tmp_path, monkeypatch):
 
     api = Api()
     source = read("../../gui/__init__.py") if False else open(
-        os.path.join(ROOT, "readerm", "gui", "__init__.py"), encoding="utf-8").read()
+        os.path.join(ROOT, "mangasurf", "gui", "__init__.py"), encoding="utf-8").read()
     block = source[source.index("def proxy_cover"):]
     block = block[:block.index("\n    def ")]
     assert "base64" in block

@@ -1,7 +1,7 @@
 """Extra feature modules: history, queue, stats, filters, dedupe, export.
 
 These are deliberately dependency-free and file-backed so every interface
-(CLI, GUI, TUI) can share them. Everything lives under ``~/.readerm/``.
+(CLI, GUI, TUI) can share them. Everything lives under ``~/.mangasurf/``.
 """
 
 
@@ -10,7 +10,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import csv
 import json

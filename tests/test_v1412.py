@@ -27,7 +27,7 @@ import time
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 sys.path.insert(0, ROOT)
 
 

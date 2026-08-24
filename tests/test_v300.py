@@ -29,7 +29,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-READER = os.path.join(ROOT, "readerm", "reader")
+READER = os.path.join(ROOT, "mangasurf", "reader")
 APP = os.path.join(READER, "app")
 FOLIATE = os.path.join(READER, "foliate")
 
@@ -552,17 +552,17 @@ def test_the_reader_still_exposes_a_theme_list():
 
 def test_the_spec_bundles_the_reader():
     spec = read(os.path.join(ROOT, "ReaderM.spec"))
-    assert '("readerm/reader/app", "readerm/reader/app")' in spec
-    assert '("readerm/reader/foliate", "readerm/reader/foliate")' in spec
+    assert '("mangasurf/reader/app", "mangasurf/reader/app")' in spec
+    assert '("mangasurf/reader/foliate", "mangasurf/reader/foliate")' in spec
 
 
 def test_the_old_front_end_is_gone():
-    assert not os.path.exists(os.path.join(ROOT, "readerm", "gui", "web"))
+    assert not os.path.exists(os.path.join(ROOT, "mangasurf", "gui", "web"))
 
 
 def test_the_gui_window_loads_the_reader_over_http():
     """file:// would break every ES module import in the engine."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     assert "reader_info()" in source
     body = source[source.index("def run_gui"):]
     assert "webview.create_window" in body
@@ -588,7 +588,7 @@ def test_the_version_is_a_sane_three_part_number():
     """Was `startswith("3.")`. The 1.0.0 renumbering made that fail without
     anything being broken, so it now checks the shape rather than the value
     -- the part that a release can actually get wrong."""
-    import readerm
+    import mangasurf
 
     parts = mangasurf.__version__.split(".")
     assert len(parts) == 3, mangasurf.__version__
@@ -600,7 +600,7 @@ def test_the_packaged_metadata_agrees_with_the_module():
 
     pyproject = read(os.path.join(ROOT, "pyproject.toml"))
     declared = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-    import readerm
+    import mangasurf
 
     assert declared == mangasurf.__version__
 
@@ -611,7 +611,7 @@ def test_the_packaged_metadata_agrees_with_the_module():
 def _server_client():
     """A Flask test client for the LAN phone server."""
     pytest.importorskip("flask")
-    from readerm import server as phone
+    from mangasurf import server as phone
 
     api = object()
     buffer = phone.EventBuffer()

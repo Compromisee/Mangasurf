@@ -1,7 +1,7 @@
 """Source registry: every supported manga site in Mangasurf.
 
 Adding a new site is a three-step job:
-    1. write ``readerm/sources/<name>.py`` with a Source subclass
+    1. write ``mangasurf/sources/<name>.py`` with a Source subclass
     2. import it below and append it to ``SOURCE_CLASSES``
     3. that's it -- CLI, GUI, and API pick it up automatically
 """

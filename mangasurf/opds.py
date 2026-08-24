@@ -8,7 +8,7 @@ straight from the machine that downloaded it.
 
 Why a separate server from ``mangasurf.server``
 ---------------------------------------------
-They answer different questions. ``readerm/server.py`` serves the *app* to a
+They answer different questions. ``mangasurf/server.py`` serves the *app* to a
 phone browser -- it is the whole UI over HTTP. This serves *files* to a
 dedicated reader over a standardised protocol, so the reader handles
 downloading, shelving and reading. They can run at once on different ports,
@@ -48,14 +48,14 @@ from xml.sax.saxutils import escape, quoteattr
 
 logger = logging.getLogger(__name__)
 
-# Allow running this file directly (python readerm/opds.py, or an IDE's
+# Allow running this file directly (python mangasurf/opds.py, or an IDE's
 # "Run file"). Without this the relative imports below have no parent
 # package and raise ImportError before anything else happens.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
 from . import library, paths
 

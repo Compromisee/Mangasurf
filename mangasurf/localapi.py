@@ -33,7 +33,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import json
 import os
@@ -109,7 +109,7 @@ def _unlocked() -> set:
     process.
 
     Imported lazily: localapi must stay usable in a bare
-    ``python -c "from readerm import localapi"`` without dragging in the
+    ``python -c "from mangasurf import localapi"`` without dragging in the
     reader stack.
     """
     try:
@@ -385,7 +385,7 @@ ENDPOINTS = {
 
 
 def dump(name: str = "info", **kwargs) -> str:
-    """JSON for one endpoint. Used by ``readerm api <name>``."""
+    """JSON for one endpoint. Used by ``mangasurf api <name>``."""
     handler = ENDPOINTS.get(name)
     if handler is None:
         return json.dumps({"ok": False, "error": f"No endpoint {name!r}",

@@ -48,7 +48,7 @@ LOOPBACK = "127.0.0.1"
 #: Session cookie carrying the access token. Set on the first request that
 #: presents the token explicitly, so relative sub-resources -- and the nested
 #: imports inside them -- are authorised without a query string.
-COOKIE_NAME = "readerm_token"
+COOKIE_NAME = "mangasurf_token"
 
 #: Explicit types, because ``mimetypes`` on Windows reads its table out of the
 #: registry and has been observed returning ``text/plain`` for ``.js`` — which
@@ -87,7 +87,7 @@ def _asset_root() -> str:
     """Where the reader's own files live, in source and when frozen."""
     if getattr(sys, "frozen", False):
         base = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(sys.executable)),
-                            "readerm", "reader")
+                            "mangasurf", "reader")
     else:
         base = os.path.dirname(os.path.abspath(__file__))
     return base
@@ -201,7 +201,7 @@ class AssetServer:
             target=self._httpd.serve_forever,
             kwargs={"poll_interval": 0.2},
             daemon=True,
-            name="readerm-assets",
+            name="mangasurf-assets",
         )
         self._thread.start()
         logger.info("reader assets on http://%s:%s", LOOPBACK, self.port)

@@ -465,7 +465,7 @@ def test_collection_lifecycle():
 def test_export_json_csv_and_markdown(tmp_path):
     import json
 
-    from readerm import library
+    from mangasurf import library
     from mangasurf.features import export_library
 
     library.record_chapter("https://x.test/manga/1", "Test Manga", "Chapter 1",
@@ -493,7 +493,7 @@ def test_export_rejects_unknown_format(tmp_path):
 
 
 def test_import_round_trip(tmp_path):
-    from readerm import library
+    from mangasurf import library
     from mangasurf.features import export_library, import_library
 
     library.record_chapter("https://x.test/m/1", "Round Trip", "Chapter 1",
@@ -512,7 +512,7 @@ def test_import_round_trip(tmp_path):
 
 
 def test_snapshot_and_restore():
-    from readerm import library
+    from mangasurf import library
     from mangasurf.features import list_snapshots, restore_snapshot, snapshot
 
     library.record_chapter("https://x.test/m/1", "Before", "Chapter 1",
@@ -530,7 +530,7 @@ def test_snapshot_and_restore():
 
 
 def test_library_insights():
-    from readerm import library
+    from mangasurf import library
     from mangasurf.features import library_insights
 
     library.record_chapter("https://x.test/m/1", "A", "Chapter 1", pages=10,
@@ -552,7 +552,7 @@ def test_library_insights():
 
 def test_search_all_skips_excluded_sources(monkeypatch):
     """A source the user excluded must not be queried at all."""
-    from readerm import config
+    from mangasurf import config
     from mangasurf.sources import SOURCES, search_all
 
     config.set_enabled("natomanga", False)
@@ -578,7 +578,7 @@ def test_search_all_skips_excluded_sources(monkeypatch):
 
 
 def test_search_all_orders_by_rank(monkeypatch):
-    from readerm import config
+    from mangasurf import config
     from mangasurf.sources import search_all
 
     pinned = ["weebcentral", "natomanga", "mangakatana", "mangadex"]
@@ -601,7 +601,7 @@ def test_search_all_orders_by_rank(monkeypatch):
 
 
 def test_search_all_interleaves_when_asked(monkeypatch):
-    from readerm import config
+    from mangasurf import config
     from mangasurf.sources import search_all
 
     config.reorder(["mangadex", "mangakatana", "natomanga", "weebcentral"])

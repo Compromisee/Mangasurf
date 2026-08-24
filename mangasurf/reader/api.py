@@ -5,7 +5,7 @@ exposes 127 methods that the CLI, TUI, phone server and OPDS catalog all lean
 on; replacing that wholesale would break every one of them. The reader adds the
 handful of calls it needs on top and inherits the rest.
 
-Reading position lives in ``~/.readerm/reading.json``, separate from
+Reading position lives in ``~/.mangasurf/reading.json``, separate from
 ``tracking.py``'s read/unread marks. They answer different questions — "have I
 finished this chapter" versus "which page and how far down it was I on" — and
 keeping them apart means a resync of one cannot corrupt the other.

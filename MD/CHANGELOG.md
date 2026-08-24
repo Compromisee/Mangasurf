@@ -50,7 +50,7 @@ All notable changes to **Mangasurf**, newest first.
 - **Title Decluttering in File Explorer & OPDS Server**:
   - Added setting to declutter messy release tags, brackets, and resolution stamps (`[Official]`, `[1080p]`, `(Uncensored)`, `[Complete]`) for clean titles in File Explorer, OPDS reader apps, and LAN web reader.
 - **Clean Workspace Architecture**:
-  - Standardized core package name to `mangasurf` with backward-compatible `readerm` alias.
+  - Standardized core package name to `mangasurf` with backward-compatible `mangasurf` alias.
 - **Downloaded Cover Hover Darken & Fraction Badge**:
   - Automatically identifies downloaded manga in search and browse results by cross-referencing `libraryCache`.
   - Added floating status badge (`XX / XX Ch.`) on the top-left of cover thumbnails.
@@ -177,7 +177,7 @@ All notable changes to **Mangasurf**, newest first.
 - **Multi-Page Pagination across Scrapers**:
   - Enabled multi-page pagination on `Hiperdex` (`search.query`), `KuraManga` (`/search?ajax=1&page=`), and `KuraHentai` (`/?page=` and `/tag/{slug}/?page=`).
 - **External Folder Scanning Fix**:
-  - Upgraded `scan_library_folders()` in `readerm/library.py` to index both parent directories and individual series folders with multiple CBZ/ZIP chapter archives.
+  - Upgraded `scan_library_folders()` in `mangasurf/library.py` to index both parent directories and individual series folders with multiple CBZ/ZIP chapter archives.
 - **Chikari.moe Custom Tags & NSFW Unblock**:
   - Integrated `/api/tags` resolution for over 1,900 custom tags and enabled `adult=true` querying so all adult/NSFW titles are returned when Safe Mode is off.
 - **Live Server Traffic & Activity Console Streaming**:
@@ -229,7 +229,7 @@ All notable changes to **Mangasurf**, newest first.
 - **Dynamic Reading Progress Bar**:
   - Carousel info panel dynamically computes actual reading progress across all chapters (`readCount / totalChapters * 100%`) from reader positions and mark logs, displaying reading status (`Reading (Ch 12/45)` vs `Completed`).
 - **Default Descriptions from Source Website / manga.json**:
-  - Enhanced `readerm/reader/books.py` to pull series descriptions from `manga.json` / site metadata so every downloaded series has its real description.
+  - Enhanced `mangasurf/reader/books.py` to pull series descriptions from `manga.json` / site metadata so every downloaded series has its real description.
 - **Removed Servers Button from Sidebar**:
   - Removed duplicate Servers rail button from sidebar, consolidating all controls in `Settings › Servers & OPDS Hub`.
 - **FlareSolverr Service Manager in Settings**:
@@ -240,7 +240,7 @@ All notable changes to **Mangasurf**, newest first.
 - **QR Code Modal Interface Switcher (Wi-Fi vs Tailscale)**:
   - Added tabbed interface in `#srv-qr-modal` allowing instant switching between Local Wi-Fi (LAN) and Tailscale VPN URLs with real-time SVG QR code re-rendering.
 - **Archive Cover Auto-Extraction**:
-  - `existing_cover()` in `readerm/covers.py` automatically extracts page 1 from `.cbz` / `.zip` archives into `cover.jpg` when no loose cover exists.
+  - `existing_cover()` in `mangasurf/covers.py` automatically extracts page 1 from `.cbz` / `.zip` archives into `cover.jpg` when no loose cover exists.
 
 ---
 
@@ -255,7 +255,7 @@ All notable changes to **Mangasurf**, newest first.
 - **QR Code Modal Interface Switcher (Wi-Fi vs. Tailscale)**: Added tabbed interface in `#srv-qr-modal` allowing instant switching between Local Wi-Fi (LAN) and Tailscale VPN URLs with real-time SVG QR code re-rendering.
 - **Vibrant Stats Sources Tab**: Redesigned the Stats Sources tab with multi-colored gradient progress bars, provider badges, percentage breakdown, and active provider KPI ribbon.
 - **KuraManga & KuraHentai Cover Referer Proxy**: Added `cover_needs_referer = True` to `KuraMangaSource` and `KuraHentaiSource` so `shadowabyss.com` CDN images are proxied with proper `Referer` headers, fixing blank covers in search.
-- **Archive Cover Auto-Extraction**: Enhanced `existing_cover()` in `readerm/covers.py` to extract page 1 from `.cbz` / `.zip` archives into `cover.jpg` when no loose cover exists, guaranteeing 100% cover visibility in library.
+- **Archive Cover Auto-Extraction**: Enhanced `existing_cover()` in `mangasurf/covers.py` to extract page 1 from `.cbz` / `.zip` archives into `cover.jpg` when no loose cover exists, guaranteeing 100% cover visibility in library.
 
 ---
 
@@ -295,7 +295,7 @@ All notable changes to **Mangasurf**, newest first.
 ### Completed Fixes & Enhancements
 - **Tray Restore Crash Resolved**: Fixed cross-thread UI exceptions when unhiding or restoring the desktop window from system tray by safeguarding `window.show()` and `window.restore()` calls with platform checks and state validation.
 - **Search FlareSolverr Concurrency Extended**: Increased search concurrency timeout from 12s to 30s (`search_timeout` configurable), granting FlareSolverr sufficient time to solve Cloudflare Turnstile challenges across protected scrapers.
-- **Witchtoons Live Scraper Architecture**: Rewritten `readerm/sources/witchscans.py` to target live `witchtoons.net` infrastructure. Integrated direct JSON search (`/api/search?q=`), JSON browsing (`/api/series?`), RSS feed chapter parsing (`/series/comic/<slug>/feed.xml`), and high-resolution signed WebP image extraction (`/uploads/comic-pages/<slug>/<ch>/page-<n>.webp?sig=...`).
+- **Witchtoons Live Scraper Architecture**: Rewritten `mangasurf/sources/witchscans.py` to target live `witchtoons.net` infrastructure. Integrated direct JSON search (`/api/search?q=`), JSON browsing (`/api/series?`), RSS feed chapter parsing (`/series/comic/<slug>/feed.xml`), and high-resolution signed WebP image extraction (`/uploads/comic-pages/<slug>/<ch>/page-<n>.webp?sig=...`).
 - **Double Download Duplicate Prevention**: Added double-click locking and in-flight request debouncing in the manga detail UI (`#d-download`, `#d-queue`), paired with duplicate checks in `start_download()` and `add_to_cart()` to prevent duplicate jobs for the same series.
 - **Delete All (Folder and Files) Permanent Removal**: Fixed card metadata mapping (`data-key`, `data-directory`, `data-manga`, `data-open`) in library grid so right-click context menu permanently removes the entire series directory and all archive files from disk with `shutil.rmtree()`, removes metadata from `library.json`, and cleans up the UI.
 - **Search Bar Layout & Icon Buttons**: Refined search tools box padding with dedicated icon-only Search (`#search-go`) and Refine (`#search-more`) action buttons and 36px left icon padding on search inputs.

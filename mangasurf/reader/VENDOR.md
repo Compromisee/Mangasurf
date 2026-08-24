@@ -2,10 +2,10 @@
 
 ## foliate-js
 
-The reading engine under `readerm/reader/foliate/` is a vendored copy of
+The reading engine under `mangasurf/reader/foliate/` is a vendored copy of
 [foliate-js](https://github.com/johnfactotum/foliate-js) by John Factotum,
 used under the MIT Licence. The full licence text is kept alongside the code
-at `readerm/reader/foliate/LICENSE`.
+at `mangasurf/reader/foliate/LICENSE`.
 
 * Upstream commit: `78914aef4466eb960965702401634c2cb348e9b1`
 * Fetched: 2026-08-03
@@ -22,7 +22,7 @@ Foliate for multiple platforms.
 ### Local changes
 
 The vendored files are unmodified. Manga-specific behaviour is added
-*alongside* them in `readerm/reader/app/manga-view.js` rather than by patching
+*alongside* them in `mangasurf/reader/app/manga-view.js` rather than by patching
 upstream, so the engine can be re-based on a newer commit without merge pain.
 
 The one thing that had to be built rather than reused is continuous vertical

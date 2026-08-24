@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from threading import Lock
 
-# Allow running this file directly (python readerm/downloader.py, or an IDE's
+# Allow running this file directly (python mangasurf/downloader.py, or an IDE's
 # "Run file"). Without this the relative imports below have no parent package
 # and raise ImportError before the module can do anything.
 if __package__ in (None, ""):
@@ -198,7 +198,7 @@ class DownloadEngine:
         total_image_workers = max(1, min(16, opt.chapter_workers * opt.image_workers))
         self._image_pool = ThreadPoolExecutor(
             max_workers=total_image_workers,
-            thread_name_prefix="readerm-img",
+            thread_name_prefix="mangasurf-img",
         )
 
         chapter_dirs = {}  # chapter name -> images dir

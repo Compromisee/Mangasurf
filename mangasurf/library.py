@@ -1,7 +1,7 @@
 """Persistent library and bookmarks stored as JSON in the user folder.
 
-~/.readerm/library.json    - every downloaded chapter, per manga
-~/.readerm/bookmarks.json  - bookmarked manga
+~/.mangasurf/library.json    - every downloaded chapter, per manga
+~/.mangasurf/bookmarks.json  - bookmarked manga
 
 The download engine records chapters here so any UI (GUI / TUI / CLI)
 can highlight what has already been downloaded.
@@ -13,7 +13,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import json
 import os

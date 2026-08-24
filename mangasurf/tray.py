@@ -257,7 +257,7 @@ class TrayController:
 
         try:
             self.icon = Icon(
-                "readerm",
+                "mangasurf",
                 icon=_build_icon_image(False),
                 title=self.tooltip(),
                 menu=self._build_menu(),
@@ -278,7 +278,7 @@ class TrayController:
                 logger.exception("tray icon stopped")
                 started.set()
 
-        self._thread = threading.Thread(target=run, name="readerm-tray",
+        self._thread = threading.Thread(target=run, name="mangasurf-tray",
                                         daemon=True)
         self._thread.start()
         started.wait(timeout=5)
@@ -300,7 +300,7 @@ class TrayController:
                 except Exception:
                     logger.debug("tray refresh failed", exc_info=True)
 
-        threading.Thread(target=loop, name="readerm-tray-refresh",
+        threading.Thread(target=loop, name="mangasurf-tray-refresh",
                          daemon=True).start()
 
     def refresh(self):

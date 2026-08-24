@@ -679,7 +679,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             _, _, save_t = _dialog_types()
             ext = {"json": "json", "csv": "csv", "md": "md"}.get(fmt, "json")
             dest = self.window.create_file_dialog(
-                save_t, save_filename=f"readerm-library.{ext}")
+                save_t, save_filename=f"mangasurf-library.{ext}")
             if not dest:
                 return {"ok": False, "cancelled": True}
             if isinstance(dest, (list, tuple)):
@@ -1006,7 +1006,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                 self._flush()
 
         self._smart_thread = threading.Thread(
-            target=run, daemon=True, name="readerm-smart-covers")
+            target=run, daemon=True, name="mangasurf-smart-covers")
         self._smart_thread.start()
         return {"ok": True, "started": True}
 
@@ -1770,7 +1770,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             _, _, save_t = _dialog_types()
             dest = self.window.create_file_dialog(
                 save_t,
-                save_filename=f"readerm-{time.strftime('%Y%m%d-%H%M%S')}.log",
+                save_filename=f"mangasurf-{time.strftime('%Y%m%d-%H%M%S')}.log",
             )
             if not dest:
                 return {"ok": False, "cancelled": True}
@@ -2077,7 +2077,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         self.engine = engine          # back-compat for stop_download()
 
         thread = threading.Thread(target=self._run_job, args=(job_id,),
-                                  daemon=True, name=f"readerm-{job_id}")
+                                  daemon=True, name=f"mangasurf-{job_id}")
         record["thread"] = thread
         self._thread = thread
         thread.start()
@@ -2318,7 +2318,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                 self._server_port = None
                 self._server_start_time = 0.0
 
-        thread = threading.Thread(target=run, name="readerm-lan-server", daemon=True)
+        thread = threading.Thread(target=run, name="mangasurf-lan-server", daemon=True)
         self._server_thread = thread
         thread.start()
         logger.info("LAN server starting on port %s", p)
@@ -2471,7 +2471,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                 self._opds_port = None
                 self._opds_start_time = 0.0
 
-        thread = threading.Thread(target=run, name="readerm-opds", daemon=True)
+        thread = threading.Thread(target=run, name="mangasurf-opds", daemon=True)
         self._opds_thread = thread
         thread.start()
         logger.info("OPDS catalog starting on port %s", p)
@@ -2795,7 +2795,7 @@ def _web_asset_path():
     """Locate the reader's index.html in source and in a PyInstaller bundle.
 
     The old hand-rolled front-end under ``gui/web`` was replaced in v3.0.0 by
-    the Foliate-based reader in ``readerm/reader/app``; this resolves to that.
+    the Foliate-based reader in ``mangasurf/reader/app``; this resolves to that.
     """
     from ..reader.assets import ASSET_ROOT
     return os.path.join(ASSET_ROOT, "app", "index.html")
@@ -3146,7 +3146,7 @@ def run_gui():
     #
     #     Windows fatal exception: access violation
     #       Thread ...: pystray/_win32.py _mainloop      <- tray already up
-    #       Thread ...: readerm/tray.py loop
+    #       Thread ...: mangasurf/tray.py loop
     #       Current  : clr_loader/types.py __call__      <- CLR loading
     #                  webview/platforms/winforms.py <module>
     #

@@ -197,7 +197,7 @@ def test_webtoons_extracts_title_no():
 def test_webtoons_sends_a_referer():
     """pstatic.net answers 403 without one -- measured live."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    source = open(os.path.join(root, "readerm", "sources", "webtoons.py"),
+    source = open(os.path.join(root, "mangasurf", "sources", "webtoons.py"),
                   encoding="utf-8").read()
     assert "def download_file" in source
     assert "webtoons.com" in source

@@ -1,19 +1,19 @@
 """Mangasurf - full-screen terminal UI (Textual).
 
 Launch with:  mangasurf tui
-         or:  python -m readerm tui
+         or:  python -m mangasurf tui
 """
 
 import os
 import sys
 import threading
 
-# Allow running this file directly (python readerm/tui.py): register the
-# parent directory so the 'readerm' package resolves for relative imports.
+# Allow running this file directly (python mangasurf/tui.py): register the
+# parent directory so the 'mangasurf' package resolves for relative imports.
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import readerm  # noqa: F401
-    __package__ = "readerm"
+    import mangasurf  # noqa: F401
+    __package__ = "mangasurf"
 
 # Textual is an optional extra ("pip install mangasurf[tui]"). Importing it at
 # module scope means a missing install crashes `mangasurf tui` with a raw

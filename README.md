@@ -58,8 +58,8 @@
 - **Passcode-Protected Shelves**: Organize titles into folders and optionally lock private shelves with passcodes.
 
 ### Custom Scrapers & `.source` Plugin Engine
-- Declarative `.source` plugin architecture in `readerm/sources/customsources/`.
-- Full specification documented in [`readerm/sources/customsources/syntax.source`](readerm/sources/customsources/syntax.source).
+- Declarative `.source` plugin architecture in `mangasurf/sources/customsources/`.
+- Full specification documented in [`mangasurf/sources/customsources/syntax.source`](mangasurf/sources/customsources/syntax.source).
 - Define custom scraper endpoints, CSS/JSON selectors, page extractors, headers, and rate limits without touching core code.
 
 ---

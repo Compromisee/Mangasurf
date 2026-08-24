@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WEB = os.path.join(ROOT, "readerm", "gui", "web")
+WEB = os.path.join(ROOT, "mangasurf", "gui", "web")
 
 
 def read(path):
@@ -33,7 +33,7 @@ def test_hold_does_not_end_on_an_idle_queue():
     clicking "Open ReaderM" flashed the window and lost it. Guard the
     predicate directly, because the subprocess tests are slow.
     """
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def _hold_for_tray("):]
     body = body[:body.index("\ndef ")]
     predicate = body[body.index("def keep_holding"):body.index("logger.info")]
@@ -44,7 +44,7 @@ def test_hold_does_not_end_on_an_idle_queue():
 
 def test_show_window_is_not_racing_a_shutdown():
     """Reopening must clear the hidden flag, never trigger teardown."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def show_window():"):]
     body = body[:body.index("def quit_app():")]
     assert "_hidden_to_tray = False" in body
@@ -59,7 +59,7 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import config, features, library
+    from mangasurf import config, features, library
     for module in (config, features, library):
         importlib.reload(module)
     import mangasurf.gui as gui

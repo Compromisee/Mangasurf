@@ -1,7 +1,7 @@
 """Packaging downloaded chapters into CBZ / PDF / EPUB volumes."""
 import sys
 import os
-# Allow running this file directly (python readerm/packager.py, or an IDE's
+# Allow running this file directly (python mangasurf/packager.py, or an IDE's
 # "Run file"). Without this the relative imports below have no parent package
 # and raise ImportError before the module can do anything.
 if __package__ in (None, ""):

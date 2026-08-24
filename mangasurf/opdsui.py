@@ -135,7 +135,7 @@ class OpdsController:
                 self._running = False
                 ready.set()
 
-        self._thread = threading.Thread(target=run, name="readerm-opds",
+        self._thread = threading.Thread(target=run, name="mangasurf-opds",
                                         daemon=True)
         self._running = True
         self._thread.start()

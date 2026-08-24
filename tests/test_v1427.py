@@ -46,7 +46,7 @@ def home(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import singleton
+    from mangasurf import singleton
     importlib.reload(singleton)
     return singleton
 
@@ -152,7 +152,7 @@ def test_run_gui_claims_the_slot_before_importing_webview():
     """Order matters: importing pywebview loads the CLR, and the crash log
     shows that dying. A duplicate must be turned away before it gets there.
     """
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def run_gui():"):]
     claim = body.index("instance.start()")
     webview_import = body.index("import webview")
@@ -166,7 +166,7 @@ def test_run_gui_claims_the_slot_before_importing_webview():
 def test_tray_starts_after_the_toolkit():
     """The crash: pystray's Win32 message loop was already running when
     pywebview loaded the .NET CLR."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def run_gui():"):]
 
     setup = body[:body.index("webview.start(")]
@@ -260,7 +260,7 @@ def test_tray_install_is_idempotent(tmp_path):
 
 
 def test_a_backend_that_never_fires_shown_still_gets_a_tray():
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("def run_gui():"):]
     assert "_tray_fallback" in body, (
         "no fallback for backends that do not fire 'shown'")
@@ -270,7 +270,7 @@ def test_a_backend_that_never_fires_shown_still_gets_a_tray():
 def test_a_fast_close_still_gets_a_tray():
     """If the user closes the window before either trigger fires, minimise
     to tray must still work rather than quitting the app."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     assert "_on_closing_pre" in source
     body = source[source.index("def _on_closing_pre():"):]
     body = body[:body.index("return True")]
@@ -281,7 +281,7 @@ def test_windows_does_not_retry_backends_after_a_failed_import():
     """Retrying another backend re-enters the CLR load that already crashed
     once. The log shows the access violation happening inside that import.
     """
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     body = source[source.index("last_error = None"):]
     body = body[:body.index("_show_fatal(")]
     assert 'sys.platform == "win32"' in body and "break" in body, (
@@ -423,7 +423,7 @@ def test_crash_log_is_trimmed(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import logs
+    from mangasurf import logs
     importlib.reload(logs)
 
     os.makedirs(logs.LOG_DIR, exist_ok=True)
@@ -448,7 +448,7 @@ def test_trim_starts_at_a_session_boundary(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import logs
+    from mangasurf import logs
     importlib.reload(logs)
 
     os.makedirs(logs.LOG_DIR, exist_ok=True)
@@ -465,7 +465,7 @@ def test_a_small_crash_log_is_left_alone(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     import importlib
 
-    from readerm import logs
+    from mangasurf import logs
     importlib.reload(logs)
 
     os.makedirs(logs.LOG_DIR, exist_ok=True)

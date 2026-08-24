@@ -167,7 +167,7 @@ def test_finished_jobs_leave_the_active_set():
 def test_engine_reports_bytes_through_the_source():
     """download_file must feed the meter as chunks land, not once per file --
     counting whole files makes the rate lurch between 0 and a spike."""
-    source = read(os.path.join(ROOT, "readerm", "sources", "base.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "sources", "base.py"))
     body = source[source.index("def download_file"):]
     assert "self.on_bytes" in body
     assert "on_bytes(len(block))" in body
@@ -196,7 +196,7 @@ def test_tray_import_never_raises_on_a_headless_machine():
 
 
 def test_tray_module_does_not_import_pystray_at_module_scope():
-    source = read(os.path.join(ROOT, "readerm", "tray.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "tray.py"))
     head = source[:source.index("def tray_available")]
     assert not re.search(r"(?m)^(import pystray|from pystray)", head)
 
@@ -336,7 +336,7 @@ def test_tray_is_not_installed_when_the_setting_is_off():
 def test_shutdown_is_skipped_while_the_tray_holds_the_app():
     """Tearing down sessions on close would break the very downloads the
     tray exists to keep running."""
-    source = read(os.path.join(ROOT, "readerm", "gui", "__init__.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "gui", "__init__.py"))
     handler = source[source.index("def _on_closed():"):]
     handler = handler[:handler.index("window.events.closed")]
     assert "_really_quitting" in handler
@@ -369,7 +369,7 @@ def test_two_concurrent_jobs_are_both_journaled(tmp_path, monkeypatch):
     """The bug: the journal was one file, so starting B overwrote A and A
     could never be resumed."""
     _isolate_journal(tmp_path, monkeypatch)
-    from readerm import logs
+    from mangasurf import logs
 
     logs.write_journal({"url": "https://a/x"}, {"title": "A"}, job_id="j1")
     logs.write_journal({"url": "https://b/y"}, {"title": "B"}, job_id="j2")
@@ -382,7 +382,7 @@ def test_one_job_finishing_does_not_wipe_the_other(tmp_path, monkeypatch):
     """The second bug: whichever job finished first called clear_journal()
     and erased the record of the one still running."""
     _isolate_journal(tmp_path, monkeypatch)
-    from readerm import logs
+    from mangasurf import logs
 
     logs.write_journal({"url": "https://a/x"}, {"title": "A"}, job_id="j1")
     logs.write_journal({"url": "https://b/y"}, {"title": "B"}, job_id="j2")
@@ -392,7 +392,7 @@ def test_one_job_finishing_does_not_wipe_the_other(tmp_path, monkeypatch):
 
 
 def test_engine_clears_only_its_own_journal():
-    source = read(os.path.join(ROOT, "readerm", "downloader.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "downloader.py"))
     assert "clear_journal(self.job_id)" in source
     assert "write_journal" in source and "job_id=self.job_id" in source
 
@@ -401,7 +401,7 @@ def test_legacy_single_file_journal_is_migrated(tmp_path, monkeypatch):
     import json
 
     _isolate_journal(tmp_path, monkeypatch)
-    from readerm import logs
+    from mangasurf import logs
 
     os.makedirs(os.path.dirname(logs.JOURNAL_PATH), exist_ok=True)
     with open(logs.JOURNAL_PATH, "w", encoding="utf-8") as f:
@@ -414,7 +414,7 @@ def test_legacy_single_file_journal_is_migrated(tmp_path, monkeypatch):
 def test_a_truncated_journal_is_dropped_not_fatal(tmp_path, monkeypatch):
     """A crash mid-write must not poison every future read."""
     _isolate_journal(tmp_path, monkeypatch)
-    from readerm import logs
+    from mangasurf import logs
 
     logs.write_journal({"url": "https://a/x"}, {"title": "Good"}, job_id="ok")
     os.makedirs(logs.JOBS_DIR, exist_ok=True)
@@ -427,7 +427,7 @@ def test_a_truncated_journal_is_dropped_not_fatal(tmp_path, monkeypatch):
 def test_journal_writes_are_atomic_and_fsynced():
     """A partially written journal reads back as "no job", losing the
     resume record precisely when it is needed."""
-    source = read(os.path.join(ROOT, "readerm", "logs.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "logs.py"))
     body = source[source.index("def write_journal"):source.index("def _migrate")]
     assert "os.replace" in body
     assert "os.fsync" in body
@@ -435,7 +435,7 @@ def test_journal_writes_are_atomic_and_fsynced():
 
 def test_gui_reports_every_pending_job(tmp_path, monkeypatch):
     _isolate_journal(tmp_path, monkeypatch)
-    from readerm import logs
+    from mangasurf import logs
     from mangasurf.gui import Api
 
     logs.write_journal({"url": "https://a/x"}, {"title": "A"}, job_id="j1")
@@ -449,7 +449,7 @@ def test_gui_reports_every_pending_job(tmp_path, monkeypatch):
 def test_cli_resume_survives_piped_input():
     """The second prompt lacked the EOF guard the first has, so a piped "n"
     crashed with EOFError instead of exiting cleanly."""
-    source = read(os.path.join(ROOT, "readerm", "cli.py"))
+    source = read(os.path.join(ROOT, "mangasurf", "cli.py"))
     body = source[source.index("def cmd_resume"):source.index("def cmd_download")]
     assert body.count("except (KeyboardInterrupt, EOFError)") >= 2
 
@@ -459,7 +459,7 @@ def test_cli_resume_survives_piped_input():
 
 def _isolate_journal(tmp_path, monkeypatch):
     """Point the journal at a temp dir for one test."""
-    from readerm import logs
+    from mangasurf import logs
 
     base = str(tmp_path)
     monkeypatch.setattr(logs, "BASE_DIR", base)

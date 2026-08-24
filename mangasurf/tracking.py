@@ -1,6 +1,6 @@
 """Reading progress, update checking, notes, ratings and duplicate scanning.
 
-Stored under ``~/.readerm/``:
+Stored under ``~/.mangasurf/``:
 
     progress.json   per-series reading position and per-chapter read flags
     watchlist.json  series watched for new chapters, with the last seen count
@@ -15,7 +15,7 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    __package__ = "readerm"
+    __package__ = "mangasurf"
 
 import json
 import os

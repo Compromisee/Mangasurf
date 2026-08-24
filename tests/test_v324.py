@@ -29,7 +29,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-APP = os.path.join(ROOT, "readerm", "reader", "app")
+APP = os.path.join(ROOT, "mangasurf", "reader", "app")
 
 
 def read(name):
@@ -64,7 +64,7 @@ def shelf(tmp_path, monkeypatch):
         (chapter / f"{i:06d}.jpg").write_bytes(png(60, 90, (10 * i, 90, 200)))
     (series / "cover.jpg").write_bytes(png(60, 90, (220, 90, 140)))
 
-    from readerm import library
+    from mangasurf import library
 
     library.record_chapter("http://x/s", "Series", "Chapter 1", pages=5,
                            cover=str(series / "cover.jpg"),

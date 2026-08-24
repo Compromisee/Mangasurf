@@ -46,7 +46,7 @@ Images
     ``img.imgholder`` on the chapter page, served from ``mangathird.org``.
     The first ``.imgholder`` is an ad banner (``/img/free_ads.jpg``) and is
     skipped by requiring an absolute URL. The CDN hotlinks fine (200,
-    image/webp, no Referer). Covers live on ``readermc.org`` and contain
+    image/webp, no Referer). Covers live on ``mangasurfc.org`` and contain
     literal spaces, which requests handles.
 """
 
@@ -67,7 +67,7 @@ class DemonicScansSource(Source):
     id = "demonicscans"
     name = "Demonic Scans"
     base_url = SITE
-    domains = ("demonicscans.org", "readermc.org", "mangathird.org")
+    domains = ("demonicscans.org", "mangasurfc.org", "mangathird.org")
 
     #: Predominantly Korean manhwa, but the catalogue holds manga and manhua
     #: too, so this is only a fallback for entries with no type of their own.

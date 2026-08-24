@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy dependency files
 COPY requirements.txt pyproject.toml setup.py /app/
-COPY readerm /app/readerm
+COPY mangasurf /app/mangasurf
 COPY ui /app/ui
 COPY docs /app/docs
 COPY server.py opdsserve.py launcher.py mangasurf.py README.md /app/
