@@ -6,7 +6,7 @@
 
 **Download manga, manhwa and manhua from 32+ sites — and read them, in a desktop manga reader with 3D Depth Carousel, Foliate-js engine, full-screen TUI, phone server and OPDS catalog.**
 
-**[Command syntax reference -> SYNTAX.md](MD/SYNTAX.md) • [Live Documentation Website](https://compromisee.github.io/mangasurf/)**
+**[Command syntax reference -> SYNTAX.md](MD/SYNTAX.md)
 
 [![Release](https://img.shields.io/github/v/release/Compromisee/mangasurf?style=for-the-badge&color=00f5ff&logo=github)](https://github.com/Compromisee/mangasurf/releases)
 [![Build & Release](https://img.shields.io/github/actions/workflow/status/Compromisee/mangasurf/release.yml?style=for-the-badge&label=OneFile%20Builds&logo=githubactions&logoColor=white)](https://github.com/Compromisee/mangasurf/actions/workflows/release.yml)
