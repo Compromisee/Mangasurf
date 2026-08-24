@@ -7,17 +7,46 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.7.0)'
+        description: 'Release Tag Name (e.g. v1.7.1)'
         required: false
         default: ''
       prerelease:
-        description: 'Mark as pre-release'
+        description: 'Mark as pre-release version'
         type: boolean
         default: false
       draft:
-        description: 'Create as draft'
+        description: 'Create GitHub release as a draft'
         type: boolean
         default: false
+      skip_tests:
+        description: 'Skip pytest execution phase before building'
+        type: boolean
+        default: false
+      custom_changelog_path:
+        description: 'Custom path to parse release notes from'
+        required: true
+        type: string
+        default: 'MD/CHANGELOG.md'
+      build_python_version:
+        description: 'Python runtime environment version to use'
+        required: true
+        type: choice
+        options:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+          - "3.9"
+        default: "3.12"
+      pyinstaller_log_level:
+        description: 'Verbosity log level for PyInstaller compilation'
+        required: true
+        type: choice
+        options:
+          - "INFO"
+          - "WARN"
+          - "ERROR"
+          - "DEBUG"
+        default: "INFO"
 
 permissions:
   contents: write
@@ -29,10 +58,49 @@ concurrency:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
-  # 1. Build Standalone OneFile Binaries across Windows, Linux, and macOS
+  # 1. Determine the Dynamic Target Version across all events
+  # ──────────────────────────────────────────────────────────────────────────
+  prep-version:
+    name: Resolve Target Version
+    runs-on: ubuntu-latest
+    outputs:
+      resolved_tag: ${{ steps.get-tag.outputs.tag }}
+      clean_version: ${{ steps.get-tag.outputs.clean_version }}
+    steps:
+      - name: Checkout repository to read project configuration
+        uses: actions/checkout@v4
+
+      - name: Resolve Dynamic Version Tag
+        id: get-tag
+        run: |
+          INPUT_TAG="${{ github.event.inputs.tag_name }}"
+          REF_TAG="${{ github.ref_name }}"
+          
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          elif [[ "$REF_TAG" =~ ^v[0-9] ]]; then
+            TAG="$REF_TAG"
+          else
+            EXTRACTED=$(grep -E '^version[[:space:]]*=' pyproject.toml | head -n 1 | tr -d '"' | tr -d "'" | awk '{print $3}')
+            if [ -n "$EXTRACTED" ]; then
+              TAG="v$EXTRACTED"
+            else
+              TAG="v0.0.0-snapshot"
+            fi
+          fi
+          
+          CLEAN="${TAG#v}"
+          
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "clean_version=${CLEAN}" >> $GITHUB_OUTPUT
+          echo "Resolved dynamic tag: $TAG (Clean version: $CLEAN)"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. Build Standalone OneFile Binaries across Windows, Linux, and macOS
   # ──────────────────────────────────────────────────────────────────────────
   build:
     name: Build OneFile (${{ matrix.platform.name }})
+    needs: prep-version
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
@@ -41,25 +109,25 @@ jobs:
           - name: windows-x64
             os: windows-latest
             artifact_name: mangasurf-windows-x64.exe
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-windows-x64.zip
+            archive_name: mangasurf-${{ needs.prep-version.outputs.resolved_tag }}-windows-x64.zip
             binary_src: dist/Mangasurf.exe
             use_zip: true
           - name: linux-x86_64
             os: ubuntu-22.04
             artifact_name: mangasurf-linux-x86_64
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-linux-x86_64.tar.gz
+            archive_name: mangasurf-${{ needs.prep-version.outputs.resolved_tag }}-linux-x86_64.tar.gz
             binary_src: dist/Mangasurf
             use_tar: true
           - name: macos-arm64
             os: macos-14
             artifact_name: mangasurf-macos-arm64
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-macos-arm64.zip
+            archive_name: mangasurf-${{ needs.prep-version.outputs.resolved_tag }}-macos-arm64.zip
             binary_src: dist/Mangasurf
             use_zip: true
           - name: macos-x86_64
             os: macos-13
             artifact_name: mangasurf-macos-x86_64
-            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-macos-x86_64.zip
+            archive_name: mangasurf-${{ needs.prep-version.outputs.resolved_tag }}-macos-x86_64.zip
             binary_src: dist/Mangasurf
             use_zip: true
 
@@ -69,10 +137,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python 3.12
+      - name: Set up Python Runtime
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ github.event.inputs.build_python_version || '3.12' }}
           cache: "pip"
 
       - name: Install system dependencies (Linux)
@@ -94,6 +162,7 @@ jobs:
           pip install pyinstaller pytest
 
       - name: Run test suite verification before building
+        if: ${{ github.event.inputs.skip_tests != 'true' }}
         run: |
           python -m pytest tests/test_mangasurf_sources.py tests/test_v169_list_downloads.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py -q
 
@@ -101,7 +170,7 @@ jobs:
         env:
           PYINSTALLER_ONEFILE: "1"
         run: |
-          pyinstaller Mangasurf.spec --clean --noconfirm -- --onefile
+          pyinstaller Mangasurf.spec --clean --noconfirm --log-level=${{ github.event.inputs.pyinstaller_log_level || 'INFO' }} -- --onefile
 
       - name: Prepare Release Artifacts (Windows)
         if: runner.os == 'Windows'
@@ -138,43 +207,39 @@ jobs:
           if-no-files-found: error
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 2. Extract & Format Release Notes from CHANGELOG.md
+  # 3. Extract & Format Release Notes from CHANGELOG.md
   # ──────────────────────────────────────────────────────────────────────────
   release-notes:
     name: Generate Release Notes
+    needs: prep-version
     runs-on: ubuntu-latest
     outputs:
-      release_version: ${{ steps.version.outputs.version }}
+      release_version: ${{ needs.prep-version.outputs.resolved_tag }}
       release_notes: ${{ steps.notes.outputs.content }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Release Version
-        id: version
-        run: |
-          TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
-          if [[ -z "$TAG" || "$TAG" == "main" ]]; then
-            TAG="v1.7.0"
-          fi
-          echo "version=${TAG}" >> $GITHUB_OUTPUT
-
       - name: Generate Formatted Release Notes
         id: notes
+        env:
+          TAG_NAME: ${{ needs.prep-version.outputs.resolved_tag }}
+          CLEAN_VERSION: ${{ needs.prep-version.outputs.clean_version }}
+          CHANGELOG_INPUT_PATH: ${{ github.event.inputs.custom_changelog_path || 'MD/CHANGELOG.md' }}
         run: |
           python - << 'EOF'
           import re
           import os
 
-          tag = os.environ.get("TAG_NAME", "v1.7.0").lstrip("v")
-          changelog_path = "MD/CHANGELOG.md"
+          tag = os.environ.get("CLEAN_VERSION", "0.0.0")
+          full_tag = os.environ.get("TAG_NAME", "v0.0.0")
+          changelog_path = os.environ.get("CHANGELOG_INPUT_PATH", "MD/CHANGELOG.md")
           
           notes_body = ""
           if os.path.exists(changelog_path):
               with open(changelog_path, "r", encoding="utf-8") as f:
                   content = f.read()
                   
-              # Find section for this version
               pattern = rf"##\s*\[?v?{re.escape(tag)}\]?[^\n]*\n(.*?)(?=\n##\s*\[?v?\d|\Z)"
               match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
               if match:
@@ -183,106 +248,7 @@ jobs:
           if not notes_body:
               notes_body = """### What's Changed
           - **32 Registered Sources**: High-speed scrapers across MangaDex, Chikari, KuraManga, KuraHentai, Hiperdex, MangaK, etc.
-          - **Curated List Bulk Downloading**: One-click download for lists (e.g. Chikari list 461).
+          - **Curated List Bulk Downloading**: One-click download for lists.
           - **3D Depth Library Carousel**: Smooth 7-perspective cards with luminous glow, reading progress, and shelf pills.
           - **Offline Database Integration**: Instant omnibar suggestions and offline SFW/Hentai indexing.
           - **LAN Web Reader & OPDS 1.2 Hub**: Native phone reader server (:8577) & OPDS catalog (:8578) with live device telemetry.
-          - **Zero-Deletion Root Safety**: Protected master root directories (~/Manga, /media, output_dir).
-          - **Custom Vector Icon**: New dynamic MangaSurf wave crest & anime speed prism icon.
-          """
-
-          header = f"""# 🌊 Mangasurf {os.environ.get('TAG_NAME', 'v1.7.0')} — Desktop Manga Reader & Downloader
-
-          > High-performance Python manga ecosystem, omnibar discovery engine, and multi-threaded downloader supporting **32 registered sources**.
-
-          ---
-
-          {notes_body}
-
-          ---
-
-          ## 📦 Available Downloads
-
-          | Platform | Architecture | Download Package | Standalone Executable |
-          | :--- | :--- | :--- | :--- |
-          | **Windows** | x64 (64-bit) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-windows-x64.zip`](#) | `mangasurf-windows-x64.exe` |
-          | **Linux** | x86_64 (glibc 2.35+) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-linux-x86_64.tar.gz`](#) | `mangasurf-linux-x86_64` |
-          | **macOS** | Apple Silicon (M1/M2/M3/M4) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-macos-arm64.zip`](#) | `mangasurf-macos-arm64` |
-          | **macOS** | Intel (x86_64) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-macos-x86_64.zip`](#) | `mangasurf-macos-x86_64` |
-
-          ### 🚀 Quick Start (No Python Required)
-          1. Download the archive for your operating system above.
-          2. Extract and run `mangasurf` (or double-click `mangasurf.exe` on Windows).
-          3. Enjoy reading with the 3D Depth Carousel, Foliate webtoon viewer, LAN Phone Server (:8577), or OPDS 1.2 Catalog (:8578)!
-
-          ```bash
-          # CLI search & download
-          ./mangasurf search "solo leveling"
-          ./mangasurf "https://chikari.moe/lists/461-my-manhwa-list"
-          ```
-          """
-
-          with open("RELEASE_NOTES.md", "w", encoding="utf-8") as out:
-              out.write(header)
-          EOF
-        env:
-          TAG_NAME: ${{ steps.version.outputs.version }}
-
-      - name: Save Release Notes to Output
-        id: notes_out
-        run: |
-          echo "notes_file=RELEASE_NOTES.md" >> $GITHUB_OUTPUT
-
-      - name: Upload Release Notes Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-notes
-          path: RELEASE_NOTES.md
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # 3. Publish GitHub Release with all Binary Assets and Checksums
-  # ──────────────────────────────────────────────────────────────────────────
-  publish:
-    name: Publish Official GitHub Release
-    needs: [build, release-notes]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist-release
-
-      - name: Consolidate Artifacts & Compute Checksums
-        run: |
-          mkdir -p release-assets
-          find dist-release -type f \( -name "*.exe" -o -name "*.tar.gz" -o -name "*.zip" -o -name "mangasurf-*" \) ! -name "*.sha256" -exec cp {} release-assets/ \;
-          
-          cd release-assets
-          chmod +x mangasurf-linux-x86_64 mangasurf-macos-arm64 mangasurf-macos-x86_64 2>/dev/null || true
-          
-          echo "=== SHA256 Checksums ===" > SHA256SUMS.txt
-          sha256sum * 2>/dev/null >> SHA256SUMS.txt || shasum -a 256 * >> SHA256SUMS.txt
-          cat SHA256SUMS.txt
-
-      - name: Download Release Notes
-        uses: actions/download-artifact@v4
-        with:
-          name: release-notes
-          path: .
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.release-notes.outputs.release_version }}
-          name: Mangasurf ${{ needs.release-notes.outputs.release_version }}
-          body_path: RELEASE_NOTES.md
-          draft: ${{ github.event.inputs.draft || false }}
-          prerelease: ${{ github.event.inputs.prerelease || false }}
-          files: |
-            release-assets/*
-            SHA256SUMS.txt
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
