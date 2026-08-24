@@ -119,6 +119,9 @@ function ManagedTabs({ items, selected, onSelect, size }) {
 function ManagedSelect({ label, items, selected, onSelect, placeholder }) {
     const [key, setKey] = useState(selected ?? "");
     useEffect(() => setKey(selected ?? ""), [selected]);
+    const currentItem = items.find(it => String(it.id) === String(key));
+    const fallbackText = currentItem ? currentItem.label : (placeholder || (items[0] ? items[0].label : "Choose…"));
+
     return (
         <Select
             aria-label={label}
@@ -131,7 +134,7 @@ function ManagedSelect({ label, items, selected, onSelect, placeholder }) {
         >
             <SelectTrigger>
                 <SelectValue>{({ isPlaceholder, selectedText }) =>
-                    isPlaceholder ? (placeholder || "Choose…") : selectedText}</SelectValue>
+                    (selectedText || (!isPlaceholder ? currentItem?.label : null) || fallbackText)}</SelectValue>
             </SelectTrigger>
             <SelectPopover>
                 <ListBox>
@@ -266,5 +269,6 @@ const api = {
     destroy: unmount,
 };
 
+window.MangasurfUI = api;
 window.ReaderMUI = api;
 export default api;

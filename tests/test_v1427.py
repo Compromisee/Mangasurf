@@ -230,9 +230,9 @@ IDEMPOTENCE = textwrap.dedent("""
     wv.start = start
     sys.modules["webview"] = wv
 
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
     update_settings({"minimize_to_tray": True})
-    import readerm.gui as g
+    import mangasurf.gui as g
     g.Api.get_progress = lambda self: {"active": 0, "queued": 0, "jobs": []}
 
     def report():
@@ -333,9 +333,9 @@ FAKE = textwrap.dedent("""
     wv.start = start
     sys.modules["webview"] = wv
 
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
     update_settings({"minimize_to_tray": True})
-    import readerm.gui as g
+    import mangasurf.gui as g
     g.Api.get_progress = lambda self: {"active": 0, "queued": 0, "jobs": []}
     print("PID", __import__("os").getpid(), flush=True)
     g.run_gui()

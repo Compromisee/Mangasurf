@@ -127,7 +127,7 @@ def test_a_rejected_token_does_not_overwrite_the_good_one(home):
 
 def test_a_corrupt_stored_token_is_replaced(home):
     """Someone hand-editing config.json must not lock the server out."""
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
 
     update_settings({"server_token": "xx"})
     token = home.load_server_settings()["token"]
@@ -144,14 +144,14 @@ def test_port_bounds(home):
 
 
 def test_a_corrupt_port_falls_back(home):
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
 
     update_settings({"server_port": "banana"})
     assert home.load_server_settings()["port"] == 8577
 
 
 def test_the_settings_have_defaults():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert DEFAULT_SETTINGS["server_token"] == ""
     assert DEFAULT_SETTINGS["server_port"] == 8577
@@ -176,7 +176,7 @@ def test_the_api_exposes_the_server_config(tmp_path, monkeypatch):
     from readerm import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()
@@ -200,7 +200,7 @@ def test_the_gui_and_the_server_agree(tmp_path, monkeypatch):
     from readerm import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     gui.Api().set_server_config(token="SharedBetweenBoth1")

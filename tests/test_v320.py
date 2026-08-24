@@ -43,9 +43,9 @@ def test_the_spec_was_renamed():
 
 def test_the_console_scripts_are_renamed():
     pyproject = read(os.path.join(ROOT, "pyproject.toml"))
-    assert 'readerm = "readerm.cli:main"' in pyproject
-    assert 'readerm-gui = "readerm.gui:run_gui"' in pyproject
-    assert 'readerm-tui = "readerm.tui:run_tui"' in pyproject
+    assert 'readerm = "mangasurf.cli:main"' in pyproject
+    assert 'readerm-gui = "mangasurf.gui:run_gui"' in pyproject
+    assert 'readerm-tui = "mangasurf.tui:run_tui"' in pyproject
 
 
 def test_no_shipped_file_still_says_the_old_name():
@@ -93,7 +93,7 @@ def test_the_module_and_the_package_metadata_agree():
     pyproject = open(os.path.join(ROOT, "pyproject.toml"),
                      encoding="utf-8").read()
     declared = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-    assert declared == readerm.__version__
+    assert declared == mangasurf.__version__
 
 
 # ──────────────────────────────────────────────────────────── data folder
@@ -140,7 +140,7 @@ def old_install(tmp_path, monkeypatch):
     (old / "lock.json").write_text(json.dumps({"hash": "abc", "hint": "the usual"}))
     (old / "stats.json").write_text(json.dumps({"totals": {"chapters": 431}}))
     (old / "instance.json").write_text(json.dumps({"pid": 4242}))
-    (old / "readerm.log").write_text("old log")
+    (old / "mangasurf.log").write_text("old log")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(os.path, "expanduser", lambda p: p.replace("~", str(home)))
     return home
@@ -189,7 +189,7 @@ def test_per_install_noise_is_left_behind(old_install):
     paths.migrate()
     new = old_install / ".readerm"
     assert not (new / "instance.json").exists()
-    assert not (new / "readerm.log").exists()
+    assert not (new / "mangasurf.log").exists()
 
 
 def test_the_old_folder_is_kept_as_a_backup(old_install):
@@ -259,7 +259,7 @@ def test_a_failed_migration_does_not_stop_the_app(old_install, monkeypatch):
 def test_every_backend_setting_has_a_control():
     """A setting that saves and loads but has no control is exactly the bug
     v3.1.0 fixed; this stops it coming back as the list grows."""
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     app = read(os.path.join(APP, "app.js"))
     bound = set(re.findall(r"pushSettings\(\{\s*\[?([a-z_]+)", app))
@@ -276,7 +276,7 @@ def test_every_backend_setting_has_a_control():
 def test_the_reader_theme_key_is_gone():
     """v3.1.0 unified on `theme`; `reader_theme` was a leftover that would
     quietly diverge from it."""
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     app = read(os.path.join(APP, "app.js"))
     assert "reader_theme" not in app

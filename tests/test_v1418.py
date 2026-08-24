@@ -24,8 +24,8 @@ def read(path):
 
 def test_madaranet_is_the_only_madara_entry():
     """Ten sites, one row in Settings."""
-    from readerm.sources import SOURCES
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources import SOURCES
+    from mangasurf.sources.madaranet import MEMBERS
 
     assert "madaranet" in SOURCES
     assert len(MEMBERS) == 10
@@ -41,8 +41,8 @@ def test_madaranet_is_the_only_madara_entry():
 def test_aggregate_id_is_not_the_engine_name():
     """Calling it "madara" would collide with the theme engine in madara.py --
     the exact confusion v1.4.17 had to untangle."""
-    from readerm.sources import SOURCES
-    from readerm.sources.madaranet import MadaraNetSource
+    from mangasurf.sources import SOURCES
+    from mangasurf.sources.madaranet import MadaraNetSource
 
     assert MadaraNetSource.id == "madaranet"
     assert "madara" not in SOURCES
@@ -50,8 +50,8 @@ def test_aggregate_id_is_not_the_engine_name():
 
 def test_aggregate_claims_every_member_domain():
     """Pasting any member's URL has to resolve to the aggregate."""
-    from readerm.sources import detect_source
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources import detect_source
+    from mangasurf.sources.madaranet import MEMBERS
 
     for cls in MEMBERS:
         for domain in cls.domains:
@@ -59,7 +59,7 @@ def test_aggregate_claims_every_member_domain():
 
 
 def test_member_ids_are_namespaced_and_unique():
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources.madaranet import MEMBERS
 
     ids = [cls.id for cls in MEMBERS]
     assert len(ids) == len(set(ids))
@@ -68,7 +68,7 @@ def test_member_ids_are_namespaced_and_unique():
 
 
 def test_member_lookup_by_url():
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source("madaranet")
     try:
@@ -81,8 +81,8 @@ def test_member_lookup_by_url():
 
 
 def test_delegation_raises_a_useful_error_for_a_foreign_url():
-    from readerm.sources import get_source
-    from readerm.sources.base import ScrapeError
+    from mangasurf.sources import get_source
+    from mangasurf.sources.base import ScrapeError
 
     source = get_source("madaranet")
     try:
@@ -97,7 +97,7 @@ def test_genre_names_map_back_to_each_installs_own_slug():
     """"Action" is `action` on most installs and `genre-action-new-genre` on
     Manhwa Top. Passing the display name straight through 404s -- measured at
     31.0s of retries before the fail-fast fix."""
-    from readerm.sources.madaranet import _ManhwaTop, _Toonily
+    from mangasurf.sources.madaranet import _ManhwaTop, _Toonily
 
     assert _ManhwaTop.genre_slug("Action") == "genre-action-new-genre"
     assert _ManhwaTop.genre_slug("Romance") == "romance-genre-hot"
@@ -109,7 +109,7 @@ def test_genre_names_map_back_to_each_installs_own_slug():
 def test_aggregate_genres_are_display_names_not_slugs():
     """Members translate names back themselves, so the aggregate must not
     leak one install's slug to the others."""
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source("madaranet")
     try:
@@ -125,7 +125,7 @@ def test_aggregate_genres_are_display_names_not_slugs():
 def test_aggregate_offline_genres_need_no_network():
     """genres_all() falls back to this when a source times out; an aggregate
     has no GENRES attribute, so it publishes the hook instead."""
-    from readerm.sources import _offline_genres
+    from mangasurf.sources import _offline_genres
 
     rows = _offline_genres("madaranet")
     assert rows
@@ -135,8 +135,8 @@ def test_aggregate_offline_genres_need_no_network():
 def test_aggregate_is_not_flagged_cloudflare():
     """Only one member needs a solver; flagging the whole source would imply
     none of it works without FlareSolverr, which is false."""
-    from readerm.sources import SOURCES
-    from readerm.sources.madaranet import _SetsuScans
+    from mangasurf.sources import SOURCES
+    from mangasurf.sources.madaranet import _SetsuScans
 
     assert SOURCES["madaranet"].needs_flaresolverr is False
     assert _SetsuScans.needs_flaresolverr is True
@@ -145,7 +145,7 @@ def test_aggregate_is_not_flagged_cloudflare():
 def test_rejected_members_are_documented_not_shipped():
     """Two candidates were tested and left out; the reasons must be recorded
     so nobody re-adds them."""
-    from readerm.sources.madaranet import MEMBERS
+    from mangasurf.sources.madaranet import MEMBERS
 
     hosts = {d for cls in MEMBERS for d in cls.domains}
     assert not any("manhwafull" in h for h in hosts)
@@ -158,7 +158,7 @@ def test_rejected_members_are_documented_not_shipped():
 def test_members_keep_their_measured_quirks():
     """Folding the sites into one source must not lose the per-install
     findings from v1.4.15."""
-    from readerm.sources.madaranet import (_MangaGG, _MangaOwl, _MangaRead,
+    from mangasurf.sources.madaranet import (_MangaGG, _MangaOwl, _MangaRead,
                                            _ManhuaTop, _Toonily)
 
     assert _ManhuaTop.series_prefix == "/manhua/"
@@ -178,8 +178,8 @@ def test_fetch_does_not_retry_a_404():
     dragging a genre browse to 25.0s. After: 1.4s."""
     import time
 
-    from readerm.sources.base import ScrapeError
-    from readerm.sources.witchscans import WitchScansSource
+    from mangasurf.sources.base import ScrapeError
+    from mangasurf.sources.witchscans import WitchScansSource
 
     class Missing:
         status_code = 404
@@ -208,8 +208,8 @@ def test_fetch_does_not_retry_a_404():
 
 def test_a_500_is_still_retried():
     """Only 404/410 are definitive; a server error may well be transient."""
-    from readerm.sources.base import ScrapeError
-    from readerm.sources.witchscans import WitchScansSource
+    from mangasurf.sources.base import ScrapeError
+    from mangasurf.sources.witchscans import WitchScansSource
 
     import requests
 
@@ -243,7 +243,7 @@ def test_cjk_titles_are_not_destroyed():
     non-ASCII character, so EVERY CJK title normalised to "" and they all
     landed in one group. Measured live: a search for ワンピース merged three
     unrelated doujinshi into one row and silently dropped two."""
-    from readerm.features import _normalise_title
+    from mangasurf.features import _normalise_title
 
     for title in ("ワンピース", "나 혼자만 레벨업", "进击的巨人"):
         assert _normalise_title(title), title
@@ -270,7 +270,7 @@ def test_untitled_rows_are_not_lumped_together():
 
 
 def test_editions_of_the_same_work_still_merge():
-    from readerm.features import _normalise_title as key
+    from mangasurf.features import _normalise_title as key
 
     assert key("Berserk") == key("Berserk (Official Colored)")
     assert key("Naruto") == key("Naruto (Digital Colored Comics)")
@@ -279,7 +279,7 @@ def test_editions_of_the_same_work_still_merge():
 
 def test_different_works_are_kept_apart():
     """Stripping every parenthetical merged genuinely different series."""
-    from readerm.features import _normalise_title as key
+    from mangasurf.features import _normalise_title as key
 
     assert key("Solo Leveling") != key("Solo Leveling (Pre-serialization)")
     assert key("Tower of God") != key("Tower of God (Season 2)")
@@ -297,14 +297,14 @@ def test_word_break_variants_merge():
 
 
 def test_leading_article_is_ignored():
-    from readerm.features import _normalise_title as key
+    from mangasurf.features import _normalise_title as key
 
     assert key("The Beginning After The End") == key("Beginning After the End")
 
 
 def test_a_title_that_is_only_stopwords_survives():
     """Dropping stopwords must never empty a title outright."""
-    from readerm.features import _normalise_title as key
+    from mangasurf.features import _normalise_title as key
 
     assert key("The End")
     assert key("A")

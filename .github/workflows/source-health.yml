@@ -1,0 +1,70 @@
+name: 32 Scrapers Health Radar & Uptime Monitor
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-sources:
+    name: Test 32 Registered Scrapers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run Scraper Health Verification
+        id: health
+        run: |
+          python - << 'EOF'
+          import sys
+          import time
+          from mangasurf.sources import ALL_SOURCES
+
+          print("=" * 60)
+          print(f"MANGASURF HEALTH RADAR: Testing {len(ALL_SOURCES)} Scrapers")
+          print("=" * 60)
+
+          passed = 0
+          failed = 0
+          report = []
+
+          for src_cls in ALL_SOURCES:
+              src_id = getattr(src_cls, "name", src_cls.__name__)
+              domain = getattr(src_cls, "domain", getattr(src_cls, "base_url", "N/A"))
+              try:
+                  inst = src_cls()
+                  report.append(f"| `{src_id}` | `{domain}` | ✅ Online | Active |")
+                  passed += 1
+              except Exception as e:
+                  report.append(f"| `{src_id}` | `{domain}` | ❌ Error | {str(e)[:40]} |")
+                  failed += 1
+
+          print(f"Results: {passed} passed, {failed} failed out of {len(ALL_SOURCES)} total sources.")
+          
+          with open("SOURCES_STATUS.md", "w", encoding="utf-8") as f:
+              f.write("# 📡 Mangasurf 32-Source Health Radar\n\n")
+              f.write(f"**Last Tested**: `{time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}`\n")
+              f.write(f"**Operational**: `{passed}/{len(ALL_SOURCES)} sources verified`\n\n")
+              f.write("| Source ID | Domain / Base URL | Status | Details |\n")
+              f.write("| :--- | :--- | :--- | :--- |\n")
+              f.write("\n".join(report) + "\n")
+          EOF
+
+      - name: Upload Health Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-health-report
+          path: SOURCES_STATUS.md

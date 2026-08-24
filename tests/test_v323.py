@@ -40,7 +40,7 @@ def read(name):
 @pytest.fixture()
 def api(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     return Api()
 
@@ -88,7 +88,7 @@ def test_sources_are_searched_in_a_wide_pool():
     """19 sources through a pool of 4 is five sequential waves, and one slow
     site holds up the wave behind it. Measured over the full registry:
     4 workers 4.23s, 8 -> 2.53s, 12 -> 2.32s, 16 -> 2.58s."""
-    from readerm.sources import SEARCH_WORKERS
+    from mangasurf.sources import SEARCH_WORKERS
 
     assert SEARCH_WORKERS >= 8, SEARCH_WORKERS
 

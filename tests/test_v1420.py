@@ -60,7 +60,7 @@ def make(tmp_path, *relative):
     ("\u30ef\u30f3\u30d4\u30fc\u30b9 - Chapters 001.cbz", "\u30ef\u30f3\u30d4\u30fc\u30b9"),
 ])
 def test_clean_title(filename, expected):
-    from readerm.covers import clean_title
+    from mangasurf.covers import clean_title
 
     assert clean_title(filename) == expected
 
@@ -68,21 +68,21 @@ def test_clean_title(filename, expected):
 def test_clean_title_never_returns_empty():
     """A title stripped to "" would search for nothing and match everything,
     so the least-stripped form is kept instead."""
-    from readerm.covers import clean_title
+    from mangasurf.covers import clean_title
 
     for name in ("Chapter 5.cbz", "v03.cbz", "[Group].cbz", "001.cbz"):
         assert clean_title(name), name
 
 
 def test_clean_title_handles_junk():
-    from readerm.covers import clean_title
+    from mangasurf.covers import clean_title
 
     assert clean_title("") == ""
     assert clean_title(None) == ""
 
 
 def test_series_key_groups_case_and_punctuation_variants():
-    from readerm.covers import series_key
+    from mangasurf.covers import series_key
 
     assert series_key("Solo Leveling - Chapter 1.cbz") == \
         series_key("solo.leveling.c002.cbz")
@@ -93,7 +93,7 @@ def test_series_key_groups_case_and_punctuation_variants():
 
 
 def test_scan_finds_archives_recursively(tmp_path):
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     root = make(tmp_path,
                 "A/Series One - Chapters 001.cbz",
@@ -104,7 +104,7 @@ def test_scan_finds_archives_recursively(tmp_path):
 
 def test_a_tidy_folder_is_never_reorganised(tmp_path):
     """One series alone in its folder must be left exactly where it is."""
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     root = make(tmp_path,
                 "Afterlife Diner/Afterlife Diner - Chapters 001.cbz",
@@ -118,7 +118,7 @@ def test_a_tidy_folder_is_never_reorganised(tmp_path):
 def test_mixed_folder_gives_each_series_its_own_target(tmp_path):
     """Several series loose in one folder: a single cover.jpg there would be
     wrong for all but one of them."""
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     root = make(tmp_path,
                 "Mixed/Solo Leveling - Chapters 001-010.cbz",
@@ -136,7 +136,7 @@ def test_mixed_folder_gives_each_series_its_own_target(tmp_path):
 
 def test_scan_ignores_the_raw_page_folders(tmp_path):
     """The downloader leaves raw/ behind; it holds images, not archives."""
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     root = make(tmp_path,
                 "Series/Series - Chapters 001.cbz",
@@ -145,7 +145,7 @@ def test_scan_ignores_the_raw_page_folders(tmp_path):
 
 
 def test_existing_cover_is_detected(tmp_path):
-    from readerm.covers import existing_cover, scan
+    from mangasurf.covers import existing_cover, scan
 
     root = make(tmp_path, "S/S - Chapters 001.cbz", "S/cover.jpg")
     assert existing_cover(os.path.join(root, "S"))
@@ -153,7 +153,7 @@ def test_existing_cover_is_detected(tmp_path):
 
 
 def test_plan_skips_folders_that_already_have_a_cover(tmp_path):
-    from readerm.covers import plan
+    from mangasurf.covers import plan
 
     root = make(tmp_path,
                 "Has/Has - Chapters 001.cbz", "Has/cover.jpg",
@@ -163,7 +163,7 @@ def test_plan_skips_folders_that_already_have_a_cover(tmp_path):
 
 
 def test_an_empty_cover_file_does_not_count(tmp_path):
-    from readerm.covers import existing_cover
+    from mangasurf.covers import existing_cover
 
     root = make(tmp_path, "S/S - Chapters 001.cbz")
     open(os.path.join(root, "S", "cover.jpg"), "w").close()   # 0 bytes
@@ -171,7 +171,7 @@ def test_an_empty_cover_file_does_not_count(tmp_path):
 
 
 def test_scan_of_a_missing_root_is_empty_not_an_error():
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     assert scan("/no/such/place") == []
     assert scan("") == []
@@ -181,7 +181,7 @@ def test_scan_of_a_missing_root_is_empty_not_an_error():
 
 
 def test_isolate_moves_only_mixed_groups(tmp_path):
-    from readerm.covers import isolate, scan
+    from mangasurf.covers import isolate, scan
 
     root = make(tmp_path,
                 "Mixed/Solo Leveling - Chapters 001.cbz",
@@ -200,7 +200,7 @@ def test_isolate_moves_only_mixed_groups(tmp_path):
 
 def test_isolate_is_idempotent(tmp_path):
     """Running the tool twice must not nest folders inside folders."""
-    from readerm.covers import isolate, scan
+    from mangasurf.covers import isolate, scan
 
     root = make(tmp_path,
                 "Mixed/A Series - Chapters 001.cbz",
@@ -215,7 +215,7 @@ def test_isolate_is_idempotent(tmp_path):
 
 
 def test_isolate_never_overwrites_an_existing_file(tmp_path):
-    from readerm.covers import isolate, scan
+    from mangasurf.covers import isolate, scan
 
     root = make(tmp_path,
                 "Mixed/A Series - Chapters 001.cbz",
@@ -235,7 +235,7 @@ def test_isolate_never_overwrites_an_existing_file(tmp_path):
 
 
 def test_dry_run_moves_nothing(tmp_path):
-    from readerm.covers import isolate, scan
+    from mangasurf.covers import isolate, scan
 
     root = make(tmp_path,
                 "Mixed/A Series - Chapters 001.cbz",
@@ -262,7 +262,7 @@ def test_candidates_rank_exact_titles_first():
          "source_name": "C", "url": "u3"},
     ]
     covers.search_all = None            # ensure the stub below is used
-    import readerm.sources as sources_module
+    import mangasurf.sources as sources_module
     original = sources_module.search_all
     sources_module.search_all = lambda *a, **k: rows
     try:
@@ -278,7 +278,7 @@ def test_candidates_rank_exact_titles_first():
 
 def test_candidates_skip_results_with_no_cover():
     from readerm import covers
-    import readerm.sources as sources_module
+    import mangasurf.sources as sources_module
 
     original = sources_module.search_all
     sources_module.search_all = lambda *a, **k: [
@@ -292,7 +292,7 @@ def test_candidates_skip_results_with_no_cover():
 
 
 def test_candidates_of_an_empty_title_is_empty():
-    from readerm.covers import candidates
+    from mangasurf.covers import candidates
 
     assert candidates("") == []
     assert candidates(None) == []
@@ -300,7 +300,7 @@ def test_candidates_of_an_empty_title_is_empty():
 
 def test_a_failing_search_does_not_raise():
     from readerm import covers
-    import readerm.sources as sources_module
+    import mangasurf.sources as sources_module
 
     original = sources_module.search_all
 
@@ -318,7 +318,7 @@ def test_a_failing_search_does_not_raise():
 
 
 def test_gui_exposes_the_three_endpoints():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     for name in ("scan_covers", "cover_candidates", "apply_cover"):
@@ -326,7 +326,7 @@ def test_gui_exposes_the_three_endpoints():
 
 
 def test_scan_covers_is_read_only(tmp_path):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     root = make(tmp_path,
                 "Mixed/A Series - Chapters 001.cbz",
@@ -339,7 +339,7 @@ def test_scan_covers_is_read_only(tmp_path):
 
 
 def test_apply_cover_refuses_an_empty_choice(tmp_path):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     root = make(tmp_path, "S/S - Chapters 001.cbz")
     result = Api().apply_cover(
@@ -349,7 +349,7 @@ def test_apply_cover_refuses_an_empty_choice(tmp_path):
 
 
 def test_apply_cover_refuses_a_group_with_no_folder():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     result = Api().apply_cover({}, {"cover": "https://example.com/c.jpg"})
     assert result["ok"] is False
@@ -359,7 +359,7 @@ def test_aggregate_member_ids_resolve_for_proxying():
     """Members like "madara.toonily" are real sources but not in the
     registry. Without a lookup for them, proxying their covers failed with
     "Unknown source" and 3 of 15 thumbnails rendered blank."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     source = Api()._source("madara.toonily")
     assert source is not None
@@ -396,7 +396,7 @@ def test_every_preview_is_proxied_not_just_referer_gated_ones():
     ("Close Family Ch.001~036.cbz", "Close Family"),
 ])
 def test_ch_dot_range_titles(filename, expected):
-    from readerm.covers import clean_title
+    from mangasurf.covers import clean_title
 
     assert clean_title(filename) == expected
 
@@ -416,7 +416,7 @@ def test_ch_dot_range_titles(filename, expected):
     ("Eleceed Ch.200.cbz", "Eleceed"),
 ])
 def test_chapter_marker_does_not_eat_real_words(filename, expected):
-    from readerm.covers import clean_title
+    from mangasurf.covers import clean_title
 
     assert clean_title(filename) == expected
 
@@ -424,7 +424,7 @@ def test_chapter_marker_does_not_eat_real_words(filename, expected):
 def test_longest_marker_spelling_wins():
     """Alternation order matters: with "ch" tried before "chs", the "s" is
     left behind and the title becomes "Close Family Chs 001"."""
-    from readerm.covers import _CHAPTER_TAIL
+    from mangasurf.covers import _CHAPTER_TAIL
 
     pattern = _CHAPTER_TAIL.pattern
     assert pattern.index("chapters?") < pattern.index("|ch|")
@@ -434,7 +434,7 @@ def test_longest_marker_spelling_wins():
 def test_a_flat_folder_of_loose_archives_splits_by_title(tmp_path):
     """The "300 CBZs in one directory" case: every archive gets a folder
     named after its series, and multi-volume sets group together."""
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     root = make(tmp_path,
                 "Close Family Ch.001-036.cbz",
@@ -450,8 +450,8 @@ def test_a_flat_folder_of_loose_archives_splits_by_title(tmp_path):
 
 def test_organise_covers_sorts_without_downloading(tmp_path):
     """Sorting must not require a network call -- it is a filesystem job."""
-    import readerm.sources as sources_module
-    from readerm.gui import Api
+    import mangasurf.sources as sources_module
+    from mangasurf.gui import Api
 
     root = make(tmp_path,
                 "Close Family Ch.001-036.cbz",
@@ -479,7 +479,7 @@ def test_organise_covers_sorts_without_downloading(tmp_path):
 
 
 def test_organise_covers_leaves_tidy_folders_alone(tmp_path):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     root = make(tmp_path, "Series/Series Ch.001.cbz")
     result = Api().organise_covers(root)
@@ -488,7 +488,7 @@ def test_organise_covers_leaves_tidy_folders_alone(tmp_path):
 
 
 def test_organise_covers_is_idempotent(tmp_path):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     root = make(tmp_path, "A Series Ch.001.cbz", "B Series Ch.001.cbz")
     Api().organise_covers(root)
@@ -500,7 +500,7 @@ def test_organise_covers_is_idempotent(tmp_path):
 def test_scan_covers_honours_an_explicit_root(tmp_path):
     """The tool must scan the folder you choose, not only the configured
     downloads directory."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     chosen = make(tmp_path / "elsewhere", "Picked Ch.001.cbz")
     result = Api().scan_covers(chosen)
@@ -516,7 +516,7 @@ def test_cli_has_dedicated_cover_flags():
     import sys
 
     result = subprocess.run(
-        [sys.executable, "-m", "readerm.cli", "--help"],
+        [sys.executable, "-m", "mangasurf.cli", "--help"],
         capture_output=True, text=True, cwd=ROOT, timeout=180)
     for flag in ("--dry-run", "--sort-only", "--replace"):
         assert flag in result.stdout, flag
@@ -534,7 +534,7 @@ def _rows(*specs):
 
 def test_auto_pick_prefers_an_exact_title_over_a_bigger_image():
     """A cover for the wrong series is a failure however pretty it is."""
-    from readerm.covers import auto_pick
+    from mangasurf.covers import auto_pick
 
     rows = _rows(("a", 30, "Something Else"), ("b", 100, "Real Title"))
     chosen, _ = auto_pick(rows, measure=False)
@@ -543,8 +543,8 @@ def test_auto_pick_prefers_an_exact_title_over_a_bigger_image():
 
 def test_auto_pick_follows_the_settings_ranking():
     """The whole point: the button uses the order set in Settings."""
-    from readerm.config import reorder
-    from readerm.covers import auto_pick
+    from mangasurf.config import reorder
+    from mangasurf.covers import auto_pick
 
     rows = _rows(("mangadex", 100, "T"), ("natomanga", 100, "T"))
 
@@ -560,8 +560,8 @@ def test_auto_pick_follows_the_settings_ranking():
 def test_auto_pick_skips_list_thumbnails():
     """Measured across three titles, the rank-1 candidate was 6x-15x smaller
     in pixels than the best available -- often a 175x238 list thumbnail."""
-    from readerm.config import reorder
-    from readerm.covers import MIN_GOOD_PIXELS, auto_pick
+    from mangasurf.config import reorder
+    from mangasurf.covers import MIN_GOOD_PIXELS, auto_pick
 
     # The thumbnail source is ranked FIRST, so only the size rule can save us.
     reorder(["natomanga", "mangadex"])
@@ -573,7 +573,7 @@ def test_auto_pick_skips_list_thumbnails():
                                   "pixels": 800 * 1164, "bytes": 64000},
     }
     # Patch in measurements without hitting the network.
-    import readerm.covers as covers_module
+    import mangasurf.covers as covers_module
 
     original = covers_module.measure_cover
     covers_module.measure_cover = lambda url, *a, **k: (
@@ -591,9 +591,9 @@ def test_auto_pick_skips_list_thumbnails():
 def test_ranking_still_wins_between_two_good_covers():
     """Resolution separates artwork from thumbnails; it must not override
     the user's ranking when both are real covers."""
-    from readerm.config import reorder
-    from readerm.covers import auto_pick
-    import readerm.covers as covers_module
+    from mangasurf.config import reorder
+    from mangasurf.covers import auto_pick
+    import mangasurf.covers as covers_module
 
     # Real source ids: rank_of() returns the default 100 for anything not in
     # the registry, so invented names all tie and resolution decides -- which
@@ -615,7 +615,7 @@ def test_ranking_still_wins_between_two_good_covers():
 
 
 def test_auto_pick_of_nothing_is_none():
-    from readerm.covers import auto_pick
+    from mangasurf.covers import auto_pick
 
     chosen, measurements = auto_pick([], measure=False)
     assert chosen is None and measurements == {}
@@ -624,8 +624,8 @@ def test_auto_pick_of_nothing_is_none():
 def test_auto_pick_survives_unmeasurable_covers():
     """A source that blocks the fetch must not crash the picker, and must
     not be treated as worst -- it may simply be strict."""
-    import readerm.covers as covers_module
-    from readerm.covers import auto_pick
+    import mangasurf.covers as covers_module
+    from mangasurf.covers import auto_pick
 
     rows = _rows(("a", 100, "T"), ("b", 100, "T"))
     original = covers_module.measure_cover
@@ -639,7 +639,7 @@ def test_auto_pick_survives_unmeasurable_covers():
 
 
 def test_smart_covers_endpoint_exists_and_is_async():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     assert callable(getattr(api, "smart_covers", None))
@@ -649,8 +649,8 @@ def test_smart_covers_endpoint_exists_and_is_async():
 def test_smart_covers_reports_progress_and_saves(tmp_path):
     """End to end with the network stubbed: one call sorts a flat folder and
     writes a cover per series."""
-    import readerm.covers as covers_module
-    from readerm.gui import Api
+    import mangasurf.covers as covers_module
+    from mangasurf.gui import Api
 
     root = make(tmp_path,
                 "Close Family Ch.001-036.cbz",
@@ -689,8 +689,8 @@ def test_smart_covers_reports_progress_and_saves(tmp_path):
 def test_smart_covers_refuses_to_run_twice(tmp_path):
     import threading
 
-    import readerm.covers as covers_module
-    from readerm.gui import Api
+    import mangasurf.covers as covers_module
+    from mangasurf.gui import Api
 
     root = make(tmp_path, "A Series Ch.001.cbz")
     gate = threading.Event()

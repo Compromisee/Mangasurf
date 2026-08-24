@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mangasurf"
-version = "1.2.0"
-description = "Download manga, manhwa and manhua from 23+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader"
+version = "1.7.1"
+description = "Download manga, manhwa and manhua from 32+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -30,15 +30,24 @@ dev = ["pytest>=7.0"]
 all = ["PyQt6>=6.5.0", "pywebview>=5.0", "textual>=0.60", "pystray>=0.19", "flask>=3.0"]
 
 [project.scripts]
-mangasurf = "readerm.cli:main"
-mangasurf-gui = "readerm.gui:run_gui"
-readerm = "readerm.cli:main"
-readerm-gui = "readerm.gui:run_gui"
+mangasurf = "mangasurf.cli:main"
+mangasurf-gui = "mangasurf.gui:run_gui"
+readerm = "mangasurf.cli:main"
+readerm-gui = "mangasurf.gui:run_gui"
 
 [tool.setuptools.packages.find]
-include = ["readerm*", "mangasurf*"]
+include = ["mangasurf*", "readerm*"]
 
 [tool.setuptools.package-data]
+"mangasurf.reader" = [
+    "app/*",
+    "app/**/*",
+    "foliate/*",
+    "foliate/vendor/*",
+    "foliate/vendor/pdfjs/*",
+    "foliate/vendor/pdfjs/**/*",
+    "*.md",
+]
 "readerm.reader" = [
     "app/*",
     "app/**/*",

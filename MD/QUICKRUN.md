@@ -1,4 +1,4 @@
-# QUICKRUN.md — running ReaderM without packaging it
+# QUICKRUN.md — running Mangasurf without packaging it
 
 For running from a source checkout. If you want a single `.exe`/`.app` to
 hand someone, that is [PACKAGING.md](PACKAGING.md) instead.
@@ -8,12 +8,12 @@ hand someone, that is [PACKAGING.md](PACKAGING.md) instead.
 ## The one-liner
 
 ```bash
-git clone https://github.com/Compromisee/ReaderM && cd ReaderM
+git clone https://github.com/Compromisee/mangasurf && cd mangasurf
 pip install -e .
-readerm gui
+mangasurf gui
 ```
 
-`pip install -e .` puts the `readerm`, `readerm-gui` and `readerm-tui`
+`pip install -e .` puts the `mangasurf`, `mangasurf-gui` and `mangasurf-tui`
 commands on your PATH and keeps them pointed at the checkout, so edits take
 effect immediately with no reinstall.
 
@@ -24,10 +24,10 @@ effect immediately with no reinstall.
 Every entry point also works as a module, straight out of the folder:
 
 ```bash
-python -m readerm gui              # desktop window
-python -m readerm tui              # terminal UI
-python -m readerm server           # LAN server for your phone
-python -m readerm --help           # the CLI
+python -m mangasurf gui              # desktop window
+python -m mangasurf tui              # terminal UI
+python -m mangasurf server           # LAN server for your phone
+python -m mangasurf --help           # the CLI
 ```
 
 You still need the dependencies:
@@ -42,11 +42,11 @@ pip install -r requirements.txt        # or: pip install -e .
 
 | You want | Install | Run |
 |----------|---------|-----|
-| CLI downloads | `pip install -e .` | `readerm <url>` |
-| Terminal UI | `pip install -e .` | `readerm tui` |
-| Desktop window | `pip install -e ".[gui]"` | `readerm gui` |
-| Phone / LAN server | `pip install -e ".[server]"` | `readerm server` |
-| OPDS catalog | `pip install -e ".[server]"` | `readerm opds` |
+| CLI downloads | `pip install -e .` | `mangasurf <url>` |
+| Terminal UI | `pip install -e .` | `mangasurf tui` |
+| Desktop window | `pip install -e ".[gui]"` | `mangasurf gui` |
+| Phone / LAN server | `pip install -e ".[server]"` | `mangasurf server` (or `readerm server`) |
+| OPDS catalog | `pip install -e ".[server]"` | `mangasurf opds` (or `readerm opds`) |
 | Everything | `pip install -e ".[all]"` | |
 
 The desktop window needs `pywebview`, which needs a system webview:
@@ -56,8 +56,8 @@ The desktop window needs `pywebview`, which needs a system webview:
 * **Linux** — `sudo apt install python3-gi gir1.2-webkit2-4.1` (or your
   distro's WebKitGTK package).
 
-No webview? `readerm tui` and the CLI need none of it, and
-`readerm server` gives you the full UI in an ordinary browser.
+No webview? `mangasurf tui` and the CLI need none of it, and
+`mangasurf server` gives you the full UI in an ordinary browser.
 
 ---
 
@@ -66,7 +66,7 @@ No webview? `readerm tui` and the CLI need none of it, and
 Often the easiest path on a headless box or a Linux machine with no WebKit:
 
 ```bash
-python -m readerm server --port 8577
+python -m mangasurf server --port 8577
 ```
 
 It prints a URL and an access token. Open it on this machine, or on a phone
@@ -79,7 +79,7 @@ byte ranges, so a big archive opens without downloading it whole first.
 For a quick local poke with no token:
 
 ```bash
-python -m readerm server --host 127.0.0.1 --no-auth
+python -m mangasurf server --host 127.0.0.1 --no-auth
 ```
 
 Do not use `--no-auth` on a shared network.
@@ -93,7 +93,7 @@ committed, so a normal checkout never touches Node.
 
 ```bash
 npm --prefix ui install
-npm --prefix ui run build          # writes readerm/reader/app/vendor/
+npm --prefix ui run build          # writes mangasurf/reader/app/vendor/
 npm --prefix ui run build -- --watch
 ```
 
@@ -126,7 +126,7 @@ python -m pytest -q -x --lf                      # stop at the first failure,
 
 ## Where your data lives
 
-Everything is under `~/.readerm/` (`%USERPROFILE%\.readerm` on Windows):
+Everything is under `~/.mangasurf/` (`%USERPROFILE%\.mangasurf` on Windows):
 
 | File | What it holds |
 |------|---------------|
@@ -139,22 +139,22 @@ Everything is under `~/.readerm/` (`%USERPROFILE%\.readerm` on Windows):
 | `config.json` | settings |
 | `lock.json` | the app passcode verifier — never the passcode |
 
-`readerm api paths` prints all of them as JSON, with a stat for each.
+`mangasurf api paths` prints all of them as JSON, with a stat for each.
 
-Downloads go wherever you set the output folder; `readerm config` shows it.
+Downloads go wherever you set the output folder; `mangasurf config` shows it.
 
-To start clean, move `~/.readerm` aside — the app rebuilds it. Nothing is
+To start clean, move `~/.mangasurf` aside — the app rebuilds it. Nothing is
 written outside that folder and your download folder.
 
 ---
 
 ## Common problems
 
-**`ModuleNotFoundError: readerm`** — run from the repo root, or
+**`ModuleNotFoundError: mangasurf`** — run from the repo root, or
 `pip install -e .`.
 
-**The window opens white/blank** — a webview problem, not ReaderM. Try
-`readerm server` and use a browser; if that works, the app is fine and the
+**The window opens white/blank** — a webview problem, not Mangasurf. Try
+`mangasurf server` and use a browser; if that works, the app is fine and the
 webview is not.
 
 **`Flask is not installed`** — `pip install -e ".[server]"`.
@@ -166,7 +166,7 @@ usually a slow first paint rather than a fault.
 **Covers are blank in search results** — some sites serve a placeholder to
 anyone who hotlinks. Those hosts are fetched through Python and cached; if a
 *new* site does it, that host needs adding to `HOTLINK_PROTECTED` in
-`readerm/reader/app/app.js`.
+`mangasurf/reader/app/app.js`.
 
 **Tests fail with a Playwright error** — `python -m playwright install
 chromium`. On Linux you may also need
@@ -177,7 +177,7 @@ chromium`. On Linux you may also need
 ## A quick tour of the layout
 
 ```
-readerm/
+mangasurf/
   cli.py            the command line
   gui/__init__.py   Api — every method the UI can call
   reader/

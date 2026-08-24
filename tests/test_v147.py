@@ -35,15 +35,15 @@ def isolated_home(monkeypatch):
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
 
-    import readerm.config as config
-    import readerm.features as features
-    import readerm.library as library
-    import readerm.passlock as passlock
+    import mangasurf.config as config
+    import mangasurf.features as features
+    import mangasurf.library as library
+    import mangasurf.passlock as passlock
 
     for module in (config, passlock, features, library):
         importlib.reload(module)
     # gui holds module-level references to the reloaded modules
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     yield home
 
@@ -92,13 +92,13 @@ def test_bookmark_keeps_cover_mirrors():
     ("zh-hk", "Manhua"), ("en", None), (None, None), ("", None),
 ])
 def test_type_is_classified_from_origin_language(language, expected):
-    from readerm.sources.base import classify_type
+    from mangasurf.sources.base import classify_type
 
     assert classify_type(language) == expected
 
 
 def test_explicit_tags_beat_the_language():
-    from readerm.sources.base import classify_type
+    from mangasurf.sources.base import classify_type
 
     assert classify_type("ja", ["Webtoon"]) == "Manhwa"
     assert classify_type(None, ["Manhua"]) == "Manhua"
@@ -107,7 +107,7 @@ def test_explicit_tags_beat_the_language():
 def test_type_filter_drops_mismatches():
     """"One Piece" under Manhwa returned 62 results, all manga, because only
     one source implemented the type parameter and the rest ignored it."""
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [
         {"title": "One Piece", "series_type": "Manga", "source": "mangadex"},
@@ -119,14 +119,14 @@ def test_type_filter_drops_mismatches():
 
 def test_type_filter_keeps_unknown_types():
     """A source reporting no type must not vanish from every filtered search."""
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [{"title": "Mystery", "source": "nosuchsource"}]
     assert len(_narrow_by_type(rows, "Manhwa")) == 1
 
 
 def test_type_filter_is_a_noop_for_any():
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [{"title": "A", "series_type": "Manga", "source": "mangadex"}]
     assert _narrow_by_type(rows, "Any") == rows
@@ -136,7 +136,7 @@ def test_type_filter_is_a_noop_for_any():
 def test_source_level_type_fallback_is_used():
     """Sites whose search rows carry no metadata fall back to what the whole
     catalogue is."""
-    from readerm.gui import _narrow_by_type
+    from mangasurf.gui import _narrow_by_type
 
     rows = [{"title": "Some Webtoon", "source": "webtoons"}]
     assert len(_narrow_by_type(rows, "Manhwa")) == 1
@@ -288,7 +288,7 @@ def test_folders_support_lock_and_blur():
 
 
 def test_folder_api_is_reachable_from_js():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     for method in ("get_bookmark_folders", "create_bookmark_folder",
                    "update_bookmark_folder", "delete_bookmark_folder",
@@ -297,7 +297,7 @@ def test_folder_api_is_reachable_from_js():
 
 
 def test_bookmark_into_files_in_one_step():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
     from readerm import library
 
     api = Api()

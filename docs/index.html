@@ -3,938 +3,1118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ReaderM — one downloader, 19 sources</title>
-<meta name="description" content="Download manga, manhwa and manhua from 19 sources as CBZ, PDF or EPUB. Desktop app, terminal menu, full-screen TUI and a scriptable CLI.">
+<title>Mangasurf — 32 Sources, High-Performance Manga Engine & Reader</title>
+<meta name="description" content="Download manga, manhwa and manhua from 32 sources as CBZ, PDF or EPUB. Desktop PyQt app, terminal menu, full-screen TUI, Foliate reader, LAN server and OPDS catalog.">
 
-<meta property="og:title" content="ReaderM — one downloader, 19 sources">
-<meta property="og:description" content="Paste a link. Get a CBZ. Desktop app, terminal menu, TUI and CLI, all on one engine.">
+<meta property="og:title" content="Mangasurf — 32 Sources, One High-Performance Manga Ecosystem">
+<meta property="og:description" content="Download manga, manhwa and manhua from 32 sources as CBZ, PDF or EPUB. Desktop app, terminal menu, TUI and CLI, all on one engine.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#0b0a12">
+<meta name="theme-color" content="#08090d">
 
-<!-- Local styles first, fonts non-blocking: the same lesson the app itself
-     learned. A page that waits on a font CDN shows nothing until it answers. -->
-<style id="boot">html{background:#0b0a12}html[data-theme="dawn"]{background:#fbf7f4}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" media="print" onload="this.media='all'"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" media="print" onload="this.media='all'"
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0">
-<noscript>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0">
-</noscript>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="icon.ico">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0">
 
 <style>
-/* ═══════════════════════════════════════════════════════ tokens */
-
-html[data-theme="night"]{
-  --bg:#0b0a12; --bg-2:#12111c; --panel:#16151f; --panel-2:#1c1b28;
-  --line:#26243a; --line-2:#332f4d;
-  --ink:#f2f0ff; --ink-2:#a8a3c4; --ink-3:#6f6a90;
-  --a:#ff5f8f;   /* primary  */
-  --b:#7c6bff;   /* violet   */
-  --c:#3ddad7;   /* mint     */
-  --d:#ffb648;   /* amber    */
-  --glow:.55; --grid-a:.055; --shadow:0 20px 60px -20px rgba(0,0,0,.9);
-  --code-bg:#0e0d17;
-}
-html[data-theme="dawn"]{
-  --bg:#fbf7f4; --bg-2:#f4eeea; --panel:#ffffff; --panel-2:#faf6f3;
-  --line:#e8dfd9; --line-2:#d8ccc4;
-  --ink:#161320; --ink-2:#5b5470; --ink-3:#8d86a3;
-  --a:#e0326b; --b:#5b45e0; --c:#12a89e; --d:#c9741a;
-  --glow:.20; --grid-a:.05; --shadow:0 18px 44px -18px rgba(60,40,80,.28);
-  --code-bg:#1a1826;
-}
-
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{
-  background:var(--bg);color:var(--ink);
-  font:400 16px/1.65 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  -webkit-font-smoothing:antialiased;overflow-x:hidden;
-}
-img{max-width:100%;display:block}
-a{color:inherit}
-
-.material-symbols-rounded{
-  font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;
-  line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;
-  white-space:nowrap;word-wrap:normal;direction:ltr;
-  font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
-  -webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;
-  user-select:none;
-}
-/* Ligature icons read as their literal names until the font lands. */
-html:not(.icons-ready) .material-symbols-rounded{visibility:hidden}
-
-.wrap{width:min(1240px,92vw);margin-inline:auto}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-
-/* ═══════════════════════════════════════════════════ backdrop */
-/* Two soft colour fields plus a fine grid. The grid is what stops the
-   page reading as "another dark gradient landing page". */
-.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.bg::before{
-  content:"";position:absolute;inset:0;
-  background-image:
-    linear-gradient(to right,color-mix(in srgb,var(--ink) 100%,transparent) 1px,transparent 1px),
-    linear-gradient(to bottom,color-mix(in srgb,var(--ink) 100%,transparent) 1px,transparent 1px);
-  background-size:64px 64px;opacity:var(--grid-a);
-  mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 30%,transparent 78%);
-}
-.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:var(--glow)}
-.orb-1{width:640px;height:640px;top:-260px;left:-180px;
-  background:radial-gradient(circle,var(--a),transparent 68%)}
-.orb-2{width:560px;height:560px;top:-160px;right:-160px;
-  background:radial-gradient(circle,var(--b),transparent 68%)}
-.orb-3{width:520px;height:520px;top:1500px;left:38%;
-  background:radial-gradient(circle,var(--c),transparent 70%);opacity:calc(var(--glow)*.5)}
-main,nav,footer{position:relative;z-index:1}
-
-/* ══════════════════════════════════════════════════════ nav */
-.nav{
-  position:sticky;top:0;z-index:40;
-  background:color-mix(in srgb,var(--bg) 78%,transparent);
-  backdrop-filter:saturate(1.6) blur(14px);
-  border-bottom:1px solid transparent;transition:border-color .25s,background .25s;
-}
-.nav.stuck{border-bottom-color:var(--line);
-  background:color-mix(in srgb,var(--bg) 92%,transparent)}
-.nav-in{display:flex;align-items:center;gap:26px;height:66px}
-.brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
-.mark{
-  width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--a),var(--b));color:#fff;
-  box-shadow:0 6px 18px -6px var(--a);flex:none;
-}
-.mark .material-symbols-rounded{font-size:20px;font-variation-settings:'FILL' 1,'wght' 500}
-.brand b{font-size:17px;display:block;line-height:1.1}
-.brand small{font-size:10.5px;color:var(--ink-3);font-weight:600;letter-spacing:.09em;text-transform:uppercase}
-.nav-links{display:flex;gap:4px;margin-left:auto}
-.nav-links a{
-  text-decoration:none;color:var(--ink-2);font-size:14px;font-weight:550;
-  padding:7px 13px;border-radius:9px;transition:color .18s,background .18s;
-}
-.nav-links a:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 7%,transparent)}
-.icon-btn{
-  width:38px;height:38px;flex:none;border-radius:11px;cursor:pointer;
-  display:grid;place-items:center;color:var(--ink-2);
-  background:var(--panel);border:1px solid var(--line);
-  transition:color .18s,border-color .18s,transform .15s;
-}
-.icon-btn:hover{color:var(--ink);border-color:var(--line-2);transform:translateY(-1px)}
-.icon-btn .material-symbols-rounded{font-size:20px}
-
-.btn{
-  display:inline-flex;align-items:center;gap:8px;text-decoration:none;
-  font-weight:650;font-size:14.5px;padding:11px 20px;border-radius:12px;
-  border:1px solid transparent;cursor:pointer;white-space:nowrap;
-  transition:transform .16s cubic-bezier(.2,.8,.3,1),box-shadow .2s,background .2s,border-color .2s;
-}
-.btn .material-symbols-rounded{font-size:19px}
-.btn-fill{background:linear-gradient(135deg,var(--a),var(--b));color:#fff;
-  box-shadow:0 10px 26px -12px var(--a)}
-.btn-fill:hover{transform:translateY(-2px);box-shadow:0 16px 34px -12px var(--a)}
-.btn-line{background:var(--panel);color:var(--ink);border-color:var(--line)}
-.btn-line:hover{border-color:var(--line-2);transform:translateY(-2px)}
-.btn-sm{padding:8px 15px;font-size:13.5px;border-radius:10px}
-
-/* ═════════════════════════════════════════════════════ hero */
-.hero{padding:84px 0 74px}
-.hero-grid{display:grid;grid-template-columns:1.06fr .94fr;gap:56px;align-items:center}
-.tagline{
-  display:inline-flex;align-items:center;gap:9px;margin-bottom:22px;
-  font-size:12.5px;font-weight:650;letter-spacing:.02em;
-  padding:6px 13px 6px 8px;border-radius:999px;color:var(--ink-2);
-  background:var(--panel);border:1px solid var(--line);
-}
-.tagline .pip{
-  width:7px;height:7px;border-radius:50%;background:var(--c);
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent);
-  animation:pip 2.6s ease-in-out infinite;
-}
-@keyframes pip{50%{opacity:.35;transform:scale(.82)}}
-.tagline em{font-style:normal;color:var(--ink-3);font-weight:600}
-
-h1{
-  font-size:clamp(42px,5.6vw,72px);line-height:1.02;font-weight:900;
-  letter-spacing:-.035em;margin-bottom:20px;
-}
-.grad{
-  background:linear-gradient(105deg,var(--a) 8%,var(--b) 48%,var(--c) 92%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  background-size:200% auto;animation:pan 9s linear infinite;
-}
-@keyframes pan{to{background-position:200% center}}
-.lede{font-size:17.5px;color:var(--ink-2);max-width:54ch;margin-bottom:30px}
-.lede b{color:var(--ink);font-weight:650}
-.cta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:38px}
-
-.stats{display:grid;grid-template-columns:repeat(4,auto);gap:34px;justify-content:start}
-.st-n{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1;
-  font-variant-numeric:tabular-nums}
-.st-k{font-size:11px;color:var(--ink-3);font-weight:650;letter-spacing:.1em;
-  text-transform:uppercase;margin-top:7px}
-
-/* terminal ------------------------------------------------------------ */
-.term{
-  border-radius:16px;overflow:hidden;border:1px solid var(--line);
-  background:var(--code-bg);box-shadow:var(--shadow);
-}
-.term-bar{
-  display:flex;align-items:center;gap:8px;padding:11px 14px;
-  background:#141322;border-bottom:1px solid #232135;
-}
-.tl{width:11px;height:11px;border-radius:50%}
-.tl-1{background:#ff5f57}.tl-2{background:#febc2e}.tl-3{background:#28c840}
-.term-t{margin-left:8px;font:600 12px 'JetBrains Mono',monospace;color:#6f6a90}
-.term-b{padding:18px 18px 22px;font:400 13.2px/1.85 'JetBrains Mono',monospace;
-  color:#cfcae8;overflow-x:auto}
-.pr{color:var(--a);font-weight:600;user-select:none}
-.fl{color:var(--d)}.cm{color:#5f5a80}.ok{color:var(--c);font-weight:600}
-.hl{color:var(--b);font-weight:600}
-.caret{display:inline-block;width:8px;height:16px;vertical-align:-3px;
-  background:var(--c);animation:blink 1.15s steps(2) infinite}
-@keyframes blink{50%{opacity:0}}
-
-/* ══════════════════════════════════════════════════ sections */
-section{padding:82px 0;scroll-margin-top:78px}
-.kicker{
-  font-size:11.5px;font-weight:750;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--a);margin-bottom:13px;display:flex;align-items:center;gap:9px;
-}
-.kicker::after{content:"";height:1px;flex:1;max-width:74px;
-  background:linear-gradient(90deg,var(--a),transparent)}
-h2{font-size:clamp(29px,3.7vw,44px);line-height:1.1;font-weight:850;
-  letter-spacing:-.03em;margin-bottom:14px}
-.sub{color:var(--ink-2);font-size:16.5px;max-width:62ch;margin-bottom:42px}
-
-/* ── the "awkward parts" bento ─────────────────────────────────────── */
-.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
-.cell{
-  grid-column:span 2;position:relative;overflow:hidden;
-  padding:26px;border-radius:16px;
-  background:var(--panel);border:1px solid var(--line);
-  transition:transform .22s cubic-bezier(.2,.8,.3,1),border-color .22s,box-shadow .22s;
-}
-.cell:hover{transform:translateY(-4px);border-color:var(--line-2);box-shadow:var(--shadow)}
-.cell.wide{grid-column:span 3}
-.cell::after{
-  content:"";position:absolute;inset:0 0 auto 0;height:2px;
-  background:linear-gradient(90deg,var(--tint,var(--a)),transparent);
-  opacity:0;transition:opacity .22s;
-}
-.cell:hover::after{opacity:1}
-.ico{
-  width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
-  margin-bottom:16px;color:var(--tint,var(--a));
-  background:color-mix(in srgb,var(--tint,var(--a)) 13%,transparent);
-  border:1px solid color-mix(in srgb,var(--tint,var(--a)) 26%,transparent);
-}
-.ico .material-symbols-rounded{font-size:23px}
-.cell h3{font-size:17px;font-weight:700;letter-spacing:-.015em;margin-bottom:8px}
-.cell p{font-size:14.3px;color:var(--ink-2);line-height:1.62}
-.cell code{
-  font:500 12.4px 'JetBrains Mono',monospace;color:var(--c);
-  background:color-mix(in srgb,var(--c) 11%,transparent);
-  padding:1px 6px;border-radius:5px;
+/* ── Cinematic Moving Mesh Gradient & Glassmorphism Design System ────────── */
+:root {
+  --bg: #07080c;
+  --bg-surface: rgba(14, 16, 24, 0.7);
+  --bg-surface-elevated: rgba(22, 25, 38, 0.85);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-glow: rgba(56, 189, 248, 0.4);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #38bdf8;
+  --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  --accent-glow: rgba(56, 189, 248, 0.25);
+  --danger: #f43f5e;
+  --success: #10b981;
+  --amber: #fbbf24;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* ── interfaces ─────────────────────────────────────────────────────── */
-.faces{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.face{
-  padding:24px;border-radius:16px;background:var(--panel);
-  border:1px solid var(--line);display:flex;flex-direction:column;gap:12px;
-  transition:transform .22s cubic-bezier(.2,.8,.3,1),border-color .22s,box-shadow .22s;
-}
-.face:hover{transform:translateY(-4px);border-color:var(--tint);box-shadow:var(--shadow)}
-.face-top{display:flex;align-items:center;gap:11px}
-.face-ico{
-  width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
-  color:#fff;background:linear-gradient(135deg,var(--tint),color-mix(in srgb,var(--tint) 45%,var(--b)));
-}
-.face-ico .material-symbols-rounded{font-size:20px}
-.face h3{font-size:16px;font-weight:750}
-.face .who{font-size:11px;color:var(--ink-3);font-weight:650;
-  letter-spacing:.08em;text-transform:uppercase}
-.face p{font-size:14px;color:var(--ink-2);flex:1}
-.face .cmd{
-  font:500 12.6px 'JetBrains Mono',monospace;color:var(--ink);
-  background:var(--panel-2);border:1px solid var(--line);
-  padding:8px 11px;border-radius:9px;
-}
-.face .cmd::before{content:"$ ";color:var(--a);font-weight:700}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; background: var(--bg); color: var(--text-main); font-family: var(--font-ui); }
+body { min-height: 100vh; overflow-x: hidden; position: relative; line-height: 1.6; }
 
-/* ── sources ────────────────────────────────────────────────────────── */
-.src-tools{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:22px;align-items:center}
-.chip{
-  font:650 13px 'Inter',sans-serif;padding:7px 15px;border-radius:999px;cursor:pointer;
-  background:var(--panel);border:1px solid var(--line);color:var(--ink-2);
-  transition:all .18s;
-}
-.chip:hover{border-color:var(--line-2);color:var(--ink)}
-.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.chip .n{opacity:.6;margin-left:5px;font-variant-numeric:tabular-nums}
-
-.grid-src{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:11px}
-.src{
-  display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:13px;
-  background:var(--panel);border:1px solid var(--line);
-  transition:transform .18s,border-color .18s,box-shadow .18s;
-}
-.src{text-decoration:none;color:inherit}
-.src:hover{transform:translateY(-3px);border-color:var(--line-2);box-shadow:var(--shadow)}
-.src:hover .src-n{color:var(--a)}
-.src-n{transition:color .18s}
-.src-badge{
-  width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;
-  font:800 12px 'Inter',sans-serif;color:#fff;letter-spacing:-.02em;
-}
-/* Name over domain. These were inline spans in one flex row, so the two
-   texts overlapped and the 18+ tag sat on top of the domain. */
-.src-txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
-.src-n{display:block;font-size:14px;font-weight:650;letter-spacing:-.01em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.src-d{display:block;font:500 11px/1.35 'JetBrains Mono',monospace;color:var(--ink-3);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tag-adult,.tag-cf{
-  font-size:9.5px;font-weight:800;letter-spacing:.05em;padding:3px 7px;border-radius:6px;
-  flex:none;white-space:nowrap;
-}
-.tag-adult{
-  background:color-mix(in srgb,var(--a) 17%,transparent);color:var(--a);
-  border:1px solid color-mix(in srgb,var(--a) 32%,transparent);
-}
-/* Sites behind Cloudflare need FlareSolverr; saying so on the tile is more
-   use than burying it in the note underneath. */
-.tag-cf{
-  background:color-mix(in srgb,var(--d) 17%,transparent);color:var(--d);
-  border:1px solid color-mix(in srgb,var(--d) 32%,transparent);
-}
-.note{
-  margin-top:20px;font-size:13.6px;color:var(--ink-3);
-  border-left:2px solid var(--line-2);padding-left:15px;max-width:78ch;
+/* ── Moving Mesh Gradient Canvas Background ────────────────────────────── */
+#mesh-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.85;
 }
 
-/* ── CLI panel ──────────────────────────────────────────────────────── */
-.panel{border:1px solid var(--line);border-radius:16px;overflow:hidden;
-  background:var(--code-bg);box-shadow:var(--shadow)}
-.tabs{display:flex;gap:2px;padding:9px 9px 0;background:#141322;
-  border-bottom:1px solid #232135;overflow-x:auto}
-.tab{
-  font:650 13px 'Inter',sans-serif;padding:9px 16px;border-radius:9px 9px 0 0;
-  cursor:pointer;background:none;border:0;color:#6f6a90;white-space:nowrap;
-  transition:color .18s,background .18s;
-}
-.tab:hover{color:#cfcae8}
-.tab.on{color:var(--ink);background:var(--code-bg)}
-html[data-theme="dawn"] .tab.on{color:#f2f0ff}
-/* These panes are divs, not <pre>, so the newlines in the markup collapse
-   and the whole listing renders as one wrapped paragraph. Keep the source
-   formatting. */
-.pane{display:none;padding:20px 20px 24px;white-space:pre;
-  font:400 13.2px/1.9 'JetBrains Mono',monospace;color:#cfcae8;overflow-x:auto}
-.pane.on{display:block;animation:fade .3s ease}
-@keyframes fade{from{opacity:0;transform:translateY(5px)}}
-.pane .sec{color:#4f4a70;font-size:11px;letter-spacing:.13em;font-weight:700;
-  display:block;margin:15px 0 6px}
-.pane .sec:first-child{margin-top:0}
-
-/* ── screenshots ────────────────────────────────────────────────────── */
-.shot-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.shot{display:none}
-.shot.on{display:block;animation:fade .32s ease}
-.shot figure{border-radius:16px;overflow:hidden;border:1px solid var(--line);
-  background:var(--panel);box-shadow:var(--shadow)}
-.shot figcaption{padding:13px 18px;font-size:13.6px;color:var(--ink-2);
-  border-top:1px solid var(--line);background:var(--panel)}
-.shot figcaption b{color:var(--ink);font-weight:650}
-
-/* ── install ────────────────────────────────────────────────────────── */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
-.step{padding:22px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
-.step-n{
-  width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
-  font:800 12.5px 'Inter',sans-serif;margin-bottom:13px;
-  background:linear-gradient(135deg,var(--a),var(--b));color:#fff;
-}
-.step h3{font-size:14.5px;font-weight:700;margin-bottom:6px}
-.step p{font-size:13.4px;color:var(--ink-2)}
-.step code{display:block;margin-top:11px;font:500 12.3px 'JetBrains Mono',monospace;
-  background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
-  padding:9px 11px;border-radius:9px;overflow-x:auto;white-space:nowrap}
-
-.callout{
-  display:flex;gap:13px;padding:17px 19px;border-radius:13px;margin-top:8px;
-  background:color-mix(in srgb,var(--b) 9%,var(--panel));
-  border:1px solid color-mix(in srgb,var(--b) 26%,var(--line));
-}
-.callout .material-symbols-rounded{color:var(--b);font-size:21px;flex:none}
-.callout p{font-size:14px;color:var(--ink-2)}
-.callout code{font:500 12.4px 'JetBrains Mono',monospace;color:var(--ink)}
-
-/* ── footer ─────────────────────────────────────────────────────────── */
-footer{border-top:1px solid var(--line);padding:38px 0;margin-top:22px}
-.foot{display:flex;justify-content:space-between;gap:22px;flex-wrap:wrap;align-items:center}
-.foot p{font-size:13.4px;color:var(--ink-3)}
-.foot nav{display:flex;gap:20px;flex-wrap:wrap}
-.foot a{font-size:13.6px;color:var(--ink-2);text-decoration:none;font-weight:550}
-.foot a:hover{color:var(--a)}
-
-/* ── reveal on scroll ───────────────────────────────────────────────── */
-/* Only ever hidden once JS has confirmed it can un-hide them. Without the
-   .js gate a script error, an old browser or a print stylesheet would
-   leave every section below the fold permanently invisible -- the content
-   must not depend on the animation running. */
-html.js .rise{opacity:0;transform:translateY(18px);
-  transition:opacity .6s cubic-bezier(.2,.8,.3,1),transform .6s cubic-bezier(.2,.8,.3,1)}
-html.js .rise.in{opacity:1;transform:none}
-
-@media print{
-  html.js .rise{opacity:1!important;transform:none!important}
-  .bg,.nav{display:none}
+.ambient-grid-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 30%, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, black 40%, transparent 85%);
+  z-index: 0;
+  pointer-events: none;
 }
 
-/* ── responsive ─────────────────────────────────────────────────────── */
-@media(max-width:1000px){
-  .hero-grid{grid-template-columns:1fr;gap:40px}
-  .bento{grid-template-columns:repeat(2,1fr)}
-  .cell,.cell.wide{grid-column:span 1}
-  .faces{grid-template-columns:repeat(2,1fr)}
-  .steps{grid-template-columns:1fr}
-}
-@media(max-width:700px){
-  .nav-links{display:none}
-  .stats{grid-template-columns:repeat(2,1fr);gap:22px}
-  .bento,.faces{grid-template-columns:1fr}
-  section{padding:60px 0}
+/* ── Global Layout & Typography ────────────────────────────────────────── */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+.mi {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
 }
 
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation:none!important;transition:none!important;
-    scroll-behavior:auto!important}
-  .rise{opacity:1;transform:none}
+/* ── Header & Navigation ────────────────────────────────────────────────── */
+.site-nav {
+  position: sticky;
+  top: 16px;
+  z-index: 100;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass);
+  transition: all 0.3s ease;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text-main);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.brand-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--accent-gradient);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+.nav-link {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-badge {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.nav-cta {
+  background: var(--accent-gradient);
+  color: #ffffff !important;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.nav-cta:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* ── Hero Section ──────────────────────────────────────────────────────── */
+.hero {
+  padding: 80px 0 60px;
+  text-align: center;
+  position: relative;
+}
+
+.hero-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 24px;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.hero-headline {
+  font-size: clamp(38px, 6vw, 68px);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  margin-bottom: 20px;
+}
+
+.text-gradient {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--text-muted);
+  max-width: 760px;
+  margin: 0 auto 36px;
+  font-weight: 500;
+}
+
+/* 1-Click Install Command Pill */
+.install-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(14, 16, 24, 0.9);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 8px 12px 8px 20px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-main);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 40px;
+}
+
+.install-pill:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.install-copy-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.install-copy-btn:hover {
+  background: var(--accent);
+  color: #000;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  box-shadow: 0 8px 24px var(--accent-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(56, 189, 248, 0.4);
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  border-color: var(--border);
+  color: var(--text-main);
+  backdrop-filter: blur(12px);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ── Interactive Live Terminal Emulator ────────────────────────────────── */
+.terminal-showcase {
+  margin: 60px auto 100px;
+  max-width: 1040px;
+  background: #090a10;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(56, 189, 248, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #11131c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.terminal-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.term-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.term-dot.red { background: #ef4444; }
+.term-dot.yellow { background: #f59e0b; }
+.term-dot.green { background: #10b981; }
+
+.terminal-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.term-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.term-tab:hover, .term-tab.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.terminal-body {
+  padding: 24px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  min-height: 280px;
+  overflow-x: auto;
+}
+
+.term-prompt { color: #38bdf8; font-weight: 700; }
+.term-cmd { color: #f8fafc; font-weight: 700; }
+.term-dim { color: #64748b; }
+.term-green { color: #10b981; font-weight: 700; }
+.term-cyan { color: #38bdf8; font-weight: 700; }
+.term-magenta { color: #c084fc; }
+.term-amber { color: #fbbf24; }
+
+/* ── Interactive 32 Scrapers Matrix ────────────────────────────────────── */
+.section { padding: 80px 0; position: relative; }
+.section-head { text-align: center; max-width: 720px; margin: 0 auto 50px; }
+.section-tag { color: var(--accent); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.section-title { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px; }
+.section-desc { color: var(--text-muted); font-size: 16px; }
+
+/* Scrapers Filter Matrix */
+.scrapers-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+
+.filter-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover, .filter-btn.active {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.scrapers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.scraper-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(16px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.scraper-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.scraper-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scraper-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge-active { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-adult { background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); }
+.badge-api { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+.scraper-domain {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.scraper-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+}
+
+/* ── Interactive Feature Showcase Cards ────────────────────────────────── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+.feat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.feat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.feat-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.feat-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.feat-desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Screenshot Showcase Lightbox ──────────────────────────────────────── */
+.screenshots-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.screenshot-preview-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.screenshot-preview-card:hover {
+  transform: scale(1.02);
+  border-color: var(--accent);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), 0 0 24px var(--accent-glow);
+}
+
+.screenshot-preview-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.screenshot-info {
+  padding: 14px 16px;
+  background: rgba(11, 13, 20, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.screenshot-title { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.screenshot-tag { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  background: rgba(6, 7, 10, 0.95);
+  padding: 60px 0 40px;
+  margin-top: 100px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.footer-col h4 { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); margin-bottom: 16px; }
+.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer-col a { color: var(--text-muted); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+.footer-col a:hover { color: var(--accent); }
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 24px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .site-nav { padding: 10px 16px; }
+  .nav-links { display: none; }
+  .footer-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
-<div class="bg" aria-hidden="true">
-  <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
-</div>
+<!-- Animated Fluid Moving Mesh Gradient Canvas -->
+<canvas id="mesh-canvas"></canvas>
+<div class="ambient-grid-overlay"></div>
 
-<nav class="nav" id="nav">
-  <div class="wrap nav-in">
-    <a class="brand" href="#top">
-      <span class="mark"><span class="material-symbols-rounded">auto_stories</span></span>
-      <span><b>ReaderM</b><small>Compromisee </small></span>
+<!-- Top Sticky Glass Navigation -->
+<header class="container" style="padding-top: 16px;">
+  <nav class="site-nav">
+    <a href="#" class="nav-brand">
+      <div class="brand-icon-box" style="padding:0;overflow:hidden;background:none;border:none">
+        <img src="icon.svg" alt="Mangasurf Logo" style="width:36px;height:36px;object-fit:contain;border-radius:9px" />
+      </div>
+      <span>MANGASURF</span>
     </a>
-    <div class="nav-links">
-      <a href="#why">Why</a>
-      <a href="#interfaces">Interfaces</a>
-      <a href="#sources">Sources</a>
-      <a href="#cli">CLI</a>
-      <a href="#screens">Screens</a>
-      <a href="#install">Install</a>
-    </div>
-    <button class="icon-btn" id="themeBtn" aria-label="Toggle light and dark">
-      <span class="material-symbols-rounded" id="themeIcon">dark_mode</span>
-    </button>
-    <a class="btn btn-line btn-sm" href="https://github.com/Compromisee/ReaderM">
-      <span class="material-symbols-rounded">code</span> GitHub
+    <ul class="nav-links">
+      <li><a href="#terminal" class="nav-link"><span class="mi">terminal</span>Terminal</a></li>
+      <li><a href="#scrapers" class="nav-link"><span class="mi">lan</span>32 Scrapers <span class="nav-badge">Live</span></a></li>
+      <li><a href="#features" class="nav-link"><span class="mi">bolt</span>Features</a></li>
+      <li><a href="#screenshots" class="nav-link"><span class="mi">photo_library</span>Screenshots</a></li>
+      <li><a href="https://github.com/Compromisee/mangasurf" target="_blank" class="nav-link"><span class="mi">code</span>GitHub</a></li>
+    </ul>
+    <a href="https://github.com/Compromisee/mangasurf/releases" class="btn btn-primary nav-cta" style="padding:8px 18px;font-size:13px">
+      <span class="mi">download</span>Release v1.7.0
     </a>
-  </div>
-</nav>
-
-<main>
-
-<!-- ══════════════════════════════════════════════════════════ HERO -->
-<header class="hero wrap" id="top">
-  <div class="hero-grid">
-    <div>
-      <div class="tagline">
-        <span class="pip"></span> v1.0.1 <em>· MIT licensed</em>
-      </div>
-      <h1>Download it.<br><span class="grad">Then read it.</span></h1>
-      <p class="lede">
-        Paste a link from any of <b>19 sources</b>. ReaderM works out which site
-        it is, pulls the chapters, packs them into a CBZ, PDF or EPUB — and then
-        opens them in a <b>manga reader forked from Foliate</b>, with webtoon
-        scrolling, right-to-left paging and nine themes. Same engine behind a
-        terminal menu, a full-screen TUI, a scriptable CLI, a phone server and
-        an OPDS catalog.
-      </p>
-      <div class="cta">
-        <a class="btn btn-fill" href="#install">
-          <span class="material-symbols-rounded">download</span> Get started
-        </a>
-        <a class="btn btn-line" href="#cli">
-          <span class="material-symbols-rounded">terminal</span> See the CLI
-        </a>
-      </div>
-      <div class="stats">
-        <div><div class="st-n">19</div><div class="st-k">Sources</div></div>
-        <div><div class="st-n">6</div><div class="st-k">Interfaces</div></div>
-        <div><div class="st-n">1302</div><div class="st-k">Tests passing</div></div>
-        <div><div class="st-n">4</div><div class="st-k">Output formats</div></div>
-      </div>
-    </div>
-
-    <div class="term">
-      <div class="term-bar">
-        <span class="tl tl-1"></span><span class="tl tl-2"></span><span class="tl tl-3"></span>
-        <span class="term-t">readerm</span>
-      </div>
-<pre class="term-b"><span class="cm"># search every source at once</span>
-<span class="pr">$</span> readerm search <span class="hl">"solo leveling"</span> <span class="fl">--type</span> manhwa
-
-  <span class="cm">#  Source        Title</span>
-  1  MangaDex      Solo Leveling
-  2  Weeb Central  Solo Leveling: Ragnarok
-
-<span class="cm"># grab result 1, no URL needed</span>
-<span class="pr">$</span> readerm search <span class="hl">"solo leveling"</span> <span class="fl">--download</span> 1
-  <span class="ok">&#10003;</span> 179 chapters  <span class="cm">Solo Leveling - Chapters 001-179.cbz</span><span class="caret"></span></pre>
-    </div>
-  </div>
+  </nav>
 </header>
 
-<!-- ═════════════════════════════════════════════════════════ WHY -->
-<section class="wrap rise" id="why">
-  <div class="kicker">Why it exists</div>
-  <h2>Built around the awkward parts</h2>
-  <p class="sub">
-    Downloading images is the easy bit. Nearly all of the work is in what the
-    sites do to stop you — and in not losing an hour of progress when one of
-    them misbehaves.
-  </p>
+<!-- Hero Section -->
+<main>
+  <section class="hero container">
+    <div class="hero-pill-badge">
+      <span class="pulse-dot"></span>
+      <span>v1.7.0 Major Release · 32 High-Speed Scrapers</span>
+    </div>
+    
+    <h1 class="hero-headline">
+      32 Sources. Real Concurrency.<br>
+      <span class="text-gradient">Zero Ads. Open Ecosystem.</span>
+    </h1>
 
-  <div class="bento">
-    <div class="cell wide" style="--tint:var(--a)">
-      <div class="ico"><span class="material-symbols-rounded">link</span></div>
-      <h3>Paste any link</h3>
-      <p>The source is detected from the URL, including sites with tracking
-         parameters — which used to silently return zero chapters. Aggregate
-         installs resolve too, so <code>madara.toonily</code> is just Toonily.</p>
-    </div>
-    <div class="cell wide" style="--tint:var(--b)">
-      <div class="ico"><span class="material-symbols-rounded">extension</span></div>
-      <h3>Hostile page layouts</h3>
-      <p>Base64 payloads, decoy search endpoints, obfuscated readers and
-         randomly named JS variables — each handled per source, each verified
-         against the live site rather than guessed at.</p>
-    </div>
-    <div class="cell" style="--tint:var(--c)">
-      <div class="ico"><span class="material-symbols-rounded">image</span></div>
-      <h3>Hotlink-protected art</h3>
-      <p>Covers that 403 without the right referrer are fetched server-side
-         and inlined, so they show up instead of a blank tile.</p>
-    </div>
-    <div class="cell" style="--tint:var(--d)">
-      <div class="ico"><span class="material-symbols-rounded">bolt</span></div>
-      <h3>Several at once</h3>
-      <p>Queue multiple series and download them in parallel. Every progress
-         event is tagged with its job, so two books never mix their chapters.</p>
-    </div>
-    <div class="cell" style="--tint:var(--c)">
-      <div class="ico"><span class="material-symbols-rounded">restart_alt</span></div>
-      <h3>Survives interruption</h3>
-      <p>Chapter-level checkpoints, atomic writes and a per-job journal. A
-         crash costs you the current chapter, not the run.</p>
-    </div>
-    <div class="cell" style="--tint:var(--b)">
-      <div class="ico"><span class="material-symbols-rounded">tune</span></div>
-      <h3>Filters that work</h3>
-      <p>Type, status, genre and chapter-count filters — with unknown values
-         kept rather than silently erasing whole sources from the results.</p>
-    </div>
-  </div>
-</section>
+    <p class="hero-sub">
+      High-performance Python manga downloader, omnibar search engine, and offline reader.
+      Foliate reader, full-screen TUI, LAN phone server, OPDS 1.2 catalog, and curated list bulk downloading.
+    </p>
 
-<!-- ══════════════════════════════════════════════════ INTERFACES -->
-<section class="wrap rise" id="interfaces">
-  <div class="kicker">Six ways in</div>
-  <h2>Pick the interface that suits the moment</h2>
-  <p class="sub">
-    One engine underneath, one settings file. Change something in the app and
-    the CLI sees it too.
-  </p>
+    <!-- 1-Click Copy Install Pill -->
+    <div class="install-pill" onclick="copyInstallCmd(this)" title="Click to copy install command">
+      <span class="term-prompt">$</span>
+      <span>pip install "mangasurf[all]"</span>
+      <button class="install-copy-btn" id="installCopyBtn" type="button">
+        <span class="mi" style="font-size:16px">content_copy</span>Copy
+      </button>
+    </div>
 
-  <div class="faces">
-    <div class="face" style="--tint:var(--a)">
-      <div class="face-top">
-        <span class="face-ico"><span class="material-symbols-rounded">desktop_windows</span></span>
-        <div><h3>The app</h3><div class="who">Desktop</div></div>
+    <div class="hero-actions">
+      <a href="https://github.com/Compromisee/mangasurf/releases" class="btn btn-primary">
+        <span class="mi">download</span>Download v1.7.0 (.exe / Source)
+      </a>
+      <a href="#terminal" class="btn btn-secondary">
+        <span class="mi">terminal</span>Try Interactive CLI
+      </a>
+      <a href="#scrapers" class="btn btn-secondary">
+        <span class="mi">lan</span>Explore 32 Scrapers
+      </a>
+    </div>
+
+    <!-- Interactive Live Terminal Showcase -->
+    <div class="terminal-showcase" id="terminal">
+      <div class="terminal-header">
+        <div class="terminal-controls">
+          <span class="term-dot red"></span>
+          <span class="term-dot yellow"></span>
+          <span class="term-dot green"></span>
+          <span class="term-dim" style="margin-left:10px;font-size:12px">mangasurf-terminal@v1.7.0</span>
+        </div>
+        <div class="terminal-tabs">
+          <button class="term-tab active" data-term="bulk" onclick="switchTerminalTab('bulk')">List Bulk Download</button>
+          <button class="term-tab" data-term="search" onclick="switchTerminalTab('search')">Omnibar Search</button>
+          <button class="term-tab" data-term="tui" onclick="switchTerminalTab('tui')">Full-Screen TUI</button>
+          <button class="term-tab" data-term="server" onclick="switchTerminalTab('server')">LAN Phone Server</button>
+          <button class="term-tab" data-term="opds" onclick="switchTerminalTab('opds')">OPDS 1.2 Feed</button>
+        </div>
       </div>
-      <p>Cover grid, drag-to-file bookmark folders, a live grouped queue,
-         themes and a passcode lock.</p>
-      <div class="cmd">readerm-gui</div>
-    </div>
-    <div class="face" style="--tint:var(--b)">
-      <div class="face-top">
-        <span class="face-ico"><span class="material-symbols-rounded">menu_open</span></span>
-        <div><h3>The menu</h3><div class="who">Terminal</div></div>
+      <div class="terminal-body" id="termBody">
+        <!-- Terminal Body injected by JavaScript -->
       </div>
-      <p>Answer a prompt with a number. <code>b</code> goes back,
-         <code>q</code> quits. No extra install needed.</p>
-      <div class="cmd">readerm menu</div>
     </div>
-    <div class="face" style="--tint:var(--c)">
-      <div class="face-top">
-        <span class="face-ico"><span class="material-symbols-rounded">dashboard</span></span>
-        <div><h3>The TUI</h3><div class="who">Full screen</div></div>
+  </section>
+
+  <!-- Interactive 32 Scrapers Matrix -->
+  <section class="section container" id="scrapers">
+    <div class="section-head">
+      <div class="section-tag">High-Speed Scrapers</div>
+      <h2 class="section-title">32 Registered Sources</h2>
+      <p class="section-desc">Every scraper runs with thread pooling, natural chapter sorting, FlareSolverr bypass, and zero ads.</p>
+    </div>
+
+    <!-- Filter Pills Matrix -->
+    <div class="scrapers-filter-bar" id="scrapersFilterBar">
+      <button class="filter-btn active" data-filter="all"><span class="mi">apps</span>All Sources (32)</button>
+      <button class="filter-btn" data-filter="sfw"><span class="mi">auto_stories</span>Manga &amp; Manhwa (24)</button>
+      <button class="filter-btn" data-filter="nsfw"><span class="mi">lock</span>Adult &amp; Hentai 18+ (8)</button>
+      <button class="filter-btn" data-filter="api"><span class="mi">api</span>REST &amp; tRPC APIs</button>
+    </div>
+
+    <!-- Scrapers Cards Grid -->
+    <div class="scrapers-grid" id="scrapersGrid">
+      <!-- 32 Scraper Cards populated dynamically -->
+    </div>
+  </section>
+
+  <!-- Features Grid Showcase -->
+  <section class="section container" id="features">
+    <div class="section-head">
+      <div class="section-tag">Core Ecosystem</div>
+      <h2 class="section-title">Everything You Need</h2>
+      <p class="section-desc">From lightning-fast downloads to continuous Foliate webtoon reading.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon-box"><span class="mi">auto_stories</span></div>
+        <h3 class="feat-title">3D Depth Cover Carousel</h3>
+        <p class="feat-desc">Immersive 7-card 3D perspective carousel with dynamic reading progress meters, custom descriptions, and instant click-to-read interaction.</p>
       </div>
-      <p>A keyboard-driven full-screen interface for working over SSH, built
-         on Textual.</p>
-      <div class="cmd">readerm-tui</div>
-    </div>
-    <div class="face" style="--tint:var(--d)">
-      <div class="face-top">
-        <span class="face-ico"><span class="material-symbols-rounded">terminal</span></span>
-        <div><h3>The CLI</h3><div class="who">Scriptable</div></div>
+
+      <div class="feat-card">
+        <div class="feat-icon-box"><span class="mi">shopping_cart</span></div>
+        <h3 class="feat-title">Curated List Bulk Downloading</h3>
+        <p class="feat-desc">Paste user list URLs like Chikari lists into the omnibar to download all chapters from 38+ series concurrently into your library.</p>
       </div>
-      <p>Everything the app does, plus <code>--json</code> and
-         <code>--urls</code> for pipes.</p>
-      <div class="cmd">readerm &lt;url&gt; -c 1-50 -f pdf</div>
-    </div>
-    <div class="face" style="--tint:var(--c)">
-      <div class="face-top">
-        <span class="face-ico"><span class="material-symbols-rounded">smartphone</span></span>
-        <div><h3>From your phone</h3><div class="who">LAN server</div></div>
+
+      <div class="feat-card">
+        <div class="feat-icon-box"><span class="mi">router</span></div>
+        <h3 class="feat-title">LAN Server &amp; OPDS 1.2 Hub</h3>
+        <p class="feat-desc">Drive Mangasurf from your phone or stream your downloads into Readest, Panels, KyBook, and Aldiko with QR code pairing.</p>
       </div>
-      <p>The same interface over Wi-Fi. Every download still runs on the
-         host PC, so leaving range does not stop it.</p>
-      <div class="cmd">python server.py</div>
-    </div>
-    <div class="face" style="--tint:var(--d)">
-      <div class="face-top">
-        <span class="face-ico"><span class="material-symbols-rounded">auto_stories</span></span>
-        <div><h3>OPDS catalog</h3><div class="who">E-readers</div></div>
+
+      <div class="feat-card">
+        <div class="feat-icon-box"><span class="mi">shield</span></div>
+        <h3 class="feat-title">FlareSolverr Cloudflare Solver</h3>
+        <p class="feat-desc">Built-in 30s challenge resolution bypasses Cloudflare Turnstile barriers silently across protected manga sites.</p>
       </div>
-      <p>Your downloads as a standard catalog, so Readest, Panels or KyBook
-         can browse and read them.</p>
-      <div class="cmd">python opdsserve.py</div>
+
+      <div class="feat-card">
+        <div class="feat-icon-box"><span class="mi">storage</span></div>
+        <h3 class="feat-title">Offline Database Integration</h3>
+        <p class="feat-desc">Instant autocomplete suggestions and offline search indexing across thousands of SFW and Hentai manga/manhwa titles.</p>
+      </div>
+
+      <div class="feat-card">
+        <div class="feat-icon-box"><span class="mi">folder_special</span></div>
+        <h3 class="feat-title">Horizontal Shelves &amp; Zero-Deletion Safety</h3>
+        <p class="feat-desc">Protected root directory registry ensures only specific series files are deleted, keeping master folders 100% safe.</p>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ═════════════════════════════════════════════════════ SOURCES -->
-<section class="wrap rise" id="sources">
-  <div class="kicker">Nineteen sources, 28 sites</div>
-  <h2>Sources</h2>
-  <p class="sub">
-    Each one is a small module reading the same registry. Adding another does
-    not touch the CLI, the menu or the app.
-  </p>
-
-  <div class="src-tools">
-    <button class="chip on" data-filter="all">All <span class="n">19</span></button>
-    <button class="chip" data-filter="general">General <span class="n">14</span></button>
-    <button class="chip" data-filter="adult">18+ <span class="n">5</span></button>
-  </div>
-
-  <div class="grid-src" id="srcGrid">
-    <a class="src" href="https://mangadex.org" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#ff6740,#ff9f40)">MD</span><span class="src-txt"><span class="src-n">MangaDex</span><span class="src-d">mangadex.org</span></span></a>
-    <a class="src" href="https://mangakatana.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#4a7dff,#5eb0ff)">MK</span><span class="src-txt"><span class="src-n">Mangakatana</span><span class="src-d">mangakatana.com</span></span></a>
-    <a class="src" href="https://natomanga.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#22b07d,#4fd6a0)">NA</span><span class="src-txt"><span class="src-n">Natomanga</span><span class="src-d">natomanga.com</span></span></a>
-    <a class="src" href="https://weebcentral.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#7c6bff,#a48dff)">WC</span><span class="src-txt"><span class="src-n">Weeb Central</span><span class="src-d">weebcentral.com</span></span><span class="tag-cf">CF</span></a>
-    <a class="src" href="https://asuracomic.net" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#e0326b,#ff6f9c)">AS</span><span class="src-txt"><span class="src-n">Asura Scans</span><span class="src-d">asuracomic.net</span></span></a>
-    <a class="src" href="https://flamecomics.xyz" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#ff7a1a,#ffb648)">FC</span><span class="src-txt"><span class="src-n">Flame Comics</span><span class="src-d">flamecomics.xyz</span></span></a>
-    <a class="src" href="https://demonicscans.org" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#c0392b,#e8574a)">DS</span><span class="src-txt"><span class="src-n">Demonic Scans</span><span class="src-d">demonicscans.org</span></span></a>
-    <a class="src" href="https://madarascans.org" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#8e44ad,#b06fd6)">MS</span><span class="src-txt"><span class="src-n">Madara Scans</span><span class="src-d">madarascans.org</span></span></a>
-    <a class="src" href="https://omegascans.org" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#0f9b8e,#3ddad7)">OS</span><span class="src-txt"><span class="src-n">Omega Scans</span><span class="src-d">omegascans.org</span></span></a>
-    <a class="src" href="https://manhwaread.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#d81b60,#ff5f8f)">MR</span><span class="src-txt"><span class="src-n">ManhwaRead</span><span class="src-d">manhwaread.com</span></span></a>
-    <a class="src" href="https://toonily.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#5b45e0,#8a76ff)">MN</span><span class="src-txt"><span class="src-n">Madara Sites</span><span class="src-d">10 sites in one</span></span><span class="tag-cf">CF</span></a>
-    <a class="src" href="https://witchscans.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#00897b,#26c6a8)">WS</span><span class="src-txt"><span class="src-n">Witch Scans</span><span class="src-d">witchscans.com</span></span></a>
-    <a class="src" href="https://writerscans.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#455a94,#6c82c4)">WR</span><span class="src-txt"><span class="src-n">Writers' Scans</span><span class="src-d">writerscans.com</span></span></a>
-    <a class="src" href="https://webtoons.com" target="_blank" rel="noopener noreferrer" data-kind="general"><span class="src-badge" style="background:linear-gradient(135deg,#00c853,#5efc82)">WT</span><span class="src-txt"><span class="src-n">Webtoons</span><span class="src-d">webtoons.com</span></span></a>
-    <a class="src" href="https://mangadass.com" target="_blank" rel="noopener noreferrer" data-kind="adult"><span class="src-badge" style="background:linear-gradient(135deg,#6d4c41,#a1887f)">MD</span><span class="src-txt"><span class="src-n">Mangadass</span><span class="src-d">mangadass.com</span></span><span class="tag-adult">18+</span></a>
-    <a class="src" href="https://manhwa18.net" target="_blank" rel="noopener noreferrer" data-kind="adult"><span class="src-badge" style="background:linear-gradient(135deg,#37474f,#62757f)">M18</span><span class="src-txt"><span class="src-n">Manhwa18</span><span class="src-d">manhwa18.net</span></span><span class="tag-adult">18+</span></a>
-    <a class="src" href="https://manga18.club" target="_blank" rel="noopener noreferrer" data-kind="adult"><span class="src-badge" style="background:linear-gradient(135deg,#4527a0,#7953d2)">MC</span><span class="src-txt"><span class="src-n">Manga18.club</span><span class="src-d">manga18.club</span></span><span class="tag-adult">18+</span></a>
-    <a class="src" href="https://hentaiakane.com" target="_blank" rel="noopener noreferrer" data-kind="adult"><span class="src-badge" style="background:linear-gradient(135deg,#ad1457,#e35183)">HA</span><span class="src-txt"><span class="src-n">HentaiAkane</span><span class="src-d">hentaiakane.com</span></span><span class="tag-adult">18+</span></a>
-    <a class="src" href="https://nhentai.net" target="_blank" rel="noopener noreferrer" data-kind="adult"><span class="src-badge" style="background:linear-gradient(135deg,#263238,#4f5b62)">NH</span><span class="src-txt"><span class="src-n">nhentai</span><span class="src-d">nhentai.net</span></span><span class="tag-adult">18+</span></a>
-  </div>
-
-  <p class="note">
-    Adult sources are tagged, hidden by Safe mode, and can be disabled
-    individually. Weeb Central and Setsu Scans sit behind Cloudflare and need
-    FlareSolverr; without it they fall back to a stored snapshot rather than
-    stalling the other eighteen.
-  </p>
-</section>
-
-<!-- ═════════════════════════════════════════════════════════ CLI -->
-<section class="wrap rise" id="cli">
-  <div class="kicker">Command line</div>
-  <h2>Syntax</h2>
-  <p class="sub">Enough flags to script with, short enough to remember.</p>
-
-  <div class="panel">
-    <div class="tabs" role="tablist">
-      <button class="tab on" data-p="dl" role="tab">Downloading</button>
-      <button class="tab" data-p="search" role="tab">Search</button>
-      <button class="tab" data-p="menu" role="tab">Menu &amp; TUI</button>
-      <button class="tab" data-p="lib" role="tab">Library</button>
-      <button class="tab" data-p="cfg" role="tab">Config</button>
+  <!-- Screenshot Gallery -->
+  <section class="section container" id="screenshots">
+    <div class="section-head">
+      <div class="section-tag">Gallery</div>
+      <h2 class="section-title">Visual Tour</h2>
+      <p class="section-desc">High-resolution interface captures across desktop GUI, TUI, and mobile server.</p>
     </div>
 
-<div class="pane on" id="p-dl"><span class="sec">BASICS</span><span class="cm"># every chapter into one CBZ</span>
-<span class="pr">$</span> readerm https://mangadex.org/title/&lt;uuid&gt;
+    <div class="screenshots-gallery">
+      <div class="screenshot-preview-card" onclick="window.open('gui-library.png')">
+        <img src="gui-library.png" alt="Library 3D Depth Carousel">
+        <div class="screenshot-info">
+          <span class="screenshot-title">Library 3D Carousel &amp; Shelves</span>
+          <span class="screenshot-tag">GUI View</span>
+        </div>
+      </div>
 
-<span class="cm"># chapters 1-50 as a PDF, and an EPUB alongside it</span>
-<span class="pr">$</span> readerm <span class="fl">--url</span> &lt;url&gt; <span class="fl">-c</span> 1-50 <span class="fl">-f</span> pdf <span class="fl">--also</span> epub
+      <div class="screenshot-preview-card" onclick="window.open('gui-search.png')">
+        <img src="gui-search.png" alt="Omnibar Search with 32 Sources">
+        <div class="screenshot-info">
+          <span class="screenshot-title">Omnibar Search &amp; Suggestions</span>
+          <span class="screenshot-tag">GUI View</span>
+        </div>
+      </div>
 
-<span class="cm"># one file per 10 chapters, with a custom name</span>
-<span class="pr">$</span> readerm <span class="fl">--url</span> &lt;url&gt; <span class="fl">--per</span> 10 <span class="fl">--name-range</span> <span class="hl">"{title} Vol {start}-{end}"</span>
+      <div class="screenshot-preview-card" onclick="window.open('gui-queue.png')">
+        <img src="gui-queue.png" alt="Live Download Queue">
+        <div class="screenshot-info">
+          <span class="screenshot-title">Live Queue &amp; Sparklines</span>
+          <span class="screenshot-tag">GUI View</span>
+        </div>
+      </div>
 
-<span class="cm"># pick up where an interrupted run stopped</span>
-<span class="pr">$</span> readerm resume
+      <div class="screenshot-preview-card" onclick="window.open('gui-settings.png')">
+        <img src="gui-settings.png" alt="Settings &amp; Servers Hub">
+        <div class="screenshot-info">
+          <span class="screenshot-title">Settings &amp; Servers Hub</span>
+          <span class="screenshot-tag">GUI View</span>
+        </div>
+      </div>
 
-<span class="sec">SELECTIONS</span><span class="fl">-c</span> all &nbsp;·&nbsp; 5 &nbsp;·&nbsp; 1-20 &nbsp;·&nbsp; 1,5,10-20 &nbsp;·&nbsp; 50- &nbsp;·&nbsp; latest &nbsp;·&nbsp; first</div>
+      <div class="screenshot-preview-card" onclick="window.open('gui-stats.png')">
+        <img src="gui-stats.png" alt="Analytics and Sources Breakdown">
+        <div class="screenshot-info">
+          <span class="screenshot-title">Reading Analytics &amp; Sources</span>
+          <span class="screenshot-tag">GUI View</span>
+        </div>
+      </div>
 
-<div class="pane" id="p-search"><span class="sec">FINDING THINGS</span><span class="cm"># every enabled source at once</span>
-<span class="pr">$</span> readerm search <span class="hl">"chainsaw man"</span>
-
-<span class="cm"># one source, filtered by genre and length</span>
-<span class="pr">$</span> readerm search <span class="hl">"cultivation"</span> <span class="fl">--source</span> mangadex <span class="fl">--genre</span> Action <span class="fl">--min-chapters</span> 100
-
-<span class="cm"># open result 3, or download it directly</span>
-<span class="pr">$</span> readerm search <span class="hl">"berserk"</span> <span class="fl">--open</span> 3
-<span class="pr">$</span> readerm search <span class="hl">"berserk"</span> <span class="fl">--download</span> 3
-
-<span class="sec">FOR SCRIPTS</span><span class="pr">$</span> readerm search <span class="hl">"one piece"</span> <span class="fl">--urls</span>   <span class="cm"># one URL per line</span>
-<span class="pr">$</span> readerm search <span class="hl">"one piece"</span> <span class="fl">--json</span>   <span class="cm"># machine readable</span></div>
-
-<div class="pane" id="p-menu"><span class="sec">INTERACTIVE</span><span class="cm"># numbered menu, no extra dependencies</span>
-<span class="pr">$</span> readerm menu
-
-<span class="cm"># full-screen terminal UI (needs the tui extra)</span>
-<span class="pr">$</span> readerm-tui
-
-<span class="cm"># the desktop app</span>
-<span class="pr">$</span> readerm-gui
-
-<span class="sec">IN THE MENU</span>  number  choose an item
-  <span class="hl">b</span>       back a level
-  <span class="hl">q</span>       quit</div>
-
-<div class="pane" id="p-lib"><span class="sec">WHAT YOU HAVE</span><span class="pr">$</span> readerm library              <span class="cm"># everything downloaded</span>
-<span class="pr">$</span> readerm library <span class="fl">--check</span>      <span class="cm"># find files that moved or vanished</span>
-
-<span class="sec">COVERS</span><span class="cm"># rebuild covers for every CBZ in a folder, recursively</span>
-<span class="pr">$</span> readerm covers ~/Manga
-
-<span class="cm"># preview without writing, or split a flat folder into series</span>
-<span class="pr">$</span> readerm covers ~/Manga <span class="fl">--dry-run</span>
-<span class="pr">$</span> readerm covers ~/Manga <span class="fl">--sort-only</span>
-
-<span class="sec">UPDATES</span><span class="pr">$</span> readerm updates               <span class="cm"># new chapters for watched series</span></div>
-
-<div class="pane" id="p-cfg"><span class="sec">SETTINGS</span><span class="pr">$</span> readerm config <span class="fl">--list</span>
-<span class="pr">$</span> readerm config <span class="fl">--set</span> output_dir=<span class="hl">"D:\Manga"</span>
-<span class="pr">$</span> readerm config <span class="fl">--set</span> chapter_workers=<span class="hl">5</span>
-
-<span class="sec">SOURCES</span><span class="pr">$</span> readerm sources                     <span class="cm"># list them with their ranks</span>
-<span class="pr">$</span> readerm sources <span class="fl">--disable</span> nhentai
-<span class="pr">$</span> readerm sources <span class="fl">--rank</span> mangadex=1
-
-<span class="sec">WHERE THINGS LIVE</span>  ~/.readerm/config.json    settings and per-source config
-  ~/.readerm/library.json   what you have downloaded
-  ~/.readerm/jobs/          crash-resume journals</div>
-  </div>
-</section>
-
-<!-- ═════════════════════════════════════════════════════ SCREENS -->
-<section class="wrap rise" id="screens">
-  <div class="kicker">Screens</div>
-  <h2>What it looks like</h2>
-  <p class="sub">The desktop app, and the terminal it grew out of.</p>
-
-  <div class="shot-tabs">
-    <button class="chip on" data-s="s1">Search</button>
-    <button class="chip" data-s="s2">Manga</button>
-    <button class="chip" data-s="s3">Queue</button>
-    <button class="chip" data-s="s4">Stats</button>
-    <button class="chip" data-s="s5">Library</button>
-    <button class="chip" data-s="s6">Terminal</button>
-  </div>
-
-  <div class="shot on" id="s-s1"><figure>
-    <img src="gui-search.png" alt="ReaderM search results in a cover grid" loading="lazy">
-    <figcaption><b>Search</b> — every enabled source at once, duplicates merged across sites.</figcaption>
-  </figure></div>
-  <div class="shot" id="s-s2"><figure>
-    <img src="gui-manga.png" alt="A series page with its chapter list" loading="lazy">
-    <figcaption><b>Series</b> — pick chapters by range, or take the lot.</figcaption>
-  </figure></div>
-  <div class="shot" id="s-s3"><figure>
-    <img src="gui-queue.png" alt="The download queue with collapsible per-series tiles" loading="lazy">
-    <figcaption><b>Queue</b> — one collapsible tile per book, with a live rate sparkline and the chapters in flight.</figcaption>
-  </figure></div>
-  <div class="shot" id="s-s4"><figure>
-    <img src="gui-insights.png" alt="Statistics with a contribution calendar" loading="lazy">
-    <figcaption><b>Stats</b> — a year of activity, each day tinted by the sources it came from.</figcaption>
-  </figure></div>
-  <div class="shot" id="s-s5"><figure>
-    <img src="gui-library.png" alt="The library view listing downloaded series" loading="lazy">
-    <figcaption><b>Library</b> — what you have, where it is, and whether it moved.</figcaption>
-  </figure></div>
-  <div class="shot" id="s-s6"><figure>
-    <img src="tui-search.png" alt="The full-screen terminal interface" loading="lazy">
-    <figcaption><b>TUI</b> — the same engine over SSH, no desktop required.</figcaption>
-  </figure></div>
-</section>
-
-<!-- ═════════════════════════════════════════════════════ INSTALL -->
-<section class="wrap rise" id="install">
-  <div class="kicker">Install</div>
-  <h2>Two lines</h2>
-  <p class="sub">Python 3.9 or newer. That is the whole prerequisite.</p>
-
-  <div class="steps">
-    <div class="step">
-      <div class="step-n">1</div>
-      <h3>Clone it</h3>
-      <p>Or download the ZIP from the releases page.</p>
-      <code>git clone https://github.com/Compromisee/ReaderM.git</code>
+      <div class="screenshot-preview-card" onclick="window.open('gui-sources.png')">
+        <img src="gui-sources.png" alt="32 Registered Scrapers">
+        <div class="screenshot-info">
+          <span class="screenshot-title">32 Registered Scrapers Grid</span>
+          <span class="screenshot-tag">GUI View</span>
+        </div>
+      </div>
     </div>
-    <div class="step">
-      <div class="step-n">2</div>
-      <h3>Install it</h3>
-      <p><code style="display:inline;padding:1px 5px">[all]</code> adds the desktop app and the TUI.</p>
-      <code>cd ReaderM &amp;&amp; pip install -e ".[all]"</code>
-    </div>
-    <div class="step">
-      <div class="step-n">3</div>
-      <h3>Run it</h3>
-      <p>Start anywhere; they share one config.</p>
-      <code>readerm-gui</code>
-    </div>
-  </div>
-
-  <div class="callout">
-    <span class="material-symbols-rounded">info</span>
-    <p>The base install covers the CLI and the menu. Optional extras:
-       <code>[gui]</code> for the desktop app, <code>[tui]</code> for the
-       full-screen terminal UI, <code>[tray]</code> for background downloading
-       from the system tray.</p>
-  </div>
-</section>
-
+  </section>
 </main>
 
+<!-- Footer -->
 <footer>
-  <div class="wrap foot">
-    <p>ReaderM · MIT licensed · For personal use with content you may access.</p>
-    <nav>
-      <a href="https://github.com/Compromisee/ReaderM">GitHub</a>
-      <a href="https://github.com/Compromisee/ReaderM/blob/main/MD/CHANGELOG.md">Changelog</a>
-      <a href="https://github.com/Compromisee/ReaderM/blob/main/MD/FEATURES.md">Features</a>
-      <a href="https://github.com/Compromisee/ReaderM/blob/main/MD/SYNTAX.md">Syntax</a>
-    </nav>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div class="brand-icon-box" style="width:32px;height:32px;padding:0;overflow:hidden;background:none;border:none">
+            <img src="icon.svg" alt="Mangasurf Logo" style="width:32px;height:32px;object-fit:contain;border-radius:8px" />
+          </div>
+          <strong style="font-size:18px;letter-spacing:-0.02em">MANGASURF</strong>
+        </div>
+        <p style="color:var(--text-muted);font-size:13px;line-height:1.6;max-width:320px">
+          Open-source manga ecosystem, omnibar search, and high-performance downloader across 32 registered sources.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="https://github.com/Compromisee/mangasurf/blob/master/MD/SYNTAX.md">SYNTAX.md (CLI Guide)</a></li>
+          <li><a href="https://github.com/Compromisee/mangasurf/blob/master/MD/FEATURES.md">FEATURES.md</a></li>
+          <li><a href="https://github.com/Compromisee/mangasurf/blob/master/MD/AGENT.md">AGENT.md (Data Schema)</a></li>
+          <li><a href="https://github.com/Compromisee/mangasurf/blob/master/MD/CHANGELOG.md">CHANGELOG.md</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Ecosystem</h4>
+        <ul>
+          <li><a href="#scrapers">32 Scrapers Directory</a></li>
+          <li><a href="#terminal">CLI &amp; TUI Terminal</a></li>
+          <li><a href="#screenshots">GUI Screenshots</a></li>
+          <li><a href="https://github.com/Compromisee/mangasurf/releases">Release Downloads</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/Compromisee/mangasurf" target="_blank">GitHub Repository</a></li>
+          <li><a href="https://github.com/Compromisee/mangasurf/issues" target="_blank">Issue Tracker</a></li>
+          <li><a href="https://github.com/Compromisee/mangasurf/blob/master/LICENSE">MIT License</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>Mangasurf v1.7.0 &bull; Developed by Compromisee</span>
+      <span>32 Sources &bull; Foliate Reader &bull; PyQt6 &bull; Textual TUI</span>
+    </div>
   </div>
 </footer>
 
 <script>
-/* Icons are ligatures: hide them until the font resolves, but never for
-   long -- offline, the names are still better than nothing. */
-(function(){
-  var show=function(){document.documentElement.classList.add('icons-ready')};
-  var t=setTimeout(show,1200);
-  try{
-    if(document.fonts&&document.fonts.load){
-      document.fonts.load("24px 'Material Symbols Rounded'")
-        .then(function(){clearTimeout(t);show()})
-        .catch(function(){clearTimeout(t);show()});
-    }else{clearTimeout(t);show()}
-  }catch(e){clearTimeout(t);show()}
+/* ── Animated Fluid Moving Mesh Gradient Background ──────────────────────── */
+(function initMeshCanvas() {
+  const canvas = document.getElementById('mesh-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let width, height;
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Floating ambient luminous orbs
+  const orbs = [
+    { x: 0.2, y: 0.3, r: 420, color: 'rgba(56, 189, 248, 0.18)', vx: 0.0004, vy: 0.0003 },
+    { x: 0.8, y: 0.2, r: 480, color: 'rgba(129, 140, 248, 0.16)', vx: -0.0003, vy: 0.0004 },
+    { x: 0.5, y: 0.7, r: 520, color: 'rgba(192, 132, 252, 0.14)', vx: 0.0003, vy: -0.0003 },
+    { x: 0.1, y: 0.8, r: 380, color: 'rgba(16, 185, 129, 0.12)', vx: 0.0005, vy: -0.0004 },
+    { x: 0.9, y: 0.9, r: 440, color: 'rgba(251, 191, 36, 0.10)', vx: -0.0004, vy: -0.0002 },
+  ];
+
+  let time = 0;
+  function animate() {
+    time += 1;
+    ctx.clearRect(0, 0, width, height);
+
+    for (const orb of orbs) {
+      const cx = (orb.x + Math.sin(time * orb.vx) * 0.15) * width;
+      const cy = (orb.y + Math.cos(time * orb.vy) * 0.15) * height;
+
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, orb.r);
+      grad.addColorStop(0, orb.color);
+      grad.addColorStop(1, 'rgba(7, 8, 12, 0)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, orb.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
 })();
 
-/* theme --------------------------------------------------------------- */
-(function(){
-  var root=document.documentElement, icon=document.getElementById('themeIcon');
-  var saved=null;
-  try{saved=localStorage.getItem('mdl-theme')}catch(e){}
-  if(saved){root.dataset.theme=saved}
-  var sync=function(){
-    if(icon) icon.textContent = root.dataset.theme==='night' ? 'dark_mode' : 'light_mode';
-  };
-  sync();
-  document.getElementById('themeBtn').addEventListener('click',function(){
-    root.dataset.theme = root.dataset.theme==='night' ? 'dawn' : 'night';
-    try{localStorage.setItem('mdl-theme',root.dataset.theme)}catch(e){}
-    sync();
+/* ── 1-Click Copy Install Command ────────────────────────────────────────── */
+function copyInstallCmd(el) {
+  navigator.clipboard.writeText('pip install "mangasurf[all]"');
+  const btn = document.getElementById('installCopyBtn');
+  if (btn) {
+    btn.innerHTML = '<span class="mi" style="font-size:16px">check</span>Copied!';
+    setTimeout(() => {
+      btn.innerHTML = '<span class="mi" style="font-size:16px">content_copy</span>Copy';
+    }, 2000);
+  }
+}
+
+/* ── Interactive Terminal Switcher ──────────────────────────────────────── */
+const TERM_CONTENTS = {
+  bulk: `
+<span class="term-prompt">$</span> <span class="term-cmd">mangasurf https://chikari.moe/lists/461-my-manhwa-list --format cbz</span>
+<span class="term-cyan">┌── Mangasurf v1.7.0 List Downloader ──────────────────────────────────┐</span>
+│ <span class="term-green">✔</span> Curated List Detected: <span class="term-cmd">"My Manhwa list"</span> (38 Series)
+│ Enqueuing 38 series into concurrent worker thread pool...
+│ <span class="term-dim">• [01/38]</span> The Bastard of Swordborne   <span class="term-green">Downloading Ch. 1-101 (101/101)</span>
+│ <span class="term-dim">• [02/38]</span> Doom Breaker                 <span class="term-green">Downloading Ch. 1-101 (101/101)</span>
+│ <span class="term-dim">• [03/38]</span> Eleceed                      <span class="term-green">Downloading Ch. 1-408 (408/408)</span>
+│ <span class="term-dim">• [04/38]</span> Revenge of the Baskerville   <span class="term-green">Downloading Ch. 1-169 (169/169)</span>
+│ <span class="term-dim">• [05/38]</span> 2-hoecha Hwangwani           <span class="term-green">Downloading Ch. 1-88  (88/88)</span>
+├── Network: <span class="term-cyan">16.4 MB/s</span> · ETA: <span class="term-green">01:42</span> · Total Series: <span class="term-amber">38</span> ────────────────────┤
+│ <span class="term-green">✔ Saved:</span> ~/Manga/Chikari/My_Manhwa_list/*.cbz [38 series packaged]
+<span class="term-cyan">└── 100% Complete · 38 Series Synchronized ────────────────────────────┘</span>
+`,
+  search: `
+<span class="term-prompt">$</span> <span class="term-cmd">mangasurf search "solo leveling" --interleave</span>
+<span class="term-cyan">┌── Omnibar Search Results (32 Enabled Sources) ────────────────────────┐</span>
+│ <span class="term-green">#1</span> <span class="term-cmd">Solo Leveling</span> (MangaDex)
+│    Chapters: 179 · Status: Completed · Rating: 9.8 · <span class="term-dim">mangadex.org</span>
+│ <span class="term-green">#2</span> <span class="term-cmd">Solo Leveling: Ragnarok</span> (KuraManga)
+│    Chapters: 42 · Status: Ongoing · Type: Manhwa · <span class="term-dim">kuramanga.com</span>
+│ <span class="term-green">#3</span> <span class="term-cmd">Solo Leveling (Side Stories)</span> (Chikari)
+│    Chapters: 21 · Status: Completed · Type: Manhwa · <span class="term-dim">chikari.moe</span>
+│ <span class="term-green">#4</span> <span class="term-cmd">Solo Leveling</span> (Weeb Central)
+│    Chapters: 179 · Status: Completed · <span class="term-dim">weebcentral.com</span>
+<span class="term-cyan">└── Found 18 titles across 32 sources (0.34s) ─────────────────────────┘</span>
+`,
+  tui: `
+<span class="term-prompt">$</span> <span class="term-cmd">mangasurf tui</span>
+<span class="term-magenta">┌──────────────────────────── MANGASURF TUI ────────────────────────────┐</span>
+│ █▀▀▀▀▀█ <span class="term-cyan">Solo Leveling</span> [Manhwa]                        [Downloads: 38] │
+│ █ ▄▄▄ █ Chapters: 179/179 · Size: 1.4 GB · Status: Read               │
+│ █ █ █ █ 24-bit TrueColor ANSI Cover Render Active                     │
+│ █ ▀▀▀ █ Author: Chugong · Artist: DUBU (REDICE STUDIO)                │
+│ ▀▀▀▀▀▀▀ [1] Read Book  [2] Sync Metadata  [3] Relocate  [4] Delete     │
+│ ───────────────────────────────────────────────────────────────────── │
+│ <span class="term-green">↓ 14.8 MB/s</span> [██████████████████████████████████████] ETA: 00:12        │
+<span class="term-magenta">└───────────────────────────────────────────────────────────────────────┘</span>
+`,
+  server: `
+<span class="term-prompt">$</span> <span class="term-cmd">mangasurf server --port 8577</span>
+<span class="term-cyan">┌── Mangasurf LAN Web Server &amp; Remote Reader ───────────────────────────┐</span>
+│ <span class="term-green">✔ Serving on Port:</span> 8577
+│ <span class="term-green">✔ Open on Phone/Tablet:</span> http://192.168.1.50:8577/?token=mX8Asqukih2w
+│ <span class="term-cyan">✔ Tailscale Mesh VPN:</span>   http://100.84.21.5:8577/?token=mX8Asqukih2w
+│ <span class="term-dim">Connected Clients:</span>
+│   • Apple iPhone 15 Pro (Safari) · 192.168.1.105 · Active Now
+│   • Google Pixel 8 (Chrome Android) · 100.84.21.5 · Active Now
+<span class="term-cyan">└── All downloads execute on this PC · QR Code Pairing Ready ───────────┘</span>
+`,
+  opds: `
+<span class="term-prompt">$</span> <span class="term-cmd">mangasurf opds --port 8578</span>
+<span class="term-cyan">┌── Mangasurf OPDS 1.2 Catalog Server ──────────────────────────────────┐</span>
+│ <span class="term-green">✔ OPDS Feed URL:</span> http://192.168.1.50:8578/opds
+│ <span class="term-green">✔ Catalog Titles:</span> 38 Series (1,420 Chapters indexed)
+│ <span class="term-cyan">✔ Compatible Readers:</span> Readest, Panels, KyBook, Chunky, Aldiko, Thorium
+│ <span class="term-dim">Authentication:</span> Shared Token Password (any username)
+<span class="term-cyan">└── Stream CBZ / PDF / EPUB straight to your mobile e-reader ───────────┘</span>
+`,
+};
+
+function switchTerminalTab(key) {
+  for (const btn of document.querySelectorAll('.term-tab')) {
+    btn.classList.toggle('active', btn.dataset.term === key);
+  }
+  const body = document.getElementById('termBody');
+  if (body && TERM_CONTENTS[key]) {
+    body.innerHTML = TERM_CONTENTS[key].trim();
+  }
+}
+switchTerminalTab('bulk');
+
+/* ── 32 Sources Directory Data & Interactive Filtering ────────────────── */
+const SCRAPERS_DATA = [
+  { name: 'MangaDex', domain: 'mangadex.org', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Chikari', domain: 'chikari.moe', type: 'Manhwa / Lists', tag: 'api', badge: 'REST API', isAdult: false },
+  { name: 'KuraManga', domain: 'kuramanga.com', type: 'Manhwa / Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'KuraHentai', domain: 'kurahentai.com', type: 'Hentai / Doujinshi', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Hiperdex', domain: 'hiperdex.com', type: 'Adult Manhwa / tRPC', tag: 'api', badge: 'tRPC API', isAdult: true },
+  { name: 'MangaK', domain: 'mangak.io', type: 'Manhwa / Next.js', tag: 'api', badge: 'SSR API', isAdult: false },
+  { name: 'MadaraDex', domain: 'madaradex.org', type: 'Adult Webtoons', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Hitomi.la', domain: 'hitomi.la', type: 'Doujinshi / Nozomi', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Simply-Hentai', domain: 'simply-hentai.com', type: 'Hentai Manga', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Witchtoons', domain: 'witchtoons.net', type: 'Manhua / Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Weeb Central', domain: 'weebcentral.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Mangakatana', domain: 'mangakatana.com', type: 'Manga / Action', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Kagane', domain: 'kagane.to', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Comix', domain: 'comix.to', type: 'Manga / Comics', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'VyManga', domain: 'vymanga.co', type: 'Manga / Manhua', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'MangaDotNet', domain: 'manga.net', type: 'Manga Catalog', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'MangaDistrict', domain: 'mangadistrict.com', type: 'Manhwa / Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Natomanga', domain: 'natomanga.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Asura Scans', domain: 'asuracomic.net', type: 'Action Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Flame Comics', domain: 'flamecomics.me', type: 'Action Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Demonic Scans', domain: 'demonicscans.org', type: 'Action Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Madara Scans', domain: 'madarascans.com', type: 'Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Omega Scans', domain: 'omegascans.org', type: 'Action Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'ManhwaRead', domain: 'manhwaread.com', type: 'Manhwa Catalog', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Madara Network', domain: 'mangabooth.com', type: 'Madara Aggregate', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'WriterScans', domain: 'writerscans.com', type: 'Manhwa / Action', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Webtoons', domain: 'webtoons.com', type: 'Official Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Mangadass', domain: 'mangadass.com', type: 'Manga / Comics', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Manhwa18', domain: 'manhwa18.com', type: 'Adult Manhwa', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Manga18Club', domain: 'manga18.club', type: 'Adult Manhwa', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'HentaiAkane', domain: 'hentaiakane.com', type: 'Hentai Doujinshi', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'nhentai', domain: 'nhentai.to', type: 'Doujinshi Gallery', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+];
+
+function renderScrapers(filter = 'all') {
+  const grid = document.getElementById('scrapersGrid');
+  if (!grid) return;
+
+  const filtered = SCRAPERS_DATA.filter(s => {
+    if (filter === 'all') return true;
+    if (filter === 'sfw') return !s.isAdult;
+    if (filter === 'nsfw') return s.isAdult;
+    if (filter === 'api') return s.tag === 'api';
+    return true;
   });
-})();
 
-/* sticky nav ---------------------------------------------------------- */
-(function(){
-  var nav=document.getElementById('nav');
-  var onScroll=function(){nav.classList.toggle('stuck',window.scrollY>8)};
-  addEventListener('scroll',onScroll,{passive:true});onScroll();
-})();
+  grid.innerHTML = filtered.map(s => {
+    const badgeClass = s.isAdult ? 'badge-adult' : (s.tag === 'api' ? 'badge-api' : 'badge-active');
+    return `
+      <div class="scraper-card">
+        <div class="scraper-top">
+          <span class="scraper-name">${s.name}</span>
+          <span class="badge ${badgeClass}">${s.badge}</span>
+        </div>
+        <span class="scraper-domain">${s.domain}</span>
+        <div class="scraper-meta">
+          <span>${s.type}</span>
+          <span style="color:var(--accent);font-weight:700">Search &amp; Browse</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
-/* CLI tabs ------------------------------------------------------------ */
-document.querySelectorAll('.tab[data-p]').forEach(function(tab){
-  tab.addEventListener('click',function(){
-    document.querySelectorAll('.tab[data-p]').forEach(function(t){t.classList.remove('on')});
-    document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on')});
-    tab.classList.add('on');
-    var pane=document.getElementById('p-'+tab.dataset.p);
-    if(pane) pane.classList.add('on');
-  });
+document.getElementById('scrapersFilterBar')?.addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  for (const b of document.querySelectorAll('.filter-btn')) b.classList.toggle('active', b === btn);
+  renderScrapers(btn.dataset.filter);
 });
-
-/* screenshot tabs ----------------------------------------------------- */
-document.querySelectorAll('.chip[data-s]').forEach(function(tab){
-  tab.addEventListener('click',function(){
-    document.querySelectorAll('.chip[data-s]').forEach(function(t){t.classList.remove('on')});
-    document.querySelectorAll('.shot').forEach(function(s){s.classList.remove('on')});
-    tab.classList.add('on');
-    var shot=document.getElementById('s-'+tab.dataset.s);
-    if(shot) shot.classList.add('on');
-  });
-});
-
-/* source filter ------------------------------------------------------- */
-document.querySelectorAll('.chip[data-filter]').forEach(function(chip){
-  chip.addEventListener('click',function(){
-    document.querySelectorAll('.chip[data-filter]').forEach(function(c){c.classList.remove('on')});
-    chip.classList.add('on');
-    var want=chip.dataset.filter;
-    document.querySelectorAll('#srcGrid .src').forEach(function(card){
-      card.style.display = (want==='all'||card.dataset.kind===want) ? '' : 'none';
-    });
-  });
-});
-
-/* reveal on scroll ---------------------------------------------------- */
-(function(){
-  var items=document.querySelectorAll('.rise');
-  var showAll=function(){
-    items.forEach(function(el){el.classList.add('in')});
-  };
-  var reduced=window.matchMedia&&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(reduced||!('IntersectionObserver' in window)){showAll();return;}
-
-  // Arm the hiding only now that we know we can reveal again.
-  document.documentElement.classList.add('js');
-
-  var io=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}
-    });
-  },{rootMargin:'0px 0px -8% 0px',threshold:.06});
-  items.forEach(function(el){io.observe(el)});
-
-  // Safety net: anything still hidden after a few seconds is shown anyway,
-  // so a section can never be lost to a missed observer callback.
-  setTimeout(showAll,4000);
-  addEventListener('beforeprint',showAll);
-})();
+renderScrapers('all');
 </script>
+
 </body>
 </html>

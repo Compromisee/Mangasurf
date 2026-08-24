@@ -30,7 +30,7 @@ def read(path):
 def test_rate_meter_is_a_rolling_window_not_a_lifetime_average():
     """A cumulative average keeps reporting a high speed long after the
     transfer slows, which is exactly when the number matters."""
-    from readerm.progress import RateMeter
+    from mangasurf.progress import RateMeter
 
     meter = RateMeter(window=1.0)
     for _ in range(10):
@@ -47,7 +47,7 @@ def test_rate_meter_is_a_rolling_window_not_a_lifetime_average():
 
 def test_rate_meter_does_not_divide_by_a_tiny_span():
     """Two samples milliseconds apart must not report a gigabyte a second."""
-    from readerm.progress import RateMeter
+    from mangasurf.progress import RateMeter
 
     meter = RateMeter(window=8.0)
     meter.add(1024)
@@ -56,7 +56,7 @@ def test_rate_meter_does_not_divide_by_a_tiny_span():
 
 
 def test_stalled_transfer_reports_zero():
-    from readerm.progress import STALE_AFTER, RateMeter
+    from mangasurf.progress import STALE_AFTER, RateMeter
 
     meter = RateMeter(window=2.0)
     meter.add(5_000_000)
@@ -66,7 +66,7 @@ def test_stalled_transfer_reports_zero():
 
 def test_eta_is_none_when_it_cannot_be_known():
     """A fabricated ETA is worse than an honest "--"."""
-    from readerm.progress import JobProgress, human_eta
+    from mangasurf.progress import JobProgress, human_eta
 
     job = JobProgress("j", "T")
     assert job.eta_seconds() is None            # nothing started
@@ -76,7 +76,7 @@ def test_eta_is_none_when_it_cannot_be_known():
 
 
 def test_eta_counts_down_once_pages_are_known():
-    from readerm.progress import JobProgress
+    from mangasurf.progress import JobProgress
 
     job = JobProgress("j", "T")
     job.set_pages(total=100)
@@ -93,7 +93,7 @@ def test_eta_counts_down_once_pages_are_known():
 def test_eta_projects_chapters_whose_page_lists_are_not_fetched_yet():
     """Page totals arrive chapter by chapter, so an ETA based only on known
     pages showed "--" for most of a run then jumped to a few seconds."""
-    from readerm.progress import JobProgress
+    from mangasurf.progress import JobProgress
 
     job = JobProgress("j", "T")
     job.set_chapters(done=1, total=10)
@@ -105,7 +105,7 @@ def test_eta_projects_chapters_whose_page_lists_are_not_fetched_yet():
 
 
 def test_formatters():
-    from readerm.progress import human_bytes, human_eta, human_rate
+    from mangasurf.progress import human_bytes, human_eta, human_rate
 
     assert human_rate(0) == "0 KB/s"
     assert human_rate(5 * 1024 * 1024).endswith("MB/s")
@@ -117,7 +117,7 @@ def test_formatters():
 
 
 def test_registry_aggregates_concurrent_jobs():
-    from readerm.progress import ProgressRegistry
+    from mangasurf.progress import ProgressRegistry
 
     registry = ProgressRegistry()
     a = registry.job("a", "A")
@@ -140,7 +140,7 @@ def test_registry_aggregates_concurrent_jobs():
 def test_overall_eta_is_the_longest_job_not_the_sum():
     """Jobs run in parallel: summing overstates, taking the shortest promises
     a finish that has not happened."""
-    from readerm.progress import ProgressRegistry
+    from mangasurf.progress import ProgressRegistry
 
     registry = ProgressRegistry()
     quick = registry.job("q")
@@ -155,7 +155,7 @@ def test_overall_eta_is_the_longest_job_not_the_sum():
 
 
 def test_finished_jobs_leave_the_active_set():
-    from readerm.progress import ProgressRegistry
+    from mangasurf.progress import ProgressRegistry
 
     registry = ProgressRegistry()
     job = registry.job("x")
@@ -174,7 +174,7 @@ def test_engine_reports_bytes_through_the_source():
 
 
 def test_source_has_a_bytes_hook_defaulting_to_none():
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source("witchscans")
     try:
@@ -190,7 +190,7 @@ def test_tray_import_never_raises_on_a_headless_machine():
     """`import pystray` itself raises Xlib.error.DisplayNameError with no
     display -- at import, before any of our code runs. Reproduced here. So
     the import must be guarded and probing must be safe."""
-    from readerm.tray import tray_available
+    from mangasurf.tray import tray_available
 
     assert tray_available() in (True, False)      # must not raise
 
@@ -204,7 +204,7 @@ def test_tray_module_does_not_import_pystray_at_module_scope():
 def test_menu_shows_speed_eta_queue_and_jobs():
     """The four things asked for: ETA, MB/s, chapters queued, and a way back
     into the app."""
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     data = {
         "active": 2, "queued": 3,
@@ -226,7 +226,7 @@ def test_menu_shows_speed_eta_queue_and_jobs():
 
 
 def test_menu_is_honest_when_idle():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     controller = TrayController(
         callbacks={"summary": lambda: {"active": 0, "queued": 0}})
@@ -235,7 +235,7 @@ def test_menu_is_honest_when_idle():
 
 
 def test_tooltip_reports_live_figures():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     data = {"active": 1, "queued": 2, "chapters_remaining": 9,
             "speed_text": "900 KB/s", "eta_text": "2m 00s"}
@@ -245,7 +245,7 @@ def test_tooltip_reports_live_figures():
 
 def test_menu_caps_the_job_list():
     """A hundred queued series must not produce a hundred menu rows."""
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     jobs = [{"title": f"S{i}", "chapters_done": 0, "chapters_total": 3}
             for i in range(12)]
@@ -258,7 +258,7 @@ def test_menu_caps_the_job_list():
 
 
 def test_summary_failure_does_not_break_the_menu():
-    from readerm.tray import TrayController
+    from mangasurf.tray import TrayController
 
     def boom():
         raise RuntimeError("nope")
@@ -269,7 +269,7 @@ def test_summary_failure_does_not_break_the_menu():
 
 
 def test_icon_renders_both_states():
-    from readerm.tray import _build_icon_image
+    from mangasurf.tray import _build_icon_image
 
     idle = _build_icon_image(False)
     busy = _build_icon_image(True)
@@ -280,7 +280,7 @@ def test_icon_renders_both_states():
 
 def test_start_returns_false_without_a_tray():
     """The caller must be able to fall back to close-quits behaviour."""
-    from readerm.tray import TrayController, tray_available
+    from mangasurf.tray import TrayController, tray_available
 
     if tray_available():
         pytest.skip("a real tray is available here")
@@ -291,10 +291,10 @@ def test_start_returns_false_without_a_tray():
 
 
 def test_close_hides_the_window_while_the_tray_holds_the_app():
-    from readerm.gui import _install_tray
+    from mangasurf.gui import _install_tray
 
     _install_fake_pystray()
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
     update_settings({"minimize_to_tray": True})
 
     api, window = _FakeApi(), _FakeWindow()
@@ -308,10 +308,10 @@ def test_close_hides_the_window_while_the_tray_holds_the_app():
 
 
 def test_quit_from_the_tray_really_exits():
-    from readerm.gui import _install_tray
+    from mangasurf.gui import _install_tray
 
     _install_fake_pystray()
-    from readerm.config import update_settings
+    from mangasurf.config import update_settings
     update_settings({"minimize_to_tray": True})
 
     api, window = _FakeApi(), _FakeWindow()
@@ -325,8 +325,8 @@ def test_quit_from_the_tray_really_exits():
 
 
 def test_tray_is_not_installed_when_the_setting_is_off():
-    from readerm.config import update_settings
-    from readerm.gui import _install_tray
+    from mangasurf.config import update_settings
+    from mangasurf.gui import _install_tray
 
     _install_fake_pystray()
     update_settings({"minimize_to_tray": False})
@@ -343,7 +343,7 @@ def test_shutdown_is_skipped_while_the_tray_holds_the_app():
 
 
 def test_paused_queue_does_not_start_new_jobs():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api.set_queue_paused(True)
@@ -354,7 +354,7 @@ def test_paused_queue_does_not_start_new_jobs():
 
 
 def test_progress_endpoint_shape():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     data = Api().get_progress()
     for key in ("active", "queued", "speed_text", "eta_text",
@@ -436,7 +436,7 @@ def test_journal_writes_are_atomic_and_fsynced():
 def test_gui_reports_every_pending_job(tmp_path, monkeypatch):
     _isolate_journal(tmp_path, monkeypatch)
     from readerm import logs
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     logs.write_journal({"url": "https://a/x"}, {"title": "A"}, job_id="j1")
     logs.write_journal({"url": "https://b/y"}, {"title": "B"}, job_id="j2")

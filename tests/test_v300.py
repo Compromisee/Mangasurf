@@ -91,7 +91,7 @@ def test_pdf_source_maps_are_not_shipped():
 
 @pytest.fixture()
 def server():
-    from readerm.reader.assets import AssetServer
+    from mangasurf.reader.assets import AssetServer
 
     srv = AssetServer()
     srv.start()
@@ -193,7 +193,7 @@ def test_traversal_is_refused_even_when_the_target_exists(server):
 ])
 def test_is_safe_relative_judges_paths_directly(rel, safe):
     """Unit-level, so the rule is pinned regardless of what happens to exist."""
-    from readerm.reader.assets import is_safe_relative
+    from mangasurf.reader.assets import is_safe_relative
 
     assert is_safe_relative(rel) is safe
 
@@ -232,7 +232,7 @@ def test_a_suffix_range_returns_the_tail(server, tmp_path):
 
 
 def test_the_server_binds_only_to_loopback(server):
-    from readerm.reader.assets import LOOPBACK
+    from mangasurf.reader.assets import LOOPBACK
 
     assert LOOPBACK == "127.0.0.1"
     assert server.url("/").startswith("http://127.0.0.1:")
@@ -280,21 +280,21 @@ def library_dir(tmp_path):
 
 
 def test_chapter_folders_are_found_in_natural_order(library_dir):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     names = [os.path.basename(p) for p in books.chapter_folders(str(library_dir))]
     assert names == ["Chapter 1", "Chapter 2", "Chapter 10"]
 
 
 def test_raw_folders_are_skipped(library_dir):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     found = books.chapter_folders(str(library_dir))
     assert not any(os.path.basename(p) == "raw" for p in found)
 
 
 def test_pages_sort_numerically_not_alphabetically(library_dir):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     pages = books.pages_of(str(library_dir / "Chapter 2"))
     names = [os.path.basename(p) for p in pages]
@@ -304,7 +304,7 @@ def test_pages_sort_numerically_not_alphabetically(library_dir):
 
 
 def test_cover_files_are_not_pages(library_dir):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     pages = books.pages_of(str(library_dir / "Chapter 1"))
     assert len(pages) == 3
@@ -316,7 +316,7 @@ def test_a_folder_holding_only_a_cover_is_not_a_chapter(tmp_path):
     folders. Counting that as a chapter puts a phantom one-page entry at the
     top of every series.
     """
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     series = tmp_path / "Series"
     (series / "Chapter 1").mkdir(parents=True)
@@ -328,7 +328,7 @@ def test_a_folder_holding_only_a_cover_is_not_a_chapter(tmp_path):
 
 
 def test_pages_are_absolute_paths(library_dir):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     for page in books.pages_of(str(library_dir / "Chapter 1")):
         assert os.path.isabs(page)
@@ -337,7 +337,7 @@ def test_pages_are_absolute_paths(library_dir):
 
 def test_cbr_is_reported_as_unopenable_with_a_reason(tmp_path):
     """unrar is not bundled; saying so beats failing silently in the browser."""
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     book = tmp_path / "x.cbr"
     book.write_bytes(b"Rar!")
@@ -348,7 +348,7 @@ def test_cbr_is_reported_as_unopenable_with_a_reason(tmp_path):
 
 @pytest.mark.parametrize("ext", [".cbz", ".epub", ".pdf", ".mobi", ".azw3", ".fb2"])
 def test_supported_formats_are_readable(tmp_path, ext):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     book = tmp_path / f"book{ext}"
     book.write_bytes(b"data")
@@ -356,7 +356,7 @@ def test_supported_formats_are_readable(tmp_path, ext):
 
 
 def test_packaged_outputs_come_before_loose_folders(library_dir, tmp_path):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     packaged = tmp_path / "Series.cbz"
     with zipfile.ZipFile(packaged, "w") as zf:
@@ -368,7 +368,7 @@ def test_packaged_outputs_come_before_loose_folders(library_dir, tmp_path):
 
 
 def test_an_empty_folder_is_not_offered_as_readable(tmp_path):
-    from readerm.reader import books
+    from mangasurf.reader import books
 
     empty = tmp_path / "Empty"
     empty.mkdir()
@@ -380,7 +380,7 @@ def test_an_empty_folder_is_not_offered_as_readable(tmp_path):
 
 @pytest.fixture()
 def store(tmp_path, monkeypatch):
-    import readerm.reader.api as api
+    import mangasurf.reader.api as api
 
     monkeypatch.setattr(api, "READING_PATH", str(tmp_path / "reading.json"))
     monkeypatch.setattr(api, "ANNOTATIONS_PATH", str(tmp_path / "annotations.json"))
@@ -454,7 +454,7 @@ def test_many_annotations_in_one_tick_all_get_unique_ids(store):
 
 @pytest.fixture()
 def reader_api(store, tmp_path):
-    from readerm.reader.api import ReaderApi
+    from mangasurf.reader.api import ReaderApi
 
     api = ReaderApi()
     yield api
@@ -511,7 +511,7 @@ def test_the_chapter_list_reports_page_counts(reader_api, library_dir):
 
 def test_reader_endpoints_are_on_the_gui_api():
     """The CLI, TUI, phone server and OPDS catalog all use this one object."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     for name in ("reader_open", "reader_library", "reader_save_position",
                  "reader_chapters", "reader_info"):
@@ -519,7 +519,7 @@ def test_reader_endpoints_are_on_the_gui_api():
 
 
 def test_reading_preferences_are_in_the_settings_defaults():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     for key in ("reader_mode", "reader_theme", "reader_fit", "reader_spread"):
         assert key in DEFAULT_SETTINGS, key
@@ -589,9 +589,9 @@ def test_the_version_is_a_sane_three_part_number():
     -- the part that a release can actually get wrong."""
     import readerm
 
-    parts = readerm.__version__.split(".")
-    assert len(parts) == 3, readerm.__version__
-    assert all(p.isdigit() for p in parts), readerm.__version__
+    parts = mangasurf.__version__.split(".")
+    assert len(parts) == 3, mangasurf.__version__
+    assert all(p.isdigit() for p in parts), mangasurf.__version__
 
 
 def test_the_packaged_metadata_agrees_with_the_module():
@@ -601,7 +601,7 @@ def test_the_packaged_metadata_agrees_with_the_module():
     declared = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
     import readerm
 
-    assert declared == readerm.__version__
+    assert declared == mangasurf.__version__
 
 
 # ------------------------------------------------- phone server + reader

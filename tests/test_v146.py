@@ -51,7 +51,7 @@ def test_library_key_keeps_distinct_manga_apart():
 
 def test_chapter_identity_ignores_a_changed_date():
     """Sources append a release date the site later edits."""
-    from readerm.library import _chapter_key
+    from mangasurf.library import _chapter_key
 
     assert _chapter_key("Chapter 02 21/02/2026") == _chapter_key("Chapter 02 22/02/2026")
     assert _chapter_key("Chapter 2") == _chapter_key("Chapter 02")
@@ -111,7 +111,7 @@ def test_manga_page_matches_on_chapter_number():
 def test_series_path_drops_query_and_fragment():
     """A tracking parameter made every chapter link fail the prefix test, so
     the manga silently showed zero chapters."""
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     expected = "/manhwa/pure-love"
     for url in ("https://s.test/manhwa/pure-love",
@@ -134,7 +134,7 @@ def test_sources_use_the_shared_series_path(module):
 
 
 def test_split_genres_accepts_lists_and_strings():
-    from readerm.sources import split_genres
+    from mangasurf.sources import split_genres
 
     assert split_genres("Action, Romance") == ["Action", "Romance"]
     assert split_genres("Action|Romance") == ["Action", "Romance"]
@@ -200,7 +200,7 @@ def test_browse_multi_with_one_genre_delegates(monkeypatch):
 
 def test_narrow_by_genres_keeps_untagged_results():
     """Sources that do not report tags must not vanish from the results."""
-    from readerm.gui import _narrow_by_genres
+    from mangasurf.gui import _narrow_by_genres
 
     rows = [{"title": "A", "tags": ["Action", "Romance"]},
             {"title": "B", "tags": ["Action"]},
@@ -222,7 +222,7 @@ def test_manhwa18_uses_the_singular_genre_path():
 
 def test_nhentai_falls_back_for_an_unknown_tag():
     """Shared genre labels ("action") are not nhentai tags and 404."""
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.sources.nhentai import NhentaiSource
 
     src = read(os.path.join(ROOT, "readerm", "sources", "nhentai.py"))
     body = src[src.index("def browse"):src.index("def genres")]

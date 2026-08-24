@@ -1,18 +1,23 @@
 <div align="center">
 
+<img src="docs/icon.svg" alt="Mangasurf Logo" width="120" height="120" style="margin-bottom: 12px;" />
+
 # Mangasurf
 
-**Download manga, manhwa and manhua from 23+ sites — and read them, in a desktop manga reader forked from [Foliate](https://github.com/johnfactotum/foliate-js). CLI, interactive menu, full-screen TUI, desktop reader, phone server and OPDS catalog.**
+**Download manga, manhwa and manhua from 32+ sites — and read them, in a desktop manga reader with 3D Depth Carousel, Foliate-js engine, full-screen TUI, phone server and OPDS catalog.**
 
-**[Command syntax reference -> SYNTAX.md](MD/SYNTAX.md)**
+**[Command syntax reference -> SYNTAX.md](MD/SYNTAX.md) • [Live Documentation Website](https://compromisee.github.io/mangasurf/)**
 
+[![Release](https://img.shields.io/github/v/release/Compromisee/mangasurf?style=for-the-badge&color=00f5ff&logo=github)](https://github.com/Compromisee/mangasurf/releases)
+[![Build & Release](https://img.shields.io/github/actions/workflow/status/Compromisee/mangasurf/release.yml?style=for-the-badge&label=OneFile%20Builds&logo=githubactions&logoColor=white)](https://github.com/Compromisee/mangasurf/actions/workflows/release.yml)
+[![CI Tests](https://img.shields.io/github/actions/workflow/status/Compromisee/mangasurf/ci.yml?style=for-the-badge&label=CI%20Matrix&logo=pytest&logoColor=white)](https://github.com/Compromisee/mangasurf/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![PyQt / pywebview](https://img.shields.io/badge/GUI-PyQt%20%7C%20pywebview-2962FF?style=for-the-badge)](https://pywebview.flowrl.com)
 [![License](https://img.shields.io/badge/License-MIT-00875A?style=for-the-badge)](LICENSE)
 
 <br>
 
-![GUI - manga view](docs/gui-manga.png)
+![Mangasurf Hero Showcase](docs/hero-bento.png)
 
 </div>
 
@@ -51,6 +56,11 @@
 - **Reading Progress Tracking**: Automatic bookmarking, reading history, streaks, and reading time statistics.
 - **Customizable Themes**: Midnight, Dark, Light, Mocha, OLED Black, and Slate with accent color pickers.
 - **Passcode-Protected Shelves**: Organize titles into folders and optionally lock private shelves with passcodes.
+
+### Custom Scrapers & `.source` Plugin Engine
+- Declarative `.source` plugin architecture in `readerm/sources/customsources/`.
+- Full specification documented in [`readerm/sources/customsources/syntax.source`](readerm/sources/customsources/syntax.source).
+- Define custom scraper endpoints, CSS/JSON selectors, page extractors, headers, and rate limits without touching core code.
 
 ---
 

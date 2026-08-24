@@ -70,14 +70,14 @@ def shelf(tmp_path, monkeypatch):
                            cover=str(series / "cover.jpg"),
                            directory=str(series), source="mangadex")
 
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     yield api, str(chapter), str(series)
     server = api._asset_server()
     if server:
         server.stop()
-    from readerm.reader.api import ReaderApi
+    from mangasurf.reader.api import ReaderApi
     ReaderApi._assets = None
 
 
@@ -144,7 +144,7 @@ def test_page_names_are_relative_to_the_chapter(shelf):
 def test_mangadex_cover_urls_follow_the_documented_shape():
     """uploads.mangadex.org/covers/{manga-id}/{fileName}[.size.jpg] -- getting
     this wrong is the classic "MangaDex covers are broken" report."""
-    from readerm.sources.mangadex import MangaDexSource as MangaDex
+    from mangasurf.sources.mangadex import MangaDexSource as MangaDex
 
     url = MangaDex.cover_url("manga-id", "file.jpg", "small")
     assert url.startswith("https://uploads.mangadex.org/covers/manga-id/file.jpg")

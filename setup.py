@@ -2,11 +2,19 @@ from setuptools import setup, find_packages
 
 setup(
     name="mangasurf",
-    version="1.2.0",
-    description="Download manga, manhwa and manhua from 23+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader",
+    version="1.7.1",
+    description="Download manga, manhwa and manhua from 32+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader",
     packages=find_packages(),
     include_package_data=True,
     package_data={
+        "mangasurf.reader": [
+            "app/*",
+            "app/**/*",
+            "foliate/*",
+            "foliate/vendor/*",
+            "foliate/vendor/pdfjs/*",
+            "foliate/vendor/pdfjs/**/*",
+        ],
         "readerm.reader": [
             "app/*",
             "app/**/*",
@@ -34,10 +42,10 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "mangasurf=readerm.cli:main",
-            "mangasurf-gui=readerm.gui:run_gui",
-            "readerm=readerm.cli:main",
-            "readerm-gui=readerm.gui:run_gui",
+            "mangasurf=mangasurf.cli:main",
+            "mangasurf-gui=mangasurf.gui:run_gui",
+            "readerm=mangasurf.cli:main",
+            "readerm-gui=mangasurf.gui:run_gui",
         ],
     },
     python_requires=">=3.9",

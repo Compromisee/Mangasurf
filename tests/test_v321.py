@@ -37,7 +37,7 @@ def read(path):
 
 @pytest.fixture()
 def server():
-    from readerm.reader.assets import AssetServer
+    from mangasurf.reader.assets import AssetServer
 
     srv = AssetServer()
     srv.start()
@@ -210,7 +210,7 @@ def test_safe_mode_drops_adult_tags(filtered):
 
 
 def test_filters_round_trip_through_the_api(filtered):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api.set_filters({"min_chapters": 12, "blocked_tags": ["harem"]})
@@ -222,7 +222,7 @@ def test_filters_round_trip_through_the_api(filtered):
 def test_an_unknown_filter_key_is_ignored(filtered):
     """set_filters only writes keys it knows, so a typo cannot corrupt the
     file into something apply_filters then trips over."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     saved = api.set_filters({"min_chapters": 5, "nonsense": True})["filters"]
@@ -244,7 +244,7 @@ def test_the_search_view_has_filter_controls():
 def test_every_backend_filter_has_a_control():
     """The bug was a whole subsystem with no interface; this stops it
     happening again as DEFAULT_FILTERS grows."""
-    from readerm.features import DEFAULT_FILTERS
+    from mangasurf.features import DEFAULT_FILTERS
 
     app = read(os.path.join(APP, "app.js"))
     bound = set(re.findall(r"pushFilters\(\{\s*\[?([a-z_]+)", app))
@@ -256,7 +256,7 @@ def test_every_backend_filter_has_a_control():
 
 
 def test_the_ui_filter_defaults_match_python():
-    from readerm.features import DEFAULT_FILTERS
+    from mangasurf.features import DEFAULT_FILTERS
 
     app = read(os.path.join(APP, "app.js"))
     block = app[app.index("const FILTER_DEFAULTS"):]

@@ -30,7 +30,7 @@ def read(path):
 
 
 def test_job_snapshot_carries_formatted_text_and_history():
-    from readerm.progress import JobProgress
+    from mangasurf.progress import JobProgress
 
     job = JobProgress("j", "Title")
     job.set_chapters(done=2, total=10)
@@ -47,7 +47,7 @@ def test_history_is_bounded():
     """An hours-long download must not grow an unbounded list."""
     import time
 
-    from readerm.progress import JobProgress
+    from mangasurf.progress import JobProgress
 
     job = JobProgress("j", "T")
     for _ in range(job.HISTORY * 3):
@@ -59,7 +59,7 @@ def test_history_is_bounded():
 
 def test_history_is_rate_limited():
     """Sampling on every read made the sparkline scroll far too fast."""
-    from readerm.progress import JobProgress
+    from mangasurf.progress import JobProgress
 
     job = JobProgress("j", "T")
     job.add_bytes(1000)
@@ -71,7 +71,7 @@ def test_history_is_rate_limited():
 def test_summary_samples_each_job_once():
     """The summary used to call snapshot() four times per job, which also
     sampled the history four times."""
-    from readerm.progress import ProgressRegistry
+    from mangasurf.progress import ProgressRegistry
 
     registry = ProgressRegistry()
     job = registry.job("a", "A")
@@ -81,7 +81,7 @@ def test_summary_samples_each_job_once():
 
 
 def test_summary_jobs_include_history_for_the_sparkline():
-    from readerm.progress import ProgressRegistry
+    from mangasurf.progress import ProgressRegistry
 
     registry = ProgressRegistry()
     job = registry.job("a", "A")

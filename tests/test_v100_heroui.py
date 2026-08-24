@@ -142,7 +142,7 @@ def test_the_build_inlines_everything():
 
 @pytest.fixture()
 def server():
-    from readerm.reader.assets import AssetServer
+    from mangasurf.reader.assets import AssetServer
 
     srv = AssetServer()
     srv.start()

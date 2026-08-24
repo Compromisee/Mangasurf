@@ -1,0 +1,85 @@
+# syntax.source — Mangasurf Custom Declarative Source Specification
+# Version: 1.2.0
+# Description: Defines the declarative syntax for custom .source / .scource plugin files in Mangasurf.
+
+[source]
+id = "example_manga"
+name = "Example Manga Source"
+base_url = "https://example.com"
+domains = ["example.com", "manga.example.com"]
+language = "en"
+nsfw = false
+needs_flaresolverr = false
+rate_limit_delay = 0.5
+
+[headers]
+User-Agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+Accept = "text/html,application/xhtml+xml,application/json,*/*;q=0.8"
+Referer = "https://example.com/"
+
+[search]
+# Mode: "html" (CSS / XPath / Regex selectors) or "json" (REST API)
+mode = "html"
+method = "GET"
+endpoint = "/search"
+query_param = "q"
+page_param = "page"
+limit = 30
+
+# HTML Selectors for search results
+item_selector = "div.comic-item, div.manga-card"
+title_selector = "h3.title, a.manga-title"
+url_selector = "a.manga-title@href"
+cover_selector = "img.thumbnail@data-src, img.thumbnail@src"
+status_selector = "span.status"
+type_selector = "span.badge-type"
+
+[browse]
+mode = "html"
+endpoint = "/browse"
+sort_param = "sort"
+sorts = ["Trending", "Latest Updates", "Popularity", "Rating", "Alphabetical"]
+genre_param = "genre"
+pagination = "page"
+
+[genres]
+# Static list or dynamic extraction
+endpoint = "/genres"
+selector = "ul.genre-list li a"
+list = [
+    "Action", "Adventure", "Comedy", "Drama", "Fantasy",
+    "Isekai", "Martial Arts", "Mystery", "Romance", "Sci-Fi",
+    "Slice of Life", "Supernatural", "Webtoon"
+]
+
+[manga_info]
+# How to extract series details from a manga URL
+mode = "html"
+title_selector = "h1.series-title"
+alt_titles_selector = "div.alt-titles span"
+cover_selector = "div.cover-wrap img@src"
+description_selector = "div.synopsis p, div.description"
+authors_selector = "div.author a"
+artists_selector = "div.artist a"
+status_selector = "div.status-wrap span"
+tags_selector = "div.genres a"
+year_selector = "span.release-year"
+
+[chapters]
+# How to list all chapters for a manga URL
+mode = "html"
+list_selector = "ul.chapter-list li.chapter-item, div.list-group a"
+name_selector = "span.chapter-name, a.chapter-link"
+url_selector = "a.chapter-link@href"
+date_selector = "span.chapter-date"
+# Chapter number extraction regex
+number_regex = "Chapter\\s+(\\d+(?:\\.\\d+)?)"
+sort_order = "oldest_first" # "oldest_first" or "newest_first"
+
+[images]
+# How to extract page images from a chapter URL
+mode = "html"
+page_selector = "div.reader-images img@data-src, div.reader-images img@src"
+filter_out = ["loading.gif", "placeholder.png", "banner.jpg"]
+referer_required = true
+custom_referer = "$CHAPTER_URL"

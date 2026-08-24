@@ -44,8 +44,8 @@ def test_collect_submodules_sees_them():
     from PyInstaller.utils.hooks import collect_submodules
 
     found = collect_submodules("readerm")
-    for module in ("readerm.server", "readerm.landing",
-                   "readerm.serverui", "readerm.servercfg"):
+    for module in ("mangasurf.server", "mangasurf.landing",
+                   "mangasurf.serverui", "mangasurf.servercfg"):
         assert module in found, f"{module} would not be bundled"
 
 
@@ -55,7 +55,7 @@ def test_the_root_wrappers_still_work():
         path = os.path.join(ROOT, name)
         assert os.path.isfile(path), name
         source = read(path)
-        assert "from readerm." in source, f"{name} is not a wrapper"
+        assert "from mangasurf." in source, f"{name} is not a wrapper"
         # Thin: the real code must not have been duplicated back.
         assert len(source.splitlines()) < 30, f"{name} is not thin"
 
@@ -91,7 +91,7 @@ def test_server_finds_its_web_assets_when_frozen():
 
 
 def test_web_dir_points_at_real_assets():
-    from readerm.server import WEB_DIR
+    from mangasurf.server import WEB_DIR
 
     assert os.path.isfile(os.path.join(WEB_DIR, "index.html"))
     assert os.path.isfile(os.path.join(WEB_DIR, "app.js"))
@@ -162,7 +162,7 @@ def test_the_launcher_actually_runs(args, expect, tmp_path):
 
 def test_landing_has_frozen_arguments_for_every_target():
     """A bundle has no .py files, so each tile must re-invoke the exe."""
-    from readerm.landing import Launcher
+    from mangasurf.landing import Launcher
 
     assert set(Launcher.TARGETS) == set(Launcher.FROZEN_ARGS), (
         "a target has no frozen equivalent, so it would fail in the exe")
@@ -170,7 +170,7 @@ def test_landing_has_frozen_arguments_for_every_target():
 
 def test_frozen_arguments_match_what_the_launcher_routes():
     """ReaderM.exe <arg> has to reach the interface the tile promises."""
-    from readerm.landing import Launcher
+    from mangasurf.landing import Launcher
 
     routed = read(os.path.join(ROOT, "launcher.py"))
     cli = read(os.path.join(ROOT, "readerm", "cli.py"))
@@ -269,8 +269,8 @@ def test_direct_commands_differ_when_frozen(tmp_path, monkeypatch):
 
 def test_the_spec_bundles_the_new_modules():
     spec = read(os.path.join(ROOT, "ReaderM.spec"))
-    for module in ("readerm.server", "readerm.landing", "readerm.serverui",
-                   "readerm.servercfg", "flask"):
+    for module in ("mangasurf.server", "mangasurf.landing", "mangasurf.serverui",
+                   "mangasurf.servercfg", "flask"):
         assert f'"{module}"' in spec, f"{module} missing from the spec"
 
 
@@ -316,7 +316,7 @@ def test_scan_of_an_empty_root_is_empty():
     """os.path.abspath("") is the current directory, so scan("") used to
     walk wherever the process happened to be -- picking up build output
     from a checkout, or the user's home in a packaged build."""
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     assert scan("") == []
     assert scan("   ") == []
@@ -324,7 +324,7 @@ def test_scan_of_an_empty_root_is_empty():
 
 
 def test_scan_does_not_depend_on_the_working_directory(tmp_path, monkeypatch):
-    from readerm.covers import scan
+    from mangasurf.covers import scan
 
     monkeypatch.chdir(ROOT)
     assert scan("") == []

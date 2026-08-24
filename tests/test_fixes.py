@@ -18,7 +18,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                   "readerm", "gui", "web")
+                   "mangasurf", "reader", "app")
 
 
 @pytest.fixture(autouse=True)
@@ -26,8 +26,8 @@ def isolated_home(monkeypatch):
     home = tempfile.mkdtemp()
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
-    import readerm.config as config
-    import readerm.features as features
+    import mangasurf.config as config
+    import mangasurf.features as features
     for module in (config, features):
         importlib.reload(module)
     yield home
@@ -37,7 +37,7 @@ def isolated_home(monkeypatch):
 
 
 def test_cover_urls_keep_the_full_filename():
-    from readerm.sources.mangadex import MangaDexSource
+    from mangasurf.sources.mangadex import MangaDexSource
 
     url = MangaDexSource.cover_url("mid", "abc.png", "medium")
     assert url.endswith("abc.png.512.jpg")
@@ -63,7 +63,7 @@ class FakeWindow:
 
 
 def _api_with_window():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api.window = FakeWindow()
@@ -133,7 +133,7 @@ def test_shutdown_cancels_the_timer():
 
 
 def test_push_without_a_window_is_safe():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api.window = None
@@ -144,7 +144,7 @@ def test_push_without_a_window_is_safe():
 
 
 def test_backend_search_returns_results_with_covers(monkeypatch):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     class FakeSource:
         supports_browse = True
@@ -158,7 +158,7 @@ def test_backend_search_returns_results_with_covers(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("readerm.sources.get_source", lambda sid, **kw: FakeSource())
+    monkeypatch.setattr("mangasurf.sources.get_source", lambda sid, **kw: FakeSource())
     result = Api().search("berserk", {"source": "all"})
     assert result["ok"] is True
     assert result["results"]
@@ -166,7 +166,7 @@ def test_backend_search_returns_results_with_covers(monkeypatch):
 
 
 def test_search_failure_is_reported_not_swallowed(monkeypatch):
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     monkeypatch.setattr(api, "_source",
@@ -181,14 +181,14 @@ def test_search_failure_is_reported_not_swallowed(monkeypatch):
 
 def test_images_stream_to_disk():
     """Buffering whole images in RAM multiplied by every worker thread."""
-    source = open(os.path.join(os.path.dirname(WEB), "..", "sources", "base.py"),
+    source = open(os.path.join(os.path.dirname(os.path.dirname(WEB)), "sources", "base.py"),
                   encoding="utf-8").read()
     assert "iter_content" in source
     assert "stream=True" in source
 
 
 def test_download_still_rejects_non_images(tmp_path):
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     class FakeResponse:
         status_code = 200
@@ -214,14 +214,14 @@ def test_download_still_rejects_non_images(tmp_path):
 
 def test_engine_uses_one_shared_image_pool():
     """A pool per chapter meant chapter_workers x image_workers threads."""
-    downloader = open(os.path.join(os.path.dirname(WEB), "..", "downloader.py"),
+    downloader = open(os.path.join(os.path.dirname(os.path.dirname(WEB)), "downloader.py"),
                       encoding="utf-8").read()
     assert "_image_pool" in downloader
     assert downloader.count("ThreadPoolExecutor(") <= 3
 
 
 def test_image_pool_is_bounded():
-    from readerm.downloader import DownloadOptions
+    from mangasurf.downloader import DownloadOptions
 
     options = DownloadOptions(url="x", chapter_workers=8, image_workers=10)
     bounded = max(1, min(16, options.chapter_workers * options.image_workers))

@@ -1,0 +1,288 @@
+name: Release Builds & Multi-Platform OneFile Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag Name (e.g. v1.7.0)'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: false
+      draft:
+        description: 'Create as draft'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. Build Standalone OneFile Binaries across Windows, Linux, and macOS
+  # ──────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build OneFile (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: windows-x64
+            os: windows-latest
+            artifact_name: mangasurf-windows-x64.exe
+            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-windows-x64.zip
+            binary_src: dist/Mangasurf.exe
+            use_zip: true
+          - name: linux-x86_64
+            os: ubuntu-22.04
+            artifact_name: mangasurf-linux-x86_64
+            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-linux-x86_64.tar.gz
+            binary_src: dist/Mangasurf
+            use_tar: true
+          - name: macos-arm64
+            os: macos-14
+            artifact_name: mangasurf-macos-arm64
+            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-macos-arm64.zip
+            binary_src: dist/Mangasurf
+            use_zip: true
+          - name: macos-x86_64
+            os: macos-13
+            artifact_name: mangasurf-macos-x86_64
+            archive_name: mangasurf-${{ github.ref_name || 'v1.7.0' }}-macos-x86_64.zip
+            binary_src: dist/Mangasurf
+            use_zip: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            libgl1-mesa-dev \
+            libglib2.0-0 \
+            libgtk-3-dev \
+            gir1.2-webkit2-4.1 \
+            libayatana-appindicator3-dev
+
+      - name: Install Python dependencies & PyInstaller
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller pytest
+
+      - name: Run test suite verification before building
+        run: |
+          python -m pytest tests/test_mangasurf_sources.py tests/test_v169_list_downloads.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py -q
+
+      - name: Build Standalone OneFile Executable with PyInstaller
+        env:
+          PYINSTALLER_ONEFILE: "1"
+        run: |
+          pyinstaller Mangasurf.spec --clean --noconfirm -- --onefile
+
+      - name: Prepare Release Artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "${{ matrix.platform.binary_src }}" -Destination "${{ matrix.platform.artifact_name }}"
+          Compress-Archive -Path "${{ matrix.platform.artifact_name }}", "README.md", "LICENSE", "docs/icon.ico" -DestinationPath "${{ matrix.platform.archive_name }}"
+          Get-FileHash "${{ matrix.platform.artifact_name }}" -Algorithm SHA256 | Out-File -FilePath "${{ matrix.platform.artifact_name }}.sha256"
+          Get-FileHash "${{ matrix.platform.archive_name }}" -Algorithm SHA256 | Out-File -FilePath "${{ matrix.platform.archive_name }}.sha256"
+
+      - name: Prepare Release Artifacts (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x "${{ matrix.platform.binary_src }}"
+          cp "${{ matrix.platform.binary_src }}" "${{ matrix.platform.artifact_name }}"
+          
+          if [ "${{ matrix.platform.use_tar }}" = "true" ]; then
+            tar -czf "${{ matrix.platform.archive_name }}" "${{ matrix.platform.artifact_name }}" README.md LICENSE docs/icon.png
+          else
+            zip -r "${{ matrix.platform.archive_name }}" "${{ matrix.platform.artifact_name }}" README.md LICENSE docs/icon.png
+          fi
+          
+          shasum -a 256 "${{ matrix.platform.artifact_name }}" > "${{ matrix.platform.artifact_name }}.sha256"
+          shasum -a 256 "${{ matrix.platform.archive_name }}" > "${{ matrix.platform.archive_name }}.sha256"
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform.name }}
+          path: |
+            ${{ matrix.platform.artifact_name }}
+            ${{ matrix.platform.archive_name }}
+            *.sha256
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. Extract & Format Release Notes from CHANGELOG.md
+  # ──────────────────────────────────────────────────────────────────────────
+  release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.version.outputs.version }}
+      release_notes: ${{ steps.notes.outputs.content }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Release Version
+        id: version
+        run: |
+          TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
+          if [[ -z "$TAG" || "$TAG" == "main" ]]; then
+            TAG="v1.7.0"
+          fi
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Generate Formatted Release Notes
+        id: notes
+        run: |
+          python - << 'EOF'
+          import re
+          import os
+
+          tag = os.environ.get("TAG_NAME", "v1.7.0").lstrip("v")
+          changelog_path = "MD/CHANGELOG.md"
+          
+          notes_body = ""
+          if os.path.exists(changelog_path):
+              with open(changelog_path, "r", encoding="utf-8") as f:
+                  content = f.read()
+                  
+              # Find section for this version
+              pattern = rf"##\s*\[?v?{re.escape(tag)}\]?[^\n]*\n(.*?)(?=\n##\s*\[?v?\d|\Z)"
+              match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+              if match:
+                  notes_body = match.group(1).strip()
+
+          if not notes_body:
+              notes_body = """### What's Changed
+          - **32 Registered Sources**: High-speed scrapers across MangaDex, Chikari, KuraManga, KuraHentai, Hiperdex, MangaK, etc.
+          - **Curated List Bulk Downloading**: One-click download for lists (e.g. Chikari list 461).
+          - **3D Depth Library Carousel**: Smooth 7-perspective cards with luminous glow, reading progress, and shelf pills.
+          - **Offline Database Integration**: Instant omnibar suggestions and offline SFW/Hentai indexing.
+          - **LAN Web Reader & OPDS 1.2 Hub**: Native phone reader server (:8577) & OPDS catalog (:8578) with live device telemetry.
+          - **Zero-Deletion Root Safety**: Protected master root directories (~/Manga, /media, output_dir).
+          - **Custom Vector Icon**: New dynamic MangaSurf wave crest & anime speed prism icon.
+          """
+
+          header = f"""# 🌊 Mangasurf {os.environ.get('TAG_NAME', 'v1.7.0')} — Desktop Manga Reader & Downloader
+
+          > High-performance Python manga ecosystem, omnibar discovery engine, and multi-threaded downloader supporting **32 registered sources**.
+
+          ---
+
+          {notes_body}
+
+          ---
+
+          ## 📦 Available Downloads
+
+          | Platform | Architecture | Download Package | Standalone Executable |
+          | :--- | :--- | :--- | :--- |
+          | **Windows** | x64 (64-bit) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-windows-x64.zip`](#) | `mangasurf-windows-x64.exe` |
+          | **Linux** | x86_64 (glibc 2.35+) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-linux-x86_64.tar.gz`](#) | `mangasurf-linux-x86_64` |
+          | **macOS** | Apple Silicon (M1/M2/M3/M4) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-macos-arm64.zip`](#) | `mangasurf-macos-arm64` |
+          | **macOS** | Intel (x86_64) | [`mangasurf-{os.environ.get('TAG_NAME', 'v1.7.0')}-macos-x86_64.zip`](#) | `mangasurf-macos-x86_64` |
+
+          ### 🚀 Quick Start (No Python Required)
+          1. Download the archive for your operating system above.
+          2. Extract and run `mangasurf` (or double-click `mangasurf.exe` on Windows).
+          3. Enjoy reading with the 3D Depth Carousel, Foliate webtoon viewer, LAN Phone Server (:8577), or OPDS 1.2 Catalog (:8578)!
+
+          ```bash
+          # CLI search & download
+          ./mangasurf search "solo leveling"
+          ./mangasurf "https://chikari.moe/lists/461-my-manhwa-list"
+          ```
+          """
+
+          with open("RELEASE_NOTES.md", "w", encoding="utf-8") as out:
+              out.write(header)
+          EOF
+        env:
+          TAG_NAME: ${{ steps.version.outputs.version }}
+
+      - name: Save Release Notes to Output
+        id: notes_out
+        run: |
+          echo "notes_file=RELEASE_NOTES.md" >> $GITHUB_OUTPUT
+
+      - name: Upload Release Notes Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: RELEASE_NOTES.md
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. Publish GitHub Release with all Binary Assets and Checksums
+  # ──────────────────────────────────────────────────────────────────────────
+  publish:
+    name: Publish Official GitHub Release
+    needs: [build, release-notes]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-release
+
+      - name: Consolidate Artifacts & Compute Checksums
+        run: |
+          mkdir -p release-assets
+          find dist-release -type f \( -name "*.exe" -o -name "*.tar.gz" -o -name "*.zip" -o -name "mangasurf-*" \) ! -name "*.sha256" -exec cp {} release-assets/ \;
+          
+          cd release-assets
+          chmod +x mangasurf-linux-x86_64 mangasurf-macos-arm64 mangasurf-macos-x86_64 2>/dev/null || true
+          
+          echo "=== SHA256 Checksums ===" > SHA256SUMS.txt
+          sha256sum * 2>/dev/null >> SHA256SUMS.txt || shasum -a 256 * >> SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Download Release Notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-notes.outputs.release_version }}
+          name: Mangasurf ${{ needs.release-notes.outputs.release_version }}
+          body_path: RELEASE_NOTES.md
+          draft: ${{ github.event.inputs.draft || false }}
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          files: |
+            release-assets/*
+            SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

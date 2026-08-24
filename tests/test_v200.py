@@ -521,7 +521,7 @@ def test_set_cover_reports_missing_paths(tmp_path):
 
 
 def test_the_opds_settings_have_defaults():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert DEFAULT_SETTINGS["opds_port"] == 8578
     assert DEFAULT_SETTINGS["opds_autostart"] is False
@@ -529,7 +529,7 @@ def test_the_opds_settings_have_defaults():
 
 def test_the_catalog_uses_a_different_port_from_the_app_server():
     """Both must be able to run at once."""
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert DEFAULT_SETTINGS["opds_port"] != DEFAULT_SETTINGS["server_port"]
 
@@ -541,7 +541,7 @@ def test_the_api_exposes_the_catalog(tmp_path, monkeypatch):
     from readerm import config, servercfg
     importlib.reload(config)
     importlib.reload(servercfg)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     api = gui.Api()
@@ -562,7 +562,7 @@ def test_autostart_is_wired_into_run_gui():
 
 
 def test_the_launcher_offers_the_catalog():
-    from readerm.landing import Launcher
+    from mangasurf.landing import Launcher
 
     assert "opds" in Launcher.TARGETS
     assert "opds" in Launcher.FROZEN_ARGS
@@ -576,7 +576,7 @@ def test_the_launcher_routes_the_opds_subcommand():
 
 def test_the_spec_bundles_the_catalog():
     spec = read(os.path.join(ROOT, "ReaderM.spec"))
-    for module in ("readerm.opds", "readerm.opdsserve", "readerm.opdsui"):
+    for module in ("mangasurf.opds", "mangasurf.opdsserve", "mangasurf.opdsui"):
         assert f'"{module}"' in spec, module
 
 
@@ -584,7 +584,7 @@ def test_the_root_wrapper_exists():
     path = os.path.join(ROOT, "opdsserve.py")
     assert os.path.isfile(path)
     source = read(path)
-    assert "from readerm.opdsserve import main" in source
+    assert "from mangasurf.opdsserve import main" in source
     assert len(source.splitlines()) < 30, "the wrapper should stay thin"
 
 

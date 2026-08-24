@@ -53,7 +53,7 @@ def test_nhentai_browses_popular_not_the_site_root():
 
 def test_nhentai_genres_are_real_tag_slugs():
     """The old list was generic manga genres; 7 of its 12 answered 404."""
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.sources.nhentai import NhentaiSource
 
     dead = {"romance", "drama", "fantasy", "school-life", "vanilla",
             "historical", "sci-fi"}
@@ -65,7 +65,7 @@ def test_nhentai_genres_are_real_tag_slugs():
 
 def test_nhentai_browse_sorts_drop_the_404_endpoints():
     """popular-today is a 404; only sorts the site accepts may be offered."""
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.sources.nhentai import NhentaiSource
 
     assert "popular-today" not in NhentaiSource._SORTS.values()
 
@@ -74,7 +74,7 @@ def test_nhentai_uses_the_sites_own_cover_fallbacks():
     """Cards ship data-fallbacks; honouring it is what stops empty tiles."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.sources.nhentai import NhentaiSource
 
     fallbacks = ["https://cdn/g/1/thumb.webp", "https://cdn/g/1/1t.jpg"]
     html = f'''<div class="gallery">
@@ -95,7 +95,7 @@ def test_nhentai_uses_the_sites_own_cover_fallbacks():
 def test_nhentai_survives_broken_fallback_json():
     from bs4 import BeautifulSoup
 
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.sources.nhentai import NhentaiSource
 
     html = ('<div class="gallery"><a href="/g/2/"><img src="/c.jpg" '
             "data-fallbacks='{not json'></a>"
@@ -109,7 +109,7 @@ def test_nhentai_survives_broken_fallback_json():
 
 def test_only_webtoons_declares_a_hotlinked_cover_cdn():
     """Measured: every other cover CDN answers 200 with no Referer."""
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     flagged = {c.id for c in SOURCE_CLASSES
                if getattr(c, "cover_needs_referer", False)}
@@ -117,7 +117,7 @@ def test_only_webtoons_declares_a_hotlinked_cover_cdn():
 
 
 def test_cover_flag_is_exposed_to_the_frontend():
-    from readerm.sources import list_sources
+    from mangasurf.sources import list_sources
 
     rows = {row["id"]: row for row in list_sources()}
     assert rows["webtoons"]["cover_needs_referer"] is True
@@ -127,13 +127,13 @@ def test_cover_flag_is_exposed_to_the_frontend():
 def test_gui_exposes_a_cover_proxy():
     """An <img> cannot send a Referer under no-referrer, so Python fetches
     those covers and inlines them."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     assert callable(getattr(Api, "proxy_cover", None))
 
 
 def test_proxy_cover_rejects_non_http_urls():
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api.__new__(Api)          # no window / settings needed
     for bad in ("", "file:///etc/passwd", "javascript:alert(1)", "data:x"):
@@ -151,14 +151,14 @@ NEW_SOURCES = ["mangadass", "manga18club", "hentaiakane"]
 
 @pytest.mark.parametrize("source_id", NEW_SOURCES)
 def test_new_source_is_registered(source_id):
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert source_id in SOURCES
 
 
 @pytest.mark.parametrize("source_id", NEW_SOURCES)
 def test_new_source_is_flagged_adult(source_id):
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert SOURCES[source_id].adult_only is True
 
@@ -169,14 +169,14 @@ def test_new_source_is_flagged_adult(source_id):
     ("hentaiakane", "https://hentaiakane.com/manga/love-cheer/"),
 ])
 def test_new_source_claims_its_urls(source_id, url):
-    from readerm.sources import detect_source
+    from mangasurf.sources import detect_source
 
     assert detect_source(url) == source_id
 
 
 @pytest.mark.parametrize("source_id", NEW_SOURCES)
 def test_new_source_implements_the_contract(source_id):
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     cls = SOURCES[source_id]
     for method in ("search", "browse", "genres", "get_manga_info",
@@ -200,7 +200,7 @@ def test_mangadass_orders_chapters_numerically():
     order put Chapter 1 last (measured: 2,3,4,5,6,7,8,1)."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.mangadass import MangadassSource
+    from mangasurf.sources.mangadass import MangadassSource
 
     html = "".join(
         f'<a href="/manga/x/chapter-{n}">Chapter {n}</a>'
@@ -232,7 +232,7 @@ def test_manga18club_decodes_the_base64_page_list():
     """The reader ships no usable <img> tags; pages live in slides_p_path."""
     import base64
 
-    from readerm.sources.manga18club import Manga18ClubSource
+    from mangasurf.sources.manga18club import Manga18ClubSource
 
     urls = [f"https://cdn.manga18.club/manga/x/chapters/chap-1/0{n}.jpg"
             for n in (1, 2, 3)]
@@ -244,7 +244,7 @@ def test_manga18club_decodes_the_base64_page_list():
 
 
 def test_manga18club_decode_is_safe_on_junk():
-    from readerm.sources.manga18club import Manga18ClubSource
+    from mangasurf.sources.manga18club import Manga18ClubSource
 
     assert Manga18ClubSource.decode_slides("") == []
     assert Manga18ClubSource.decode_slides("no slides here") == []
@@ -269,7 +269,7 @@ def test_manga18club_cover_does_not_come_from_the_sidebar():
 
 
 def test_hentaiakane_parses_the_ts_reader_payload():
-    from readerm.sources.hentaiakane import HentaiAkaneSource
+    from mangasurf.sources.hentaiakane import HentaiAkaneSource
 
     payload = {"sources": [{"images": ["https://img.hentai1.io/a/1.jpg",
                                        "https://img.hentai1.io/a/2.jpg"]}]}
@@ -278,7 +278,7 @@ def test_hentaiakane_parses_the_ts_reader_payload():
 
 
 def test_hentaiakane_reader_parse_is_safe_on_junk():
-    from readerm.sources.hentaiakane import HentaiAkaneSource
+    from mangasurf.sources.hentaiakane import HentaiAkaneSource
 
     assert HentaiAkaneSource.parse_reader("") == []
     assert HentaiAkaneSource.parse_reader("ts_reader.run({broken);") == []
@@ -288,7 +288,7 @@ def test_hentaiakane_cards_ignore_the_sidebar_series_links():
     """a.series matches 60 sidebar links on a search page; only .bs is real."""
     from bs4 import BeautifulSoup
 
-    from readerm.sources.hentaiakane import HentaiAkaneSource
+    from mangasurf.sources.hentaiakane import HentaiAkaneSource
 
     html = '''<a class="series" href="/manga/sidebar/" title="Sidebar"></a>
       <div class="bs"><div class="bsx"><a href="/manga/real/" title="Real">
@@ -317,7 +317,7 @@ def test_hentaiakane_documents_the_domain_correction():
 def test_landing_page_source_count_matches_the_registry():
     """The redesigned page shows this as a hero stat rather than a tab
     counter, but the number still has to track the registry."""
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     html = read(os.path.join(ROOT, "docs", "index.html"))
     # Read the stat tiles structurally: keying on one set of class names
@@ -336,7 +336,7 @@ def test_landing_page_source_count_matches_the_registry():
 def test_adult_sources_are_all_rating_stamped():
     """Safe mode filters on content_rating/tags, so every adult source must
     set them or it would leak into a filtered search."""
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     for cls in SOURCE_CLASSES:
         if not getattr(cls, "adult_only", False):

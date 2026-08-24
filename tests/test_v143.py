@@ -19,8 +19,8 @@ def isolated_home(monkeypatch):
     home = tempfile.mkdtemp()
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
-    import readerm.config as config
-    import readerm.features as features
+    import mangasurf.config as config
+    import mangasurf.features as features
     for module in (config, features):
         importlib.reload(module)
     yield home
@@ -47,7 +47,7 @@ def test_empty_body_is_retried_not_accepted():
     """Mangakatana answers HTTP 200 with a ZERO-length body when it throttles.
     Treating that as success is what made multi-source search look broken:
     the source silently contributed nothing."""
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     source = Source()
     calls = {"n": 0}
@@ -64,7 +64,7 @@ def test_empty_body_is_retried_not_accepted():
 
 
 def test_empty_body_eventually_raises():
-    from readerm.sources.base import Source, ScrapeError
+    from mangasurf.sources.base import Source, ScrapeError
 
     source = Source()
     source.session = type("S", (), {"get": staticmethod(lambda u, **k: _Resp(b""))})()
@@ -76,7 +76,7 @@ def test_empty_body_eventually_raises():
 @pytest.mark.parametrize("status", [204, 304])
 def test_bodyless_statuses_are_not_retried(status):
     """204/304 legitimately carry no body."""
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     source = Source()
     calls = {"n": 0}
@@ -91,7 +91,7 @@ def test_bodyless_statuses_are_not_retried(status):
 
 
 def test_head_requests_are_not_retried():
-    from readerm.sources.base import Source
+    from mangasurf.sources.base import Source
 
     assert Source._expects_body(_Resp(b"", method="HEAD")) is False
     assert Source._expects_body(_Resp(b"", method="GET")) is True
@@ -108,13 +108,13 @@ def test_head_requests_are_not_retried():
     ({"title": "nothing"}, None),
 ])
 def test_chapter_count_detection(item, expected):
-    from readerm.features import _chapter_count
+    from mangasurf.features import _chapter_count
 
     assert _chapter_count(item) == expected
 
 
 def test_min_and_max_chapter_filters():
-    from readerm.features import apply_filters
+    from mangasurf.features import apply_filters
 
     rows = [
         {"title": "Long", "latest": "Chapter 1050"},
@@ -132,7 +132,7 @@ def test_min_and_max_chapter_filters():
 def test_unknown_counts_are_never_filtered_out():
     """Sources report counts inconsistently; judging an unknown count would
     make whole sources vanish from every filtered search."""
-    from readerm.features import apply_filters
+    from mangasurf.features import apply_filters
 
     rows = [{"title": "No count"}]
     assert len(apply_filters(rows, {"min_chapters": 500})) == 1
@@ -140,7 +140,7 @@ def test_unknown_counts_are_never_filtered_out():
 
 
 def test_zero_means_no_limit():
-    from readerm.features import apply_filters
+    from mangasurf.features import apply_filters
 
     rows = [{"title": "A", "latest": "Chapter 5"}]
     assert len(apply_filters(rows, {"min_chapters": 0, "max_chapters": 0})) == 1
@@ -150,22 +150,22 @@ def test_zero_means_no_limit():
 
 
 def test_new_sources_registered():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert "webtoons" in SOURCES
     assert "nhentai" in SOURCES
 
 
 def test_nhentai_is_adult_only():
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     assert SOURCES["nhentai"].adult_only is True
     assert SOURCES["webtoons"].adult_only is False
 
 
 def test_nhentai_results_are_filtered_by_safe_mode():
-    from readerm.features import apply_filters
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.features import apply_filters
+    from mangasurf.sources.nhentai import NhentaiSource
 
     row = NhentaiSource()._result("Some Doujin", "https://nhentai.to/g/1/",
                                   content_rating="pornographic", tags=["Adult"])
@@ -180,14 +180,14 @@ def test_nhentai_results_are_filtered_by_safe_mode():
 ])
 def test_nhentai_thumbnail_to_full_size(thumb, full):
     """Thumbs are 't'-suffixed; the full page is the same path without it."""
-    from readerm.sources.nhentai import NhentaiSource
+    from mangasurf.sources.nhentai import NhentaiSource
 
     assert NhentaiSource.full_size(thumb) == full
 
 
 def test_webtoons_extracts_title_no():
     """The numeric id is the only stable identifier; the genre path varies."""
-    from readerm.sources.webtoons import WebtoonsSource
+    from mangasurf.sources.webtoons import WebtoonsSource
 
     url = "https://www.webtoons.com/en/action/some-slug/list?title_no=10565"
     assert WebtoonsSource.title_no(url) == "10565"
@@ -208,7 +208,7 @@ def test_webtoons_sends_a_referer():
     ("https://nhentai.to/g/123/", "nhentai"),
 ])
 def test_new_source_url_detection(url, expected):
-    from readerm.sources import detect_source
+    from mangasurf.sources import detect_source
 
     assert detect_source(url) == expected
 
@@ -222,7 +222,7 @@ def test_new_source_url_detection(url, expected):
     ("nhentai", "romance"),
 ])
 def test_live_new_sources(source_id, query):
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     source = get_source(source_id)
     try:
@@ -242,7 +242,7 @@ def test_live_new_sources(source_id, query):
 def test_live_mangakatana_search_is_stable():
     """Regression: repeated searches used to return nothing ~60% of the time
     because of empty-but-200 throttle responses."""
-    from readerm.sources import get_source
+    from mangasurf.sources import get_source
 
     hits = 0
     for _ in range(4):
@@ -258,7 +258,7 @@ def test_live_mangakatana_search_is_stable():
 @NETWORK
 def test_live_popular_title_hits_several_sources():
     """'One Piece' must aggregate, not collapse to a single source."""
-    from readerm.sources import search_all
+    from mangasurf.sources import search_all
 
     results = search_all("one piece", limit=5)
     sources = {r["source"] for r in results}

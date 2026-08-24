@@ -19,7 +19,7 @@ def isolated_home(monkeypatch):
     home = tempfile.mkdtemp()
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
-    import readerm.library as library
+    import mangasurf.library as library
     importlib.reload(library)
     yield home
 
@@ -35,13 +35,13 @@ def isolated_home(monkeypatch):
     ([], ""),
 ])
 def test_chapter_range_label(names, expected):
-    from readerm.utils import chapter_range_label
+    from mangasurf.utils import chapter_range_label
 
     assert chapter_range_label(names) == expected
 
 
 def test_range_label_collapses_gaps_into_runs():
-    from readerm.utils import chapter_range_label
+    from mangasurf.utils import chapter_range_label
 
     names = ["Chapter 1", "Chapter 2", "Chapter 3",
              "Chapter 7", "Chapter 8", "Chapter 20"]
@@ -50,7 +50,7 @@ def test_range_label_collapses_gaps_into_runs():
 
 def test_range_label_truncates_when_too_fragmented():
     """A filename must not grow unbounded for a scattered selection."""
-    from readerm.utils import chapter_range_label
+    from mangasurf.utils import chapter_range_label
 
     names = [f"Chapter {i}" for i in (1, 3, 5, 7, 9, 11, 13)]
     label = chapter_range_label(names)
@@ -59,7 +59,7 @@ def test_range_label_truncates_when_too_fragmented():
 
 
 def test_range_label_is_order_independent():
-    from readerm.utils import chapter_range_label
+    from mangasurf.utils import chapter_range_label
 
     forward = chapter_range_label(["Chapter 1", "Chapter 2", "Chapter 3"])
     reverse = chapter_range_label(["Chapter 3", "Chapter 1", "Chapter 2"])
@@ -67,7 +67,7 @@ def test_range_label_is_order_independent():
 
 
 def test_chapter_bounds():
-    from readerm.utils import chapter_bounds
+    from mangasurf.utils import chapter_bounds
 
     assert chapter_bounds([f"Chapter {i}" for i in (4, 1, 9)]) == ("001", "009")
     assert chapter_bounds([]) == ("", "")
@@ -78,7 +78,7 @@ def test_chapter_bounds():
 
 def _packaged_names(bundle, chapter_count=6, **template_overrides):
     """Run _package with a stub packager and collect the filenames it builds."""
-    from readerm.downloader import DownloadEngine, DownloadOptions
+    from mangasurf.downloader import DownloadEngine, DownloadOptions
 
     options = DownloadOptions(url="https://mangakatana.com/manga/x.1",
                               bundle=bundle, **template_overrides)
@@ -90,7 +90,7 @@ def _packaged_names(bundle, chapter_count=6, **template_overrides):
                for i in range(1, chapter_count + 1)]
     built = []
 
-    import readerm.downloader as downloader
+    import mangasurf.downloader as downloader
     real = downloader.PACKAGERS
     downloader.PACKAGERS = {
         "cbz": lambda dirs, path, title: built.append(os.path.basename(path)) or path
@@ -146,7 +146,7 @@ def test_bad_template_falls_back_instead_of_crashing():
 def test_legacy_templates_are_migrated():
     """A stored "{title}" from an older version would otherwise keep
     overriding the improved default."""
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     gui.save_settings({"name_single": "{title}",
@@ -160,7 +160,7 @@ def test_legacy_templates_are_migrated():
 
 
 def test_migration_leaves_custom_templates_alone():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     gui.save_settings({"name_single": "MY OWN {title}"})
@@ -173,8 +173,8 @@ def test_a_pre_1_4_11_settings_file_is_migrated():
     """
     import json
 
-    import readerm.config as appconfig
-    import readerm.gui as gui
+    import mangasurf.config as appconfig
+    import mangasurf.gui as gui
     importlib.reload(appconfig)
     importlib.reload(gui)
 
@@ -301,7 +301,7 @@ def test_healthy_entries_are_not_proposed():
 
 
 def test_rescan_updates_the_output_dir_setting():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
 
     url, new_root = _library_with_moved_folder()

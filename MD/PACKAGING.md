@@ -1,28 +1,29 @@
-# Packaging — building an all-inclusive executable
+# Packaging — building an all-inclusive executable (v1.7.0)
 
-This guide produces a standalone **ReaderM** executable containing the
+This guide produces a standalone **Mangasurf v1.7.0** executable containing the
 GUI, TUI and CLI in one binary — no Python installation needed on the target
 machine.
 
 | Command | Result |
 |---|---|
-| `ReaderM.exe` (double-click) | **Launcher window** — pick any interface |
-| `ReaderM.exe gui` | Desktop app, directly |
-| `ReaderM.exe menu` | Interactive terminal menu |
-| `ReaderM.exe tui` | Full-screen terminal UI |
-| `ReaderM.exe server` | LAN server for your phone |
-| `ReaderM.exe server --gui` | ...with its control window |
-| `ReaderM.exe <manga-url> --per 10` | CLI download |
-| `ReaderM.exe search "one piece"` | CLI search |
-| `ReaderM.exe resume` | Resume interrupted download |
+| `Mangasurf.exe` (double-click) | **Launcher window** — pick any interface |
+| `Mangasurf.exe gui` | Desktop app with 3D Depth Carousel & Foliate reader |
+| `Mangasurf.exe menu` | Interactive terminal menu |
+| `Mangasurf.exe tui` | Full-screen terminal UI |
+| `Mangasurf.exe server` | LAN server for your phone |
+| `Mangasurf.exe server --gui` | ...with its control window |
+| `Mangasurf.exe opds` | OPDS 1.2 catalog for Readest, Panels, Aldiko |
+| `Mangasurf.exe <manga-url> --per 10` | CLI download (32 sources supported) |
+| `Mangasurf.exe search "one piece"` | CLI search |
+| `Mangasurf.exe resume` | Resume interrupted download |
 
 Double-clicking opens the **launcher**, not the desktop app. The exe is five
 programs in one, and a double-click used to commit you to the GUI with no way
 to reach the TUI, the menu or the phone server without a terminal. Reaching
-the desktop app is now one click, and `ReaderM.exe gui` still goes straight
+the desktop app is now one click, and `Mangasurf.exe gui` still goes straight
 there, so an existing shortcut is unaffected.
 
-The build is driven by **[`ReaderM.spec`](ReaderM.spec)** and the
+The build is driven by **[`Mangasurf.spec`](Mangasurf.spec)** and the
 unified entry point **[`launcher.py`](launcher.py)**.
 
 ---
@@ -34,7 +35,7 @@ unified entry point **[`launcher.py`](launcher.py)**.
   everything importable, so a lean venv means a smaller exe)
 
 ```bash
-git clone https://github.com/Compromisee/ReaderM.git
+git clone https://github.com/Compromisee/mangasurf.git
 cd MDL
 
 python -m venv .venv
@@ -59,34 +60,34 @@ pip install pyinstaller
 Fast startup, easy to debug, updates only changed files:
 
 ```bash
-pyinstaller ReaderM.spec
+pyinstaller Mangasurf.spec
 ```
 
-Output: `dist/ReaderM/` — ship the whole folder. The executable is
-`dist/ReaderM/ReaderM(.exe)`.
+Output: `dist/Mangasurf/` — ship the whole folder. The executable is
+`dist/Mangasurf/Mangasurf(.exe)`.
 
 ### One-file build
 
 A single portable executable (slower startup — it unpacks to a temp dir):
 
 ```bash
-pyinstaller ReaderM.spec -- --onefile
+pyinstaller Mangasurf.spec -- --onefile
 ```
 
-Output: `dist/ReaderM.exe` (or `dist/ReaderM` on macOS/Linux).
+Output: `dist/Mangasurf.exe` (or `dist/Mangasurf` on macOS/Linux).
 
 ### Clean rebuild
 
 ```bash
-pyinstaller ReaderM.spec --clean --noconfirm
+pyinstaller Mangasurf.spec --clean --noconfirm
 ```
 
 ---
 
 ## 3. What the spec bundles
 
-- The whole `readerm` package (CLI + TUI + GUI + engine)
-- `readerm/gui/web/` — the GUI's HTML/CSS/JS (the code auto-detects the
+- The whole `mangasurf` package (CLI + TUI + GUI + engine)
+- `mangasurf/gui/web/` — the GUI's HTML/CSS/JS (the code auto-detects the
   PyInstaller location via `sys._MEIPASS`)
 - Textual's data files (TUI styling)
 - pywebview's platform backends as hidden imports (WinForms/EdgeChromium on
@@ -124,11 +125,11 @@ not worth a download that gets quarantined before it runs.
 
 ### macOS
 
-- The one-folder build also produces **`dist/ReaderM.app`** for
+- The one-folder build also produces **`dist/Mangasurf.app`** for
   double-click launching; the CLI/TUI binary is inside
-  `ReaderM.app/Contents/MacOS/`.
+  `Mangasurf.app/Contents/MacOS/`.
 - Gatekeeper blocks unsigned apps: either
-  `codesign --deep -s "Developer ID Application: ..." dist/ReaderM.app`
+  `codesign --deep -s "Developer ID Application: ..." dist/Mangasurf.app`
   and notarize, or instruct users to right-click → Open the first time.
 - Build separate x86_64 / arm64 binaries on the corresponding Macs (or use
   `target_arch='universal2'` in the EXE section if all deps provide
@@ -141,7 +142,7 @@ not worth a download that gets quarantined before it runs.
   equivalent. Alternatively `pip install pywebview[qt]` **before building**
   so the Qt backend is bundled.
 - Build on the **oldest** distro you want to support (glibc compatibility).
-- Mark the binary executable: `chmod +x dist/ReaderM/ReaderM`.
+- Mark the binary executable: `chmod +x dist/Mangasurf/Mangasurf`.
 
 ---
 
@@ -149,14 +150,14 @@ not worth a download that gets quarantined before it runs.
 
 ```bash
 # GUI
-dist/ReaderM/ReaderM
+dist/Mangasurf/Mangasurf
 
 # CLI
-dist/ReaderM/ReaderM --help
-dist/ReaderM/ReaderM search "vinland saga"
+dist/Mangasurf/Mangasurf --help
+dist/Mangasurf/Mangasurf search "vinland saga"
 
 # TUI (run from a real terminal)
-dist/ReaderM/ReaderM tui
+dist/Mangasurf/Mangasurf tui
 ```
 
 Smoke checklist:
@@ -164,12 +165,12 @@ Smoke checklist:
 - [ ] GUI opens, themes/orbs/dot-matrix render
 - [ ] Search returns covers; manga page loads
 - [ ] A 1-chapter download completes and packs a CBZ
-- [ ] Library/bookmarks persist (`~/.readerm/`)
+- [ ] Library/bookmarks persist (`~/.mangasurf/`)
 - [ ] `search`, `info`, `resume`, `tui` subcommands work
-- [ ] Log file appears in `~/.readerm/logs/`
+- [ ] Log file appears in `~/.mangasurf/logs/`
 
 User data (settings, library, bookmarks, logs, job journal) always lives in
-`~/.readerm/`, never next to the exe — so upgrading is just replacing
+`~/.mangasurf/`, never next to the exe — so upgrading is just replacing
 the binary/folder.
 
 ---
@@ -179,37 +180,27 @@ the binary/folder.
 ```bash
 # tag and build per platform, then:
 gh release create v2.5.0 \
-    dist/ReaderM-windows-x64.zip \
-    dist/ReaderM-macos-arm64.zip \
-    dist/ReaderM-linux-x64.tar.gz \
+    dist/Mangasurf-windows-x64.zip \
+    dist/Mangasurf-macos-arm64.zip \
+    dist/Mangasurf-linux-x64.tar.gz \
     --title "v2.5.0" --notes-file CHANGELOG.md
 ```
 
-Suggested archive naming: `ReaderM-<os>-<arch>.<zip|tar.gz>` with the
+Suggested archive naming: `Mangasurf-<os>-<arch>.<zip|tar.gz>` with the
 one-folder build zipped inside.
 
-### CI (GitHub Actions) sketch
+### CI (GitHub Actions Automation Suite)
 
-```yaml
-name: build
-on: { push: { tags: ["v*"] } }
-jobs:
-  build:
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -r requirements.txt pyinstaller
-      - run: pyinstaller ReaderM.spec --noconfirm
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ReaderM-${{ matrix.os }}
-          path: dist/
-```
+Mangasurf ships with 8 dedicated production GitHub Actions workflows in `.github/workflows/`:
+
+1. **`release.yml`**: Multi-platform PyInstaller standalone onefile builder across Windows x64 (`.exe`), Linux x86_64 (`.tar.gz`), macOS ARM64 Apple Silicon (`.zip`), and macOS Intel (`.zip`). Automatically formats release notes from `MD/CHANGELOG.md`, generates `SHA256SUMS.txt`, and publishes GitHub Releases.
+2. **`ci.yml`**: Multi-OS & Multi-Python (3.10–3.13) test matrix running the full pytest suite, flake8 linting, and web asset syntax validation.
+3. **`nightly.yml`**: Daily automated bleeding-edge onefile builds and continuous pre-release publishing.
+4. **`source-health.yml`**: Scheduled 6-hour radar testing and uptime monitoring for all 32 scraper sources.
+5. **`pages.yml`**: Automated zero-config deployment of the animated landing page (`docs/`) to GitHub Pages.
+6. **`docker.yml`**: Multi-arch container image builder (`linux/amd64`, `linux/arm64`) publishing headless server and OPDS catalog to GitHub Container Registry (`ghcr.io/compromisee/mangasurf`).
+7. **`security.yml`**: GitHub CodeQL static code analysis, Bandit Python AST security scanner, and dependency vulnerability audits.
+8. **`pypi.yml`**: Python package build (`sdist` & `bdist_wheel`) and twine validation pipeline.
 
 ---
 

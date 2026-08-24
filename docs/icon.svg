@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Dark Obsidian Cosmic Gradient -->
+    <linearGradient id="bg-squircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070611"/>
+      <stop offset="35%" stop-color="#0e0b20"/>
+      <stop offset="75%" stop-color="#14102d"/>
+      <stop offset="100%" stop-color="#1c153d"/>
+    </linearGradient>
+
+    <!-- Squircle Border Neon Gradient -->
+    <linearGradient id="squircle-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#6366f1" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#d946ef" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#f43f5e" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Radial Nebula Bloom -->
+    <radialGradient id="nebula-bloom" cx="64%" cy="36%" r="62%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.55"/>
+      <stop offset="35%" stop-color="#06b6d4" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#ec4899" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- The Great Wave Surge Gradient -->
+    <linearGradient id="wave-surge" x1="0%" y1="90%" x2="100%" y2="10%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="25%" stop-color="#0077ff"/>
+      <stop offset="55%" stop-color="#6366f1"/>
+      <stop offset="85%" stop-color="#9333ea"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+
+    <!-- Wave Crest & Dynamic Foam -->
+    <linearGradient id="wave-foam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#cffafe"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="80%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#c084fc"/>
+    </linearGradient>
+
+    <!-- Wave Crest Lip Bright Foam -->
+    <linearGradient id="crest-glow" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#e0f2fe"/>
+      <stop offset="70%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+
+    <!-- Deep Wave Interior Barrel -->
+    <linearGradient id="wave-barrel" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#021024"/>
+      <stop offset="50%" stop-color="#0b1b44"/>
+      <stop offset="100%" stop-color="#1b1242"/>
+    </linearGradient>
+
+    <!-- Sleek High-Performance Surfboard Body -->
+    <linearGradient id="board-body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="20%" stop-color="#f59e0b"/>
+      <stop offset="55%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+
+    <!-- Surfboard Deck Inlay Graphic -->
+    <linearGradient id="board-deck" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="45%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+
+    <!-- Manga Comic Frames Gradient -->
+    <linearGradient id="frame-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#080718" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="frame-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d124d" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#100620" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Sun Core Blast -->
+    <radialGradient id="sun-burst" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="20%" stop-color="#fef08a" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#fb923c" stop-opacity="0.7"/>
+      <stop offset="80%" stop-color="#ec4899" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Halftone Texture Grid -->
+    <pattern id="halftone-pattern" width="14" height="14" patternUnits="userSpaceOnUse">
+      <circle cx="7" cy="7" r="1.3" fill="#38bdf8" fill-opacity="0.08"/>
+    </pattern>
+
+    <!-- Specular Gloss Highlight -->
+    <linearGradient id="glass-glare" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="shadow-deep" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000000" flood-opacity="0.75"/>
+    </filter>
+    <filter id="glow-star" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- 1. BASE SQUIRCLE CANVAS -->
+  <rect x="16" y="16" width="480" height="480" rx="116" ry="116" fill="url(#bg-squircle)"/>
+  <rect x="16" y="16" width="480" height="480" rx="116" ry="116" fill="url(#nebula-bloom)"/>
+  <rect x="16" y="16" width="480" height="480" rx="116" ry="116" fill="url(#halftone-pattern)"/>
+  <rect x="17.5" y="17.5" width="477" height="477" rx="115" ry="115" fill="none" stroke="url(#squircle-border)" stroke-width="3" opacity="0.9"/>
+
+  <!-- 2. MANGA SPEED LINES & PERSPECTIVE GRID -->
+  <g opacity="0.28" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round">
+    <line x1="45" y1="415" x2="190" y2="315"/>
+    <line x1="65" y1="445" x2="240" y2="305"/>
+    <line x1="35" y1="345" x2="200" y2="235"/>
+    <line x1="85" y1="465" x2="295" y2="295"/>
+    <line x1="320" y1="45" x2="425" y2="165" stroke="#f43f5e" opacity="0.55"/>
+    <line x1="360" y1="35" x2="455" y2="135" stroke="#f43f5e" opacity="0.55"/>
+  </g>
+
+  <!-- 3. FLOATING MANGA PANELS (Layered Translucent Comic Frames) -->
+  <!-- Left Panel -->
+  <g filter="url(#shadow-deep)" transform="rotate(-16 185 240)">
+    <rect x="105" y="105" width="165" height="235" rx="14" fill="url(#frame-left)" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.85"/>
+    <line x1="105" y1="200" x2="270" y2="200" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="190" y1="105" x2="190" y2="200" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.4"/>
+    <circle cx="145" cy="150" r="18" fill="#38bdf8" fill-opacity="0.15"/>
+    <line x1="120" y1="235" x2="250" y2="305" stroke="#818cf8" stroke-width="1" stroke-opacity="0.35"/>
+    <line x1="130" y1="225" x2="260" y2="295" stroke="#818cf8" stroke-width="1" stroke-opacity="0.35"/>
+  </g>
+
+  <!-- Right Panel -->
+  <g filter="url(#shadow-deep)" transform="rotate(14 325 220)">
+    <rect x="240" y="95" width="165" height="235" rx="14" fill="url(#frame-right)" stroke="#ec4899" stroke-width="2" stroke-opacity="0.85"/>
+    <line x1="240" y1="210" x2="405" y2="210" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.4"/>
+    <line x1="325" y1="210" x2="325" y2="330" stroke="#ec4899" stroke-width="1.5" stroke-opacity="0.4"/>
+    <polygon points="305,130 345,130 325,180" fill="#f43f5e" fill-opacity="0.25"/>
+  </g>
+
+  <!-- 4. CELESTIAL BURST / ENERGY CORE AT WAVE APEX -->
+  <circle cx="365" cy="135" r="105" fill="url(#sun-burst)"/>
+
+  <!-- 5. THE MANGA SURF WAVE COMPOSITION -->
+  <!-- Wave Deep Hollow Cavity -->
+  <path d="M 55 385 
+           C 105 440, 225 450, 325 390 
+           C 425 335, 465 220, 410 125 
+           C 375 70, 290 95, 315 175 
+           C 335 235, 285 300, 205 330 
+           C 125 360, 75 360, 55 385 Z" 
+        fill="url(#wave-barrel)" opacity="0.95"/>
+
+  <!-- Main Surging Wave Mass -->
+  <path d="M 50 370 
+           C 100 430, 215 445, 320 390 
+           C 415 340, 455 230, 410 130 
+           C 375 75, 305 100, 325 170 
+           C 340 225, 295 290, 215 320 
+           C 130 350, 70 350, 50 370 Z" 
+        fill="url(#wave-surge)" filter="url(#shadow-deep)"/>
+
+  <!-- Wave Secondary Foam Layer / Inner Stream -->
+  <path d="M 85 365 
+           C 145 415, 245 415, 330 365 
+           C 390 325, 420 240, 385 165 
+           C 360 115, 315 130, 330 180 
+           C 342 225, 305 275, 235 305 
+           C 165 335, 105 340, 85 365 Z" 
+        fill="url(#wave-foam)" opacity="0.95"/>
+
+  <!-- Dynamic Breaking Crest Lip & Spiraling Foam Claws -->
+  <path d="M 412 128 
+           C 418 145, 412 168, 396 188 
+           C 382 160, 368 135, 332 135 
+           C 310 135, 300 150, 312 172 
+           C 328 202, 292 250, 232 282 
+           C 172 312, 112 322, 85 360 
+           C 115 335, 175 315, 240 285 
+           C 305 255, 350 200, 332 160 
+           C 322 140, 342 115, 372 105 
+           C 395 98, 408 112, 412 128 Z" 
+        fill="url(#crest-glow)" filter="url(#glow-star)"/>
+
+  <!-- Wave Crest Foam Detail Arc -->
+  <path d="M 372 105 C 342 115, 322 140, 332 160 C 350 200, 305 255, 240 285" 
+        fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
+
+  <!-- High-Energy Speed Trails -->
+  <path d="M 75 375 C 145 420, 265 420, 355 350 C 410 305, 430 215, 390 155" 
+        fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 115 385 C 185 420, 290 400, 365 330 C 420 280, 415 200, 375 160" 
+        fill="none" stroke="#00f5ff" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
+  <path d="M 165 395 C 235 410, 320 380, 370 310" 
+        fill="none" stroke="#ec4899" stroke-width="3.5" stroke-linecap="round" opacity="0.85"/>
+
+  <!-- 6. HIGH-PERFORMANCE PRO SURFBOARD / MANGA KATANA PRISM -->
+  <g transform="rotate(-34 230 270)">
+    <!-- Main Board Body: Sleek Pointed Nose & Swallow Tail -->
+    <path d="M 220 90 
+             C 245 90, 280 170, 275 285 
+             C 270 365, 245 420, 220 425 
+             C 195 420, 170 365, 165 285 
+             C 160 170, 195 90, 220 90 Z" 
+          fill="url(#board-body)" filter="url(#shadow-deep)" stroke="#ffffff" stroke-width="2.5"/>
+    
+    <!-- Central Stringer / Speed Inlay -->
+    <path d="M 220 100 
+             C 235 100, 255 170, 252 285 
+             C 248 355, 235 405, 220 410 
+             C 205 405, 192 355, 188 285 
+             C 185 170, 205 100, 220 100 Z" 
+          fill="url(#board-deck)" opacity="0.9"/>
+
+    <!-- High-Tech Racing Stripe / Anime Energy Core -->
+    <path d="M 220 110 L 220 400" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+    
+    <!-- Dynamic Chevron Accents -->
+    <path d="M 205 210 L 220 195 L 235 210" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M 205 260 L 220 245 L 235 260" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M 205 310 L 220 295 L 235 310" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Left Rail Glass Reflection Highlight -->
+    <path d="M 220 95 C 205 110, 175 180, 175 285 C 175 320, 180 350, 185 370 C 180 340, 178 280, 188 210 C 198 140, 215 105, 220 95 Z" 
+          fill="#ffffff" opacity="0.6"/>
+  </g>
+
+  <!-- 7. MANGA SPARKLES, ENERGY PARTICLES & FOAM STARS -->
+  <!-- Hero Apex 4-Point Comic Star -->
+  <g filter="url(#glow-star)">
+    <path d="M 410 90 Q 410 112 432 112 Q 410 112 410 134 Q 410 112 388 112 Q 410 112 410 90 Z" fill="#ffffff"/>
+    <circle cx="410" cy="112" r="3.5" fill="#fef08a"/>
+  </g>
+
+  <!-- Gold Star 2 -->
+  <g filter="url(#glow-star)">
+    <path d="M 445 185 Q 445 200 460 200 Q 445 200 445 215 Q 445 200 430 200 Q 445 200 445 185 Z" fill="#fde047"/>
+    <circle cx="445" cy="200" r="2.5" fill="#ffffff"/>
+  </g>
+
+  <!-- Cyan Star 3 -->
+  <g filter="url(#glow-star)">
+    <path d="M 115 280 Q 115 292 127 292 Q 115 292 115 304 Q 115 292 103 292 Q 115 292 115 280 Z" fill="#00f5ff"/>
+    <circle cx="115" cy="292" r="2" fill="#ffffff"/>
+  </g>
+
+  <!-- Magenta Star 4 -->
+  <g filter="url(#glow-star)">
+    <path d="M 440 285 Q 440 294 449 294 Q 440 294 440 303 Q 440 294 431 294 Q 440 294 440 285 Z" fill="#ec4899"/>
+  </g>
+
+  <!-- Spray & Energy Beads -->
+  <circle cx="345" cy="85" r="5.5" fill="#ffffff" filter="url(#glow-star)"/>
+  <circle cx="370" cy="68" r="4" fill="#a5f3fc"/>
+  <circle cx="315" cy="75" r="4.5" fill="#fef08a"/>
+  <circle cx="435" cy="140" r="5" fill="#ffffff"/>
+  <circle cx="460" cy="160" r="3.5" fill="#38bdf8"/>
+  <circle cx="285" cy="110" r="4" fill="#ec4899"/>
+  <circle cx="140" cy="335" r="3" fill="#ffffff"/>
+  <circle cx="90" cy="385" r="4" fill="#38bdf8"/>
+  <circle cx="455" cy="240" r="3" fill="#a855f7"/>
+
+  <!-- 8. TOP GLASS SPECULAR HIGHLIGHT SHEEN -->
+  <path d="M 20 120 C 20 60, 60 20, 120 20 L 392 20 C 452 20, 492 60, 492 120 C 492 150, 360 220, 240 220 C 120 220, 20 160, 20 120 Z" 
+        fill="url(#glass-glare)"/>
+</svg>

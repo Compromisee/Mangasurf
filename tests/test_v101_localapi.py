@@ -61,22 +61,22 @@ def live(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
 
-    import readerm.paths
-    import readerm.library
-    import readerm.passlock
-    import readerm.shelves
-    import readerm.reader.books
-    import readerm.reader.api
-    import readerm.localapi
-    import readerm.gui
-    import readerm.server
+    import mangasurf.paths
+    import mangasurf.library
+    import mangasurf.passlock
+    import mangasurf.shelves
+    import mangasurf.reader.books
+    import mangasurf.reader.api
+    import mangasurf.localapi
+    import mangasurf.gui
+    import mangasurf.server
 
-    for module in (readerm.paths, readerm.library, readerm.passlock,
-                   readerm.shelves, readerm.reader.books, readerm.reader.api,
-                   readerm.localapi, readerm.gui, readerm.server):
+    for module in (mangasurf.paths, mangasurf.library, mangasurf.passlock,
+                   mangasurf.shelves, mangasurf.reader.books, mangasurf.reader.api,
+                   mangasurf.localapi, mangasurf.gui, mangasurf.server):
         importlib.reload(module)
 
-    library, shelves = readerm.library, readerm.shelves
+    library, shelves = mangasurf.library, mangasurf.shelves
     books_root = tmp_path / "books"
 
     def make(name, url, packaged=False):
@@ -105,9 +105,9 @@ def live(tmp_path, monkeypatch):
     shelves.add_book("private", secret[0])
     shelves.set_lock("private", "hunter2")
 
-    api = readerm.gui.Api()
-    readerm.reader.api.ReaderApi._unlocked_shelves = set()
-    app = readerm.server.create_app(token="tok", api=api)
+    api = mangasurf.gui.Api()
+    mangasurf.reader.api.ReaderApi._unlocked_shelves = set()
+    app = mangasurf.server.create_app(token="tok", api=api)
 
     import werkzeug.serving
 
@@ -127,8 +127,8 @@ def live(tmp_path, monkeypatch):
     yield {"base": base, "get": lambda p, **kw: session.get(base + p,
                                                             timeout=10, **kw),
            "session": session, "public": public, "secret": secret,
-           "api": api, "shelves": shelves, "localapi": readerm.localapi,
-           "mod": readerm.reader.api}
+           "api": api, "shelves": shelves, "localapi": mangasurf.localapi,
+           "mod": mangasurf.reader.api}
     server.shutdown()
 
 
@@ -340,7 +340,7 @@ def test_the_same_data_is_available_without_http(live):
         payload = json.loads(localapi.dump(name))
         assert payload not in (None,), name
     info = json.loads(localapi.dump("info"))
-    assert info["ok"] is True and info["app"] == "ReaderM"
+    assert info["ok"] is True and info["app"] in ("ReaderM", "Mangasurf")
 
 
 def test_an_unknown_endpoint_offline_explains_itself(live):
@@ -425,12 +425,12 @@ def test_agent_md_exists_and_describes_the_real_endpoints():
 def test_quickrun_only_promises_commands_that_exist():
     """It previously advertised `readerm server`, which was parsed as a URL
     to download."""
-    from readerm.cli import DELEGATED
+    from mangasurf.cli import DELEGATED
 
     text = open(os.path.join(ROOT, "MD", "QUICKRUN.md"), encoding="utf-8").read()
     for command in ("server", "opds"):
         assert command in DELEGATED, command
-        assert f"readerm {command}" in text or f"readerm.{command}" in text
+        assert f"readerm {command}" in text or f"mangasurf.{command}" in text
 
 
 def test_every_markdown_doc_except_the_readme_lives_in_md():

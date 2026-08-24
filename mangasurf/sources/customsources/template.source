@@ -1,0 +1,42 @@
+# template.source — Template for creating new custom scrapers in Mangasurf
+
+[source]
+id = "custom_site"
+name = "Custom Manga Site"
+base_url = "https://example-manga.com"
+domains = ["example-manga.com"]
+language = "en"
+needs_flaresolverr = false
+
+[headers]
+User-Agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+Referer = "https://example-manga.com/"
+
+[search]
+mode = "html"
+endpoint = "/search"
+query_param = "q"
+item_selector = ".manga-item"
+title_selector = ".title"
+url_selector = "a@href"
+cover_selector = "img@data-src"
+
+[manga_info]
+mode = "html"
+title_selector = "h1.title"
+cover_selector = ".cover img@src"
+description_selector = ".description"
+tags_selector = ".genres a"
+authors_selector = ".authors a"
+status_selector = ".status"
+
+[chapters]
+mode = "html"
+list_selector = ".chapter-list a"
+name_selector = ".chapter-name"
+url_selector = "@href"
+sort_order = "newest_first"
+
+[images]
+mode = "html"
+page_selector = ".reader img@data-src"

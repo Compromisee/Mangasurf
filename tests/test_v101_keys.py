@@ -286,7 +286,7 @@ def test_a_frameless_window_is_draggable():
 def test_the_native_frame_can_be_put_back():
     """Some Linux window managers handle frameless windows badly, so there
     has to be a way back that is not editing JSON by hand."""
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert "custom_titlebar" in DEFAULT_SETTINGS
 
@@ -305,7 +305,7 @@ def test_closing_honours_minimise_to_tray():
 def test_window_controls_degrade_without_a_native_window():
     """The LAN server shares this Api object. A phone pressing "close" must
     not take down the host's application."""
-    from readerm.gui import Api
+    from mangasurf.gui import Api
 
     api = Api()
     api.window = None

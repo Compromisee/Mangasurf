@@ -20,10 +20,10 @@ def isolated_home(monkeypatch):
     monkeypatch.setenv("HOME", home)
     monkeypatch.setenv("USERPROFILE", home)
 
-    import readerm.config as config
-    import readerm.features as features
-    import readerm.library as library
-    import readerm.passlock as passlock
+    import mangasurf.config as config
+    import mangasurf.features as features
+    import mangasurf.library as library
+    import mangasurf.passlock as passlock
 
     for module in (config, passlock, features, library):
         importlib.reload(module)
@@ -34,8 +34,8 @@ def isolated_home(monkeypatch):
 
 
 def test_defaults_cover_every_source():
-    from readerm.config import load_config
-    from readerm.sources import SOURCES
+    from mangasurf.config import load_config
+    from mangasurf.sources import SOURCES
 
     entries = load_config()["sources"]
     assert set(entries) == set(SOURCES)
@@ -43,14 +43,14 @@ def test_defaults_cover_every_source():
 
 
 def test_ranks_are_unique_and_ordered():
-    from readerm.config import ranked_ids
+    from mangasurf.config import ranked_ids
 
     order = ranked_ids()
     assert len(order) == len(set(order))
 
 
 def test_reorder_persists():
-    from readerm.config import ranked_ids, reorder
+    from mangasurf.config import ranked_ids, reorder
 
     # only the listed sources are pinned; any others keep a stable tail
     wanted = ["natomanga", "weebcentral", "mangadex", "mangakatana"]
@@ -59,9 +59,9 @@ def test_reorder_persists():
 
 
 def test_reorder_keeps_unmentioned_sources():
-    from readerm.config import ranked_ids, reorder
+    from mangasurf.config import ranked_ids, reorder
 
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     reorder(["natomanga"])
     order = ranked_ids(include_disabled=True)
@@ -70,7 +70,7 @@ def test_reorder_keeps_unmentioned_sources():
 
 
 def test_move_up_and_down():
-    from readerm.config import move, ranked_ids
+    from mangasurf.config import move, ranked_ids
 
     start = ranked_ids(include_disabled=True)
     move(start[2], -1)
@@ -80,7 +80,7 @@ def test_move_up_and_down():
 
 
 def test_move_clamps_at_the_edges():
-    from readerm.config import move, ranked_ids
+    from mangasurf.config import move, ranked_ids
 
     first = ranked_ids(include_disabled=True)[0]
     move(first, -5)
@@ -88,7 +88,7 @@ def test_move_clamps_at_the_edges():
 
 
 def test_disabling_excludes_from_search_but_keeps_the_entry():
-    from readerm.config import is_enabled, ranked_ids, search_ids, set_enabled
+    from mangasurf.config import is_enabled, ranked_ids, search_ids, set_enabled
 
     set_enabled("natomanga", False)
     assert "natomanga" not in search_ids()
@@ -98,7 +98,7 @@ def test_disabling_excludes_from_search_but_keeps_the_entry():
 
 
 def test_search_only_exclusion_keeps_the_source_enabled():
-    from readerm.config import is_enabled, ranked_ids, search_ids, set_search_enabled
+    from mangasurf.config import is_enabled, ranked_ids, search_ids, set_search_enabled
 
     set_search_enabled("mangadex", False)
     assert "mangadex" not in search_ids()
@@ -107,9 +107,9 @@ def test_search_only_exclusion_keeps_the_source_enabled():
 
 
 def test_reset_restores_defaults():
-    from readerm.config import ranked_ids, reset_config, set_enabled
+    from mangasurf.config import ranked_ids, reset_config, set_enabled
 
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     set_enabled("mangadex", False)
     reset_config()
@@ -117,9 +117,9 @@ def test_reset_restores_defaults():
 
 
 def test_describe_merges_metadata_and_config():
-    from readerm.config import describe
+    from mangasurf.config import describe
 
-    from readerm.sources import SOURCES
+    from mangasurf.sources import SOURCES
 
     rows = describe()
     assert len(rows) == len(SOURCES)
@@ -131,14 +131,14 @@ def test_describe_merges_metadata_and_config():
 
 
 def test_lock_is_off_by_default():
-    from readerm.passlock import status
+    from mangasurf.passlock import status
 
     assert status()["enabled"] is False
     assert status()["configured"] is False
 
 
 def test_set_and_verify():
-    from readerm.passlock import set_passcode, status, verify
+    from mangasurf.passlock import set_passcode, status, verify
 
     result = set_passcode("opensesame")
     assert result["ok"] and result["recovery_key"]
@@ -148,7 +148,7 @@ def test_set_and_verify():
 
 
 def test_passcode_is_never_stored_in_plaintext(isolated_home):
-    from readerm.passlock import LOCK_PATH, set_passcode
+    from mangasurf.passlock import LOCK_PATH, set_passcode
 
     secret = "sup3r-secret-code"
     result = set_passcode(secret)
@@ -161,7 +161,7 @@ def test_salts_differ_between_installs():
     """Two identical passcodes must not produce the same stored hash."""
     import json
 
-    from readerm.passlock import LOCK_PATH, set_passcode
+    from mangasurf.passlock import LOCK_PATH, set_passcode
 
     set_passcode("same-code")
     first = json.load(open(LOCK_PATH))
@@ -172,13 +172,13 @@ def test_salts_differ_between_installs():
 
 
 def test_short_passcodes_are_rejected():
-    from readerm.passlock import set_passcode
+    from mangasurf.passlock import set_passcode
 
     assert set_passcode("ab")["ok"] is False
 
 
 def test_change_requires_the_current_passcode():
-    from readerm.passlock import change_passcode, set_passcode, verify
+    from mangasurf.passlock import change_passcode, set_passcode, verify
 
     set_passcode("first-code")
     assert change_passcode("wrong", "second-code")["ok"] is False
@@ -188,7 +188,7 @@ def test_change_requires_the_current_passcode():
 
 
 def test_disable_requires_the_passcode():
-    from readerm.passlock import disable, set_passcode, status
+    from mangasurf.passlock import disable, set_passcode, status
 
     set_passcode("lockme123")
     assert disable("nope")["ok"] is False
@@ -198,7 +198,7 @@ def test_disable_requires_the_passcode():
 
 
 def test_recovery_key_resets_the_passcode():
-    from readerm.passlock import recover, set_passcode, verify
+    from mangasurf.passlock import recover, set_passcode, verify
 
     key = set_passcode("forgotten")["recovery_key"]
     assert recover("WRONG-KEY-HERE-XXXXX", "newcode")["ok"] is False
@@ -207,14 +207,14 @@ def test_recovery_key_resets_the_passcode():
 
 
 def test_recovery_key_is_case_insensitive_and_ignores_spaces():
-    from readerm.passlock import recover, set_passcode
+    from mangasurf.passlock import recover, set_passcode
 
     key = set_passcode("something")["recovery_key"]
     assert recover(key.lower().replace("-", "- "), "another1")["ok"] is True
 
 
 def test_throttling_kicks_in_after_repeated_failures():
-    from readerm.passlock import MAX_ATTEMPTS, set_passcode, verify
+    from mangasurf.passlock import MAX_ATTEMPTS, set_passcode, verify
 
     set_passcode("correct-code")
     for _ in range(MAX_ATTEMPTS):
@@ -226,13 +226,13 @@ def test_throttling_kicks_in_after_repeated_failures():
 
 
 def test_verify_passes_when_lock_is_disabled():
-    from readerm.passlock import verify
+    from mangasurf.passlock import verify
 
     assert verify("anything")["ok"] is True
 
 
 def test_update_options_without_passcode():
-    from readerm.passlock import set_passcode, status, update_options
+    from mangasurf.passlock import set_passcode, status, update_options
 
     set_passcode("mycode123")
     update_options(auto_lock_minutes=15, blur_covers=False, hint="the usual")
@@ -246,7 +246,7 @@ def test_update_options_without_passcode():
 
 
 def test_history_records_and_deduplicates():
-    from readerm.features import add_history, get_history
+    from mangasurf.features import add_history, get_history
 
     add_history("naruto", "mangadex", 10)
     add_history("bleach", "all", 5)
@@ -257,7 +257,7 @@ def test_history_records_and_deduplicates():
 
 
 def test_history_suggestions():
-    from readerm.features import add_history, suggest
+    from mangasurf.features import add_history, suggest
 
     for title in ("naruto", "nana", "bleach"):
         add_history(title)
@@ -266,7 +266,7 @@ def test_history_suggestions():
 
 
 def test_history_clear_and_remove():
-    from readerm.features import add_history, clear_history, get_history, remove_history
+    from mangasurf.features import add_history, clear_history, get_history, remove_history
 
     add_history("one")
     add_history("two")
@@ -280,7 +280,7 @@ def test_history_clear_and_remove():
 
 
 def test_queue_add_and_order():
-    from readerm.features import queue_add, queue_list, queue_move
+    from mangasurf.features import queue_add, queue_list, queue_move
 
     queue_add({"url": "a", "title": "A"})
     b = queue_add({"url": "b", "title": "B"})
@@ -291,7 +291,7 @@ def test_queue_add_and_order():
 
 
 def test_queue_status_and_next():
-    from readerm.features import queue_add, queue_list, queue_next, queue_update
+    from mangasurf.features import queue_add, queue_list, queue_next, queue_update
 
     first = queue_add({"url": "a", "title": "A"})
     queue_add({"url": "b", "title": "B"})
@@ -301,7 +301,7 @@ def test_queue_status_and_next():
 
 
 def test_queue_remove_and_clear():
-    from readerm.features import queue_add, queue_clear, queue_list, queue_remove
+    from mangasurf.features import queue_add, queue_clear, queue_list, queue_remove
 
     job = queue_add({"url": "a", "title": "A"})
     queue_add({"url": "b", "title": "B"})
@@ -315,7 +315,7 @@ def test_queue_remove_and_clear():
 
 
 def test_stats_accumulate():
-    from readerm.features import get_stats, record_stat
+    from mangasurf.features import get_stats, record_stat
 
     record_stat("mangadex", chapters=2, pages=40, bytes_=1000, seconds=10)
     record_stat("mangadex", chapters=3, pages=60, bytes_=2000, seconds=20)
@@ -327,7 +327,7 @@ def test_stats_accumulate():
 
 
 def test_stats_reset():
-    from readerm.features import get_stats, record_stat, reset_stats
+    from mangasurf.features import get_stats, record_stat, reset_stats
 
     record_stat("mangadex", chapters=1)
     reset_stats()
@@ -338,7 +338,7 @@ def test_stats_reset():
     (0, "0 B"), (512, "512 B"), (2048, "2.0 KB"), (5 * 1024 ** 2, "5.0 MB"),
 ])
 def test_human_size(value, expected):
-    from readerm.features import human_size
+    from mangasurf.features import human_size
 
     assert human_size(value) == expected
 
@@ -347,7 +347,7 @@ def test_human_size(value, expected):
     (30, "30s"), (90, "1m 30s"), (3700, "1h 1m"),
 ])
 def test_human_time(value, expected):
-    from readerm.features import human_time
+    from mangasurf.features import human_time
 
     assert human_time(value) == expected
 
@@ -356,7 +356,7 @@ def test_human_time(value, expected):
 
 
 def test_blocked_tags_and_titles():
-    from readerm.features import apply_filters, set_filters
+    from mangasurf.features import apply_filters, set_filters
 
     set_filters(blocked_tags=["Doujinshi"], blocked_titles=["colored"])
     results = [
@@ -368,7 +368,7 @@ def test_blocked_tags_and_titles():
 
 
 def test_hide_results_without_covers():
-    from readerm.features import apply_filters, set_filters
+    from mangasurf.features import apply_filters, set_filters
 
     set_filters(hide_no_cover=True)
     results = [{"title": "A", "cover": "x"}, {"title": "B", "cover": None}]
@@ -376,7 +376,7 @@ def test_hide_results_without_covers():
 
 
 def test_safe_mode_drops_adult_content():
-    from readerm.features import apply_filters, set_filters
+    from mangasurf.features import apply_filters, set_filters
 
     set_filters(safe_mode=True)
     results = [
@@ -388,7 +388,7 @@ def test_safe_mode_drops_adult_content():
 
 
 def test_blocked_authors():
-    from readerm.features import apply_filters, set_filters
+    from mangasurf.features import apply_filters, set_filters
 
     set_filters(blocked_authors=["Bad Author"])
     results = [{"title": "A", "authors": ["Good"]},
@@ -397,7 +397,7 @@ def test_blocked_authors():
 
 
 def test_filters_are_a_no_op_when_unset():
-    from readerm.features import apply_filters
+    from mangasurf.features import apply_filters
 
     results = [{"title": "A"}, {"title": "B"}]
     assert len(apply_filters(results)) == 2
@@ -407,7 +407,7 @@ def test_filters_are_a_no_op_when_unset():
 
 
 def test_dedupe_collapses_cross_source_duplicates():
-    from readerm.features import dedupe
+    from mangasurf.features import dedupe
 
     hits = [
         {"title": "Naruto", "source": "weebcentral", "url": "w"},
@@ -422,7 +422,7 @@ def test_dedupe_collapses_cross_source_duplicates():
 
 
 def test_dedupe_normalises_decorated_titles():
-    from readerm.features import dedupe
+    from mangasurf.features import dedupe
 
     hits = [
         {"title": "Naruto", "source": "mangadex", "url": "m"},
@@ -433,7 +433,7 @@ def test_dedupe_normalises_decorated_titles():
 
 
 def test_dedupe_keeps_genuinely_different_series():
-    from readerm.features import dedupe
+    from mangasurf.features import dedupe
 
     hits = [{"title": "Naruto", "source": "a", "url": "1"},
             {"title": "Bleach", "source": "a", "url": "2"}]
@@ -444,7 +444,7 @@ def test_dedupe_keeps_genuinely_different_series():
 
 
 def test_collection_lifecycle():
-    from readerm.features import (add_to_collection, delete_collection,
+    from mangasurf.features import (add_to_collection, delete_collection,
                                   get_collections, remove_from_collection)
 
     add_to_collection("Faves", {"url": "u1", "title": "One"})
@@ -466,7 +466,7 @@ def test_export_json_csv_and_markdown(tmp_path):
     import json
 
     from readerm import library
-    from readerm.features import export_library
+    from mangasurf.features import export_library
 
     library.record_chapter("https://x.test/manga/1", "Test Manga", "Chapter 1",
                            pages=12, source="mangadex")
@@ -486,7 +486,7 @@ def test_export_json_csv_and_markdown(tmp_path):
 
 
 def test_export_rejects_unknown_format(tmp_path):
-    from readerm.features import export_library
+    from mangasurf.features import export_library
 
     with pytest.raises(ValueError):
         export_library(str(tmp_path / "x.bin"), "bin")
@@ -494,7 +494,7 @@ def test_export_rejects_unknown_format(tmp_path):
 
 def test_import_round_trip(tmp_path):
     from readerm import library
-    from readerm.features import export_library, import_library
+    from mangasurf.features import export_library, import_library
 
     library.record_chapter("https://x.test/m/1", "Round Trip", "Chapter 1",
                            pages=5, source="mangadex")
@@ -513,7 +513,7 @@ def test_import_round_trip(tmp_path):
 
 def test_snapshot_and_restore():
     from readerm import library
-    from readerm.features import list_snapshots, restore_snapshot, snapshot
+    from mangasurf.features import list_snapshots, restore_snapshot, snapshot
 
     library.record_chapter("https://x.test/m/1", "Before", "Chapter 1",
                            source="mangadex")
@@ -531,7 +531,7 @@ def test_snapshot_and_restore():
 
 def test_library_insights():
     from readerm import library
-    from readerm.features import library_insights
+    from mangasurf.features import library_insights
 
     library.record_chapter("https://x.test/m/1", "A", "Chapter 1", pages=10,
                            source="mangadex")
@@ -553,7 +553,7 @@ def test_library_insights():
 def test_search_all_skips_excluded_sources(monkeypatch):
     """A source the user excluded must not be queried at all."""
     from readerm import config
-    from readerm.sources import SOURCES, search_all
+    from mangasurf.sources import SOURCES, search_all
 
     config.set_enabled("natomanga", False)
     queried = []
@@ -569,7 +569,7 @@ def test_search_all_skips_excluded_sources(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("readerm.sources.get_source",
+    monkeypatch.setattr("mangasurf.sources.get_source",
                         lambda sid, **kw: FakeSource(sid))
     results = search_all("anything")
     assert "natomanga" not in queried
@@ -579,7 +579,7 @@ def test_search_all_skips_excluded_sources(monkeypatch):
 
 def test_search_all_orders_by_rank(monkeypatch):
     from readerm import config
-    from readerm.sources import search_all
+    from mangasurf.sources import search_all
 
     pinned = ["weebcentral", "natomanga", "mangakatana", "mangadex"]
     config.reorder(pinned)
@@ -594,7 +594,7 @@ def test_search_all_orders_by_rank(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("readerm.sources.get_source",
+    monkeypatch.setattr("mangasurf.sources.get_source",
                         lambda sid, **kw: FakeSource(sid))
     order = [r["source"] for r in search_all("anything")]
     assert order[:len(pinned)] == pinned
@@ -602,7 +602,7 @@ def test_search_all_orders_by_rank(monkeypatch):
 
 def test_search_all_interleaves_when_asked(monkeypatch):
     from readerm import config
-    from readerm.sources import search_all
+    from mangasurf.sources import search_all
 
     config.reorder(["mangadex", "mangakatana", "natomanga", "weebcentral"])
 
@@ -617,14 +617,14 @@ def test_search_all_interleaves_when_asked(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("readerm.sources.get_source",
+    monkeypatch.setattr("mangasurf.sources.get_source",
                         lambda sid, **kw: FakeSource(sid))
     order = [r["source"] for r in search_all("x", interleave=True)]
     assert order[:4] == ["mangadex", "mangakatana", "natomanga", "weebcentral"]
 
 
 def test_search_all_survives_a_failing_source(monkeypatch):
-    from readerm.sources import search_all
+    from mangasurf.sources import search_all
 
     class FakeSource:
         def __init__(self, source_id):
@@ -638,7 +638,7 @@ def test_search_all_survives_a_failing_source(monkeypatch):
         def close(self):
             pass
 
-    monkeypatch.setattr("readerm.sources.get_source",
+    monkeypatch.setattr("mangasurf.sources.get_source",
                         lambda sid, **kw: FakeSource(sid))
     results = search_all("x")
     assert results                                    # other sources still work

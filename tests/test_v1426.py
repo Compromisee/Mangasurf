@@ -62,7 +62,7 @@ def api(tmp_path, monkeypatch):
     from readerm import config, features, library
     for module in (config, features, library):
         importlib.reload(module)
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     return gui, library
 
@@ -146,7 +146,7 @@ def test_percent_is_capped_when_the_library_leads_the_source(api):
 
 
 def test_setting_exists_with_a_sane_default():
-    from readerm.gui import DEFAULT_SETTINGS
+    from mangasurf.gui import DEFAULT_SETTINGS
 
     assert DEFAULT_SETTINGS["downloaded_results"] == "darken"
 
@@ -194,7 +194,7 @@ def test_features_documents_the_new_setting():
 
 def test_features_source_table_matches_the_registry():
     """The table lists sites by hand, so it can drift from the code."""
-    from readerm.sources import list_sources
+    from mangasurf.sources import list_sources
 
     text = read(os.path.join(ROOT, "MD", "FEATURES.md"))
     table = text[text.index("### Registered sources"):]
@@ -206,7 +206,7 @@ def test_features_source_table_matches_the_registry():
 
 
 def test_no_stale_counts_in_features():
-    from readerm.sources import SOURCE_CLASSES
+    from mangasurf.sources import SOURCE_CLASSES
 
     text = read(os.path.join(ROOT, "MD", "FEATURES.md"))
     assert f"{len(SOURCE_CLASSES)} registered" in text

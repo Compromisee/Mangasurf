@@ -1,0 +1,60 @@
+name: Scraper Performance & Throughput Benchmarks
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Every Sunday at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Benchmark 34 Sources & curl_cffi Engine
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Execute Performance Benchmarks
+        run: |
+          python - << 'EOF'
+          import time
+          from mangasurf.sources import ALL_SOURCES
+          from mangasurf.metadata import search_mal, search_pornhwadb, search_mangabaka
+
+          print("=" * 60)
+          print("MANGASURF PERFORMANCE BENCHMARK SUITE")
+          print("=" * 60)
+
+          # 1. Benchmark Scraper Instantiation & DNS Resolution
+          t0 = time.time()
+          for src_cls in ALL_SOURCES:
+              inst = src_cls()
+          init_time = (time.time() - t0) * 1000
+          print(f"✅ Loaded {len(ALL_SOURCES)} source classes in {init_time:.2f}ms")
+
+          # 2. Benchmark Metadata Provider Query Latencies
+          t_mal = time.time()
+          search_mal("Solo Leveling", limit=2)
+          mal_ms = (time.time() - t_mal) * 1000
+          print(f"✅ MyAnimeList Jikan API query: {mal_ms:.1f}ms")
+
+          t_pdb = time.time()
+          search_pornhwadb("Secret Class", limit=2)
+          pdb_ms = (time.time() - t_pdb) * 1000
+          print(f"✅ PornhwaDB indexer query: {pdb_ms:.1f}ms")
+
+          t_mb = time.time()
+          search_mangabaka("Dungeon Odyssey", limit=2)
+          mb_ms = (time.time() - t_mb) * 1000
+          print(f"✅ MangaBaka synonym query: {mb_ms:.1f}ms")
+          EOF

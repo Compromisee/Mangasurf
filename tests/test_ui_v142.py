@@ -37,7 +37,7 @@ def isolated_home(monkeypatch):
 
 
 def test_corners_default_is_rounded():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     assert gui.DEFAULT_SETTINGS["corners"] == "rounded"
 
@@ -46,13 +46,13 @@ def test_corners_default_is_rounded():
 
 
 def test_rail_default_is_collapsed():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     assert gui.DEFAULT_SETTINGS["rail_expanded"] is False
 
 
 def test_rail_settings_round_trip():
-    import readerm.gui as gui
+    import mangasurf.gui as gui
     importlib.reload(gui)
     api = gui.Api()
     api.set_settings({"rail_expanded": True, "corners": "square"})
