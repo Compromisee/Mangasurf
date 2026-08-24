@@ -62,7 +62,7 @@ jobs:
         run: |
           pip install -e .
           mangasurf --help
-          python -c "import readerm; print('Mangasurf version:', mangasurf.__version__)"
+          python -c "import mangasurf; print('Mangasurf version:', mangasurf.__version__)"
 
   # ──────────────────────────────────────────────────────────────────────────
   # 2. Code Linting & Syntax Sanity Check
@@ -94,8 +94,8 @@ jobs:
         with:
           node-version: 20
       - run: |
-          node -c readerm/reader/app/app.js
-          node -c readerm/reader/app/themes.js
-          node -c readerm/reader/app/shelves.js
-          node -c readerm/reader/app/keys.js
-          node -c readerm/reader/app/manga-view.js
+          node -c mangasurf/reader/app/app.js
+          node -c mangasurf/reader/app/themes.js
+          node -c mangasurf/reader/app/shelves.js
+          node -c mangasurf/reader/app/keys.js
+          node -c mangasurf/reader/app/manga-view.js
