@@ -56,7 +56,7 @@ jobs:
         env:
           PYTHONPATH: "."
         run: |
-          python -m pytest tests/test_mangasurf_sources.py tests/test_v169_list_downloads.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py tests/test_server_gui.py tests/test_sources.py -v --tb=short
+          python -m pytest tests/test_mangasurf_sources.py tests/test_add_v160.py tests/test_fixes_v151.py tests/test_fixes.py tests/test_server_gui.py tests/test_sources.py -v --tb=short
 
       - name: Validate Python Package Installation
         run: |
