@@ -363,7 +363,7 @@ def test_live_search_and_chapters(source_id, query):
 
 @NETWORK
 def test_live_mangadex_cover_sizes_all_resolve():
-    import requests
+    from mangasurf import http as requests  # curl_cffi-backed
     source = MangaDexSource()
     try:
         info = source.get_manga_info("a1c7c817-4e59-43b7-9365-09675a149a6f")

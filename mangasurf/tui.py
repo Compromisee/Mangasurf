@@ -84,92 +84,187 @@ class MangasurfTUI(App):
     SUB_TITLE = "terminal edition"
 
     CSS = """
-    Screen { background: $surface; }
+    /* ─── Mangasurf TUI · terminal-edition theme ───────────────────────────
+       Matches the docs/ screenshots: deep navy canvas, cyan accents, letter-
+       spaced uppercase panel titles, bordered panels, and a traffic-light
+       window chrome with a centred title. Everything below is pure CSS so the
+       handlers keep working untouched. Only transform-independent properties
+       are used where possible. */
+
+    Screen {
+        background: #0a0e1a;
+        color: #c7d3f0;
+    }
+    TabbedContent { height: 1fr; }
+    TabbedContent > .tab-bar--tabs { background: #0a0e1a; }
+    TabbedContent > .tab-bar--tab {
+        color: #64748b; padding: 0 2; margin-right: 1;
+    }
+    TabbedContent > .tab-bar--tab:hover { color: #a5f3fc; background: #111a30; }
+    TabbedContent > .tab-bar--tab.-active {
+        color: #67e8f9; background: #12203a;
+        border-bottom: tall #38bdf8;
+        text-style: bold;
+    }
+    TabPane { padding: 1 2; }
 
     .hidden { display: none; }
 
-    TabbedContent { height: 1fr; }
-    TabPane { padding: 1 2; }
+    /* ── window chrome / title bar ─────────────────────────────────────── */
+    #tui-titlebar {
+        height: 3; dock: top; background: #0a0e1a;
+        padding: 0 4; 
+    }
+    #tui-titlebar .tl-dots { width: 16; }
+    .tl-dot { width: 2; text-style: bold; content-align: center middle; color: #1f6feb; }
+    #tui-title #tl-center {
+        width: 1fr; content-align: center middle;
+        text-style: bold; color: #a5f3fc;
+    }
+    #tui-subwire { color: #334155; text-style: bold; }
 
-    /* ------------------------------------------------------- search tab */
-    #src-help { color: $text-muted; margin-bottom: 1; height: auto; }
-    #src-rank-list { height: 1fr; border: round $primary 30%; }
-    #src-rank-list:focus { border: round $primary; }
-    #src-actions { height: 3; margin-top: 1; }
-    #src-actions Button { margin-right: 1; min-width: 12; }
+    /* ── panel title band (uppercase, letter-spaced, cyan) ────────────── */
+    .panel-title {
+        height: 1; color: #38bdf8; text-style: bold;
+        background: #0e1626; padding: 0 1; margin-bottom: 1;
+    }
+    .panel-title.rules { color: #334155; }
 
+    #foot { background: #0a0e1a; color: #67e8f9; }
+    Footer { background: #0a0e1a; color: #67e8f9; }
+    Footer > .footer--key { background: #0a0e1a; color: #38bdf8; }
+    Footer > .footer--description { color: #7dd3fc; }
+
+    /* ────────────────────────────── search tab ──────────────────────── */
     #search-bar { height: 3; margin-bottom: 1; }
-    #source-select { width: 20; margin-right: 1; }
-    #genre-select { width: 18; margin-left: 1; }
-    #search-input { width: 1fr; }
-    #search-btn { margin-left: 1; min-width: 12; }
-    #search-status { color: $text-muted; height: 1; margin-bottom: 1; }
-    #search-results { height: 1fr; border: round $primary 30%; }
-    #search-results:focus-within { border: round $primary; }
-    .result-title { text-style: bold; }
-    .result-url { color: $text-muted; }
+    #source-select { width: 20; margin-right: 1; background: #0e1626; }
+    #genre-select { width: 18; margin-left: 1; background: #0e1626; }
+    #search-input { width: 1fr; background: #0e1626; border: tall #1e2a44; }
+    #search-input:focus { border: tall #38bdf8; }
+    #search-btn { margin-left: 1; min-width: 12; background: #0e2a44; border: tall #1e3a5c; }
+    #search-status { color: #64748b; height: 1; margin-bottom: 1; }
 
-    /* -------------------------------------------------------- manga tab */
-    #manga-empty { height: 1fr; content-align: center middle; color: $text-muted; }
+    #search-main { height: 1fr; }
+    #search-left { width: 1fr; }
+    #search-results {
+        height: 1fr; border: round #1e2a44; background: #0b101e;
+    }
+    #search-results:focus-within { border: round #38bdf8 70%; }
+    #search-results > ListItem { padding: 1 1; height: auto; }
+    #search-results > ListItem:hover { background: #13203a; }
+    #search-results > ListItem.-highlight {
+        background: #16233f; border: tall #1e3a5c;
+    }
+    .sr-rank { color: #7ca7ff; text-style: bold; width: 5; }
+    .sr-title { text-style: bold; color: #d7e3ff; }
+    .sr-meta { color: #64748b; }
+    .sr-dim { color: #475569; }
+
+    #search-right { width: 46; margin-left: 2; }
+    #search-cover {
+        height: auto; min-height: 10; content-align: center middle;
+        border: round #1e2a44; background: #0b101e; padding: 1; margin-bottom: 1;
+    }
+    #search-preview-title { text-style: bold; color: #d7e3ff; }
+    #search-preview-meta { color: #64748b; }
+    #search-preview-empty {
+        height: 1fr; content-align: center middle; color: #475569;
+    }
+
+    /* ────────────────────────────── manga tab ────────────────────────── */
+    #manga-empty { height: 1fr; content-align: center middle; color: #64748b; }
     #manga-body { height: 1fr; }
     #manga-info {
         width: 44; min-width: 32; margin-right: 2;
-        border: round $primary 30%; padding: 1 1;
+        border: round #1e2a44; padding: 1 1; background: #0b101e;
     }
     #manga-cover {
         height: auto; min-height: 8; content-align: center middle;
-        margin-bottom: 1; border: round $primary 20%; padding: 0;
+        margin-bottom: 1; border: round #1e2a44; padding: 0;
     }
-    #manga-title { text-style: bold; color: $primary; }
-    #manga-source { color: $text-muted; text-style: italic; }
-    #manga-meta { color: $text-muted; margin-top: 1; }
-    #manga-tags { color: $secondary; margin-top: 1; }
-    #manga-desc { margin-top: 1; color: $text 80%; }
+    #manga-title { text-style: bold; color: #67e8f9; }
+    #manga-source { color: #64748b; text-style: italic; }
+    #manga-meta { color: #64748b; margin-top: 1; }
+    #manga-tags { color: #8ab4ff; margin-top: 1; }
+    #manga-desc { margin-top: 1; color: #b7c3e0; }
 
     #manga-right { width: 1fr; }
     .opt-row { height: 3; margin-bottom: 1; }
-    .opt-row Label { width: 12; content-align: left middle; height: 3; color: $text-muted; }
-    .opt-row Select { width: 26; }
-    .opt-row Input { width: 1fr; }
+    .opt-row Label { width: 12; content-align: left middle; color: #94a3b8; }
+    .opt-row Select { width: 26; background: #0e1626; }
+    .opt-row Input { width: 1fr; background: #0e1626; border: tall #1e2a44; }
     #bundle-n { width: 10; margin-left: 1; }
 
     #chapter-tools { height: 3; margin-bottom: 1; }
-    #range-input { width: 1fr; }
-    #chapter-tools Button { margin-left: 1; min-width: 8; }
-    #chapter-list { height: 1fr; border: round $primary 30%; }
-    #chapter-list:focus { border: round $primary; }
+    #range-input { width: 1fr; background: #0e1626; border: tall #1e2a44; }
+    #chapter-tools Button { margin-left: 1; min-width: 8; background: #0e2a44; }
+    #chapter-list {
+        height: 1fr; border: round #1e2a44; background: #0b101e;
+    }
+    #chapter-list:focus { border: round #38bdf8 70%; }
+    #chapter-list > SelectionList.Option {
+        height: 2; padding: 0 1; color: #c7d3f0;
+    }
+    .ch-name { color: #d7e3ff; text-style: bold; }
+    .ch-dim { color: #64748b; }
+    .st-ok  { color: #34d399; text-style: bold; }
+    .st-warn{ color: #fbbf24; text-style: bold; }
+    .st-bad { color: #f87171; text-style: bold; }
     #download-row { height: 3; margin-top: 1; }
-    #download-btn { width: 1fr; }
-    #sel-count { width: 24; content-align: right middle; height: 3; color: $text-muted; }
+    #download-btn { width: 1fr; background: #0d3a2a; border: tall #1f6f4f; }
+    #sel-count { width: 24; content-align: right middle; color: #94a3b8; }
 
-    /* ---------------------------------------------------- downloads tab */
-    #dl-empty { height: 1fr; content-align: center middle; color: $text-muted; }
+    /* ────────────────────────────── downloads tab ────────────────────── */
+    #dl-empty { height: 1fr; content-align: center middle; color: #64748b; }
     #dl-body { height: 1fr; }
-    #dl-title { text-style: bold; color: $primary; height: 1; }
-    #dl-status { color: $text-muted; height: 1; margin-bottom: 1; }
+    #dl-title { text-style: bold; color: #67e8f9; height: 1; }
+    #dl-netline { color: #64748b; height: 1; margin-bottom: 1; }
+    #dl-status { color: #64748b; height: 1; margin-bottom: 1; }
     #overall-row { height: 1; margin-bottom: 1; }
     #overall-bar { width: 1fr; }
-    #overall-bar Bar { width: 1fr; }
-    #overall-text { width: 14; content-align: right middle; }
-    #active-box { height: auto; max-height: 12; border: round $primary 30%; padding: 0 1; margin-bottom: 1; }
-    .ac-row { height: 1; }
-    .ac-name { width: 30; }
-    .ac-bar { width: 1fr; }
-    .ac-bar Bar { width: 1fr; }
-    .ac-count { width: 10; content-align: right middle; color: $text-muted; }
-    #dl-log { height: 1fr; border: round $primary 30%; }
+    #overall-bar Bar { width: 1fr; color: #34d399; }
+    #overall-text { width: 14; content-align: right middle; color: #67e8f9; }
+    #active-box { height: auto; max-height: 14; padding: 0 1; margin-bottom: 1; }
+    .ac-row { height: 3; margin-bottom: 1; }
+    .ac-head { color: #38bdf8; text-style: bold; }
+    .ac-name { color: #d7e3ff; text-style: bold; }
+    .ac-src { color: #a5b4fc; }
+    .ac-lines { color: #64748b; }
+    .ac-bar { width: 1fr; color: #38bdf8; }
+    .ac-bar Bar { width: 1fr; color: #38bdf8; }
+    .ac-count { width: 10; content-align: right middle; color: #67e8f9; }
+    #dl-log { height: 1fr; border: round #1e2a44; background: #0b101e; }
     #dl-actions { height: 3; margin-top: 1; }
-    #stop-btn { min-width: 14; }
+    #stop-btn { min-width: 14; background: #3a0d1a; border: tall #5c1f34; }
 
-    /* ----------------------------------------------------- settings tab */
-    #settings-box { width: 70; }
+    /* ────────────────────────────── settings tab ─────────────────────── */
+    #settings-main { height: 1fr; }
+    #settings-left { width: 1fr; }
+    #settings-box { width: 1fr; }
     .set-row { height: 3; margin-bottom: 1; }
-    .set-row Label { width: 34; content-align: left middle; height: 3; }
-    .set-row Input { width: 12; }
-    .set-row Select { width: 22; }
-    .set-hint { color: $text-muted; margin-bottom: 1; }
+    .set-row Label { width: 34; content-align: left middle; color: #94a3b8; }
+    .set-row Input { width: 12; background: #0e1626; border: tall #1e2a44; }
+    .set-row Select { width: 22; background: #0e1626; }
+    .set-hint { color: #64748b; margin-bottom: 1; }
     #set-output { width: 34; }
-    #save-flash { color: $success; margin-left: 2; content-align: left middle; height: 3; }
+    #save-flash { color: #34d399; margin-left: 2; content-align: left middle; height: 3; }
+
+    #settings-right { width: 1fr; margin-left: 2; }
+    #scraper-list { height: 1fr; border: round #1e2a44; background: #0b101e; }
+    #scraper-list > ListItem { padding: 0 1; height: 2; }
+    #scraper-list > ListItem.-highlight { background: #16233f; }
+    .sc-num { color: #64748b; width: 5; }
+    .sc-name { color: #d7e3ff; text-style: bold; }
+    .sc-host { color: #64748b; }
+    .sc-proto { color: #a5b4fc; }
+
+    /* ────────────────────────────── sources tab ──────────────────────── */
+    #src-help { color: #64748b; margin-bottom: 1; height: auto; }
+    #src-rank-list { height: 1fr; border: round #1e2a44; background: #0b101e; }
+    #src-rank-list:focus { border: round #38bdf8 70%; }
+    #src-rank-list > ListItem { padding: 0 1; }
+    #src-actions { height: 3; margin-top: 1; }
+    #src-actions Button { margin-right: 1; min-width: 12; background: #0e2a44; }
     """
 
     BINDINGS = [
@@ -199,10 +294,16 @@ class MangasurfTUI(App):
     # ------------------------------------------------------------ layout
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        # ── window chrome: traffic-light dots + centred title ──────────────
+        with Horizontal(id="tui-titlebar"):
+            yield Static("[#ff5f56]●[/]  [#ffbd2e]●[/]  [#27c93f]●[/]", classes="tl-dots")
+            yield Static("Mangasurf TUI  │  Omnibar Discovery & TrueColor ANSI Previews", id="tl-center")
+            yield Static("", classes="tl-dots")
+
         with TabbedContent(initial="tab-search"):
 
             with TabPane("Search", id="tab-search"):
+                yield Static("SEARCH  ·  PICK A SOURCE, TYPE A QUERY, ENTER TO OPEN", classes="panel-title")
                 with Horizontal(id="search-bar"):
                     yield Select(
                         [("All sources", "all")]
@@ -220,12 +321,24 @@ class MangasurfTUI(App):
                                  id="genre-select")
                     yield Button("Search", variant="primary", id="search-btn")
                 yield Static("", id="search-status")
-                yield ListView(id="search-results")
+                with Horizontal(id="search-main"):
+                    with Vertical(id="search-left"):
+                        yield ListView(id="search-results")
+                    with Vertical(id="search-right"):
+                        yield Static("LIVE COVER PREVIEW", classes="panel-title")
+                        yield Static("", id="search-cover")
+                        yield Static("", id="search-preview-title")
+                        yield Static("", id="search-preview-meta")
+                        yield Static(
+                            "Type a query and press Enter. Arrow through the "
+                            "results to preview a cover here; Enter opens the "
+                            "series.", id="search-preview-empty")
 
             with TabPane("Manga", id="tab-manga"):
                 yield Static("Search for a manga first  (Ctrl+S)", id="manga-empty")
                 with Horizontal(id="manga-body", classes="hidden"):
                     with VerticalScroll(id="manga-info"):
+                        yield Static("SERIES  ·  METADATA & COVER", classes="panel-title")
                         yield Static("", id="manga-cover")
                         yield Static("", id="manga-title")
                         yield Static("", id="manga-source")
@@ -233,6 +346,7 @@ class MangasurfTUI(App):
                         yield Static("", id="manga-tags")
                         yield Static("", id="manga-desc")
                     with Vertical(id="manga-right"):
+                        yield Static("CHAPTERS  ·  SELECT, TUNE FORMAT & DOWNLOAD", classes="panel-title")
                         with Horizontal(classes="opt-row"):
                             yield Label("Format")
                             yield Select(
@@ -265,19 +379,24 @@ class MangasurfTUI(App):
                             yield Static("", id="sel-count")
 
             with TabPane("Downloads", id="tab-downloads"):
+                yield Static("QUEUE MONITOR  ·  CONCURRENT ENGINE TELEMETRY", classes="panel-title")
                 yield Static("No active downloads", id="dl-empty")
                 with Vertical(id="dl-body", classes="hidden"):
                     yield Static("", id="dl-title")
+                    yield Static("", id="dl-netline")
                     yield Static("", id="dl-status")
                     with Horizontal(id="overall-row"):
                         yield ProgressBar(id="overall-bar", show_eta=False)
                         yield Static("0 / 0", id="overall-text")
+                    yield Static("ACTIVE WORKER THREADS", classes="panel-title rules")
                     yield Vertical(id="active-box")
+                    yield Static("SESSION HISTORY", classes="panel-title rules")
                     yield RichLog(id="dl-log", markup=True, wrap=True)
                     with Horizontal(id="dl-actions"):
                         yield Button("Stop", variant="error", id="stop-btn")
 
             with TabPane("Sources", id="tab-sources"):
+                yield Static("SOURCE RANKING  ·  HIGHER WINS WHEN THE SAME SERIES APPEARS TWICE", classes="panel-title")
                 yield Static(
                     "Rank sources with the buttons; higher sources win when the "
                     "same series appears on several sites. Space toggles a source "
@@ -290,38 +409,45 @@ class MangasurfTUI(App):
                     yield Button("Reset", id="src-reset")
 
             with TabPane("Settings", id="tab-settings"):
-                with Vertical(id="settings-box"):
-                    yield Static("Changes apply to new downloads. Saved to "
-                                 "~/.mangasurf/settings.json", classes="set-hint")
-                    with Horizontal(classes="set-row"):
-                        yield Label("Output directory")
-                        yield Input(value=self.settings["output_dir"], id="set-output")
-                    with Horizontal(classes="set-row"):
-                        yield Label("Default format")
-                        yield Select(
-                            [("CBZ", "cbz"), ("PDF", "pdf"), ("EPUB", "epub"),
-                             ("Images", "images")],
-                            value=self.settings.get("format", "cbz"),
-                            allow_blank=False, id="set-format",
-                        )
-                    with Horizontal(classes="set-row"):
-                        yield Label("Concurrent chapters (1-8)")
-                        yield Input(value=str(self.settings["chapter_workers"]),
-                                    id="set-chapter-workers", type="integer")
-                    with Horizontal(classes="set-row"):
-                        yield Label("Images per chapter (1-10)")
-                        yield Input(value=str(self.settings["image_workers"]),
-                                    id="set-image-workers", type="integer")
-                    with Horizontal(classes="set-row"):
-                        yield Label("Delay between chapters (s)")
-                        yield Input(value=str(self.settings["delay"]),
-                                    id="set-delay", type="number")
-                    with Horizontal(classes="set-row"):
-                        yield Switch(value=self.settings.get("keep_images", False),
-                                     id="set-keep")
-                    with Horizontal(classes="set-row"):
-                        yield Button("Save settings", variant="primary", id="save-btn")
-                        yield Static("", id="save-flash")
+                yield Static("CONFIGURATION  ·  STORAGE, ENGINE & SCRAPER MATRIX", classes="panel-title")
+                with Horizontal(id="settings-main"):
+                    with Vertical(id="settings-left"):
+                        yield Static("STORAGE & DOWNLOAD ENGINE", classes="panel-title rules")
+                        with Vertical(id="settings-box"):
+                            yield Static("Changes apply to new downloads. Saved to "
+                                         "~/.mangasurf/settings.json", classes="set-hint")
+                            with Horizontal(classes="set-row"):
+                                yield Label("Output directory")
+                                yield Input(value=self.settings["output_dir"], id="set-output")
+                            with Horizontal(classes="set-row"):
+                                yield Label("Default format")
+                                yield Select(
+                                    [("CBZ", "cbz"), ("PDF", "pdf"), ("EPUB", "epub"),
+                                     ("Images", "images")],
+                                    value=self.settings.get("format", "cbz"),
+                                    allow_blank=False, id="set-format",
+                                )
+                            with Horizontal(classes="set-row"):
+                                yield Label("Concurrent chapters (1-8)")
+                                yield Input(value=str(self.settings["chapter_workers"]),
+                                            id="set-chapter-workers", type="integer")
+                            with Horizontal(classes="set-row"):
+                                yield Label("Images per chapter (1-10)")
+                                yield Input(value=str(self.settings["image_workers"]),
+                                            id="set-image-workers", type="integer")
+                            with Horizontal(classes="set-row"):
+                                yield Label("Delay between chapters (s)")
+                                yield Input(value=str(self.settings["delay"]),
+                                            id="set-delay", type="number")
+                            with Horizontal(classes="set-row"):
+                                yield Switch(value=self.settings.get("keep_images", False),
+                                             id="set-keep")
+                            with Horizontal(classes="set-row"):
+                                yield Button("Save settings", variant="primary", id="save-btn")
+                                yield Static("", id="save-flash")
+                    with Vertical(id="settings-right"):
+                        yield Static("REGISTERED SCRAPERS", classes="panel-title rules")
+                        yield ListView(id="scraper-list")
 
         yield Footer()
 
@@ -397,6 +523,7 @@ class MangasurfTUI(App):
     def on_mount(self):
         self._load_genres()
         self._refresh_source_list()
+        self._fill_scraper_list()
 
     # ---------------------------------------------------------- bindings
 
@@ -528,21 +655,112 @@ class MangasurfTUI(App):
             return
         self.results = results
         status.update(f"[dim]{len(results)} results - press Enter to open[/]")
-        for r in results:
+        for i, r in enumerate(results):
+            # Serial column, title, source badge, chapter range, genre tags.
             src_name = r.get("source_name") or r.get("source") or ""
             badge = format_source_badge(r.get("source") or "", src_name)
-            tag = f"{badge} " if src_name else ""
-            listview.append(ListItem(
-                Static(f"{tag}[bold {ACCENT}]{r['title']}[/]\n[dim]{r['url']}[/]")
-            ))
+            chap = r.get("latest") or r.get("chapters") or ""
+            chap_txt = f"[#64748b]Ch. {chap}[/]" if chap else ""
+            tag_txt = ""
+            if r.get("tags") and isinstance(r["tags"], list):
+                # format_colored_tag returns finished Rich markup, so do not
+                # slice it (that would truncate the colour tokens and leak a
+                # literal "[bold ...").
+                tag_txt = "  ".join(format_colored_tag(t) for t in r["tags"][:2])
+            listview.append(ListItem(Static(
+                f"[#7ca7ff]{i + 1:02d}[/]  "
+                f"[bold #d7e3ff]{r['title']}[/]   "
+                f"{badge}  {chap_txt}  {tag_txt}"
+            )))
         listview.focus()
+
+    @on(ListView.Selected, "#search-results")
 
     @on(ListView.Selected, "#search-results")
     def handle_result_selected(self, event: ListView.Selected):
         index = event.list_view.index
         if index is not None and 0 <= index < len(self.results):
             result = self.results[index]
+            self._show_search_preview(index)
             self._load_manga(result["url"], result.get("source"))
+
+    @on(ListView.Highlighted, "#search-results")
+    def handle_result_highlight(self, event: ListView.Highlighted):
+        index = event.list_view.index
+        if index is not None and 0 <= index < len(self.results):
+            self._show_search_preview(index)
+
+    # ------------------------------------------------------ live preview
+    @work(thread=True, group="preview")
+    def _preview_cover_worker(self, info):
+        try:
+            from .covers import render_terminal_cover
+            ansi = render_terminal_cover(
+                info.get("cover"), width=22, max_height=11,
+                source_id=info.get("source"), referer=info.get("url"))
+        except Exception:
+            ansi = ""
+        self.call_from_thread(self._set_search_cover, ansi)
+
+    def _set_search_cover(self, ansi_art):
+        try:
+            cover = self.query_one("#search-cover", Static)
+            if not ansi_art:
+                cover.update("[#475569]no cover art[/]")
+                return
+            try:
+                from rich.text import Text
+                cover.update(Text.from_ansi(ansi_art))
+            except Exception:
+                cover.update(ansi_art)
+        except Exception:
+            pass
+
+    def _show_search_preview(self, index):
+        if not (0 <= index < len(self.results)):
+            return
+        r = self.results[index]
+        try:
+            self.query_one("#search-preview-empty", Static).add_class("hidden")
+        except Exception:
+            pass
+        try:
+            title_w = self.query_one("#search-preview-title", Static)
+            title_w.update(f"[bold #d7e3ff]{r.get('title') or ''}[/]")
+        except Exception:
+            pass
+        try:
+            name = r.get("source_name") or r.get("source") or ""
+            badge = format_source_badge(r.get("source") or "", name)
+            meta = []
+            if r.get("latest"):
+                meta.append(f"Latest {r['latest']}")
+            if r.get("status"):
+                meta.append(str(r["status"]))
+            self.query_one("#search-preview-meta", Static).update(
+                f"{badge}   [#64748b]{'  |  '.join(meta)}[/]")
+        except Exception:
+            pass
+        self._preview_cover_worker(r)
+
+    # -------------------------------------------------- scraper matrix
+    def _fill_scraper_list(self):
+        try:
+            lv = self.query_one("#scraper-list", ListView)
+            lv.clear()
+            for meta in list_sources():
+                sid = meta.get("id")
+                proto = ("[#a5b4fc]API[/]" if meta.get("supports_scanlator") is not None
+                         else "[#64748b]HTML[/]")
+                if meta.get("needs_flaresolverr"):
+                    proto = "[#fbbf24]CF[/]"
+                lv.append(ListItem(Static(
+                    f"[#64748b]{meta.get('name') or sid}[/] "
+                    f"[#475569]·[/] [#64748b]{meta.get('base_url') or ''}[/]  "
+                    f"{proto}   [#64748b]{'18+' if meta.get('adult_only') else 'SFW'}[/]"
+                )))
+        except Exception:
+            pass
 
     # ------------------------------------------------------------- manga
 
@@ -608,9 +826,22 @@ class MangasurfTUI(App):
 
         sel = self.query_one("#chapter-list", SelectionList)
         sel.clear_options()
-        # newest first, all selected by default
+        # newest first, all selected by default. Each option is a two-column
+        # row: the title on the left, a muted date/page hint on the right.
         for i in range(len(chapters) - 1, -1, -1):
-            sel.add_option(Selection(chapters[i]["name"], i, True))
+            ch = chapters[i]
+            name = ch.get("name") or f"Chapter {i + 1}"
+            hint = []
+            if ch.get("date"):
+                hint.append(str(ch["date"])[:10] if len(str(ch["date"])) > 10
+                            else str(ch["date"]))
+            if ch.get("pages"):
+                hint.append(f"{ch['pages']} pages")
+            idx = chapters.index(ch)
+            sel.add_option(Selection(
+                f"[bold #d7e3ff]{name}[/]"
+                + (f"   [#64748b]{' · '.join(hint)}[/]" if hint else ""),
+                i, True))
         self._update_count()
 
     @work(thread=True, group="cover")
@@ -821,12 +1052,24 @@ class MangasurfTUI(App):
             self.query_one("#overall-text", Static).update(f"0 / {self.total}")
             self._set_status(f"Downloading {self.total} chapters")
             self._log(f"[dim]Saving to {event['directory']}[/]")
+            try:
+                self.query_one("#dl-netline", Static).update(
+                    f"[#64748b]Output:[/] [#7dd3fc]{event['directory']}[/]   "
+                    f"[#64748b]Workers:[/] [#7dd3fc]{self.engine.opt.chapter_workers if self.engine else '?'}[/]"
+                )
+            except Exception:
+                pass
         elif t == "chapter_start":
             self._ensure_row(event["chapter"])
         elif t == "chapter_progress":
-            row = self._ensure_row(event["chapter"])
-            row["bar"].update(total=event["total"], progress=event["done"])
-            row["count"].update(f"{event['done']}/{event['total']}")
+            entry = self._ensure_row(event["chapter"])
+            entry["bar"].update(total=event["total"], progress=event["done"])
+            entry["count"].update(f"{event['done']}/{event['total']}")
+            pct = int((event["done"] / event["total"]) * 100) \
+                if event["total"] else 0
+            entry["stats"].update(
+                f"[#64748b]Progress:[/] [#67e8f9]Page {event['done']} / "
+                f"{event['total']}   ({pct}%)[/]")
         elif t == "chapter_done":
             self._remove_row(event["chapter"])
             self.query_one("#overall-bar", ProgressBar).update(
@@ -852,12 +1095,17 @@ class MangasurfTUI(App):
         if chapter in self.active_rows:
             return self.active_rows[chapter]
         box = self.query_one("#active-box", Vertical)
-        name = Static(chapter, classes="ac-name")
+        src = self.source.name if getattr(self, "source", None) else "source"
+        head = Static(f"[#38bdf8]WORKER[/]  [bold #d7e3ff]{chapter}[/]"
+                      f"   [#a5b4fc][{src}][/]", classes="ac-head")
+        stats = Static(f"[#64748b]Progress:[/] [#67e8f9]Page -[/]",
+                       classes="ac-lines")
         bar = ProgressBar(classes="ac-bar", show_eta=False, show_percentage=True)
         count = Static("-", classes="ac-count")
-        row = Horizontal(name, bar, count, classes="ac-row")
+        row = Vertical(head, stats, classes="ac-row")
+        row.mount(Horizontal(bar, count))
         box.mount(row)
-        entry = {"row": row, "bar": bar, "count": count}
+        entry = {"row": row, "bar": bar, "count": count, "stats": stats}
         self.active_rows[chapter] = entry
         return entry
 

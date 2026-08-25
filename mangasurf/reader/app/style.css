@@ -3681,3 +3681,98 @@ html[data-animations="false"] .carousel-card,
 }
 
 
+
+/* ── v1.7.3 UI polish ────────────────────────────────────────────────── */
+/* Consistent vertical rhythm: give view content breathing room at top and
+   bottom so the card grid never hugs the toolbar or the scroll edge. */
+.view { padding-bottom: 8px; }
+#main { scrollbar-gutter: stable; }
+/* Keep the content padding but reserve space for the scrollbar so the grid
+   is not cramped against it. */
+#main::-webkit-scrollbar { width: 10px; }
+
+/* Card titles and source pills must wrap instead of overflowing the card. */
+.card .name, .rowlist .name, .meta .name {
+    overflow-wrap: anywhere; word-break: break-word; min-width: 0;
+}
+.meta-dl-pill, .thumb-dl-badge, .status-tag { white-space: nowrap; }
+
+/* Search input: enough room for the icon and the clear button; also give
+   the omnibar a comfortable height on touch screens. */
+.search-wrap input { min-height: 42px; }
+.search-wrap .mi { top: 50%; transform: translateY(-50%); }
+
+/* The search chips / source row should not crowd small screens. */
+@media (max-width: 640px) {
+    .search-wrap input { min-height: 38px; }
+    .view-head { gap: var(--sp-3); }
+    .grid { row-gap: 14px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Enhanced motion (GPU-friendly)
+   All of these animate only `transform` / `opacity` (compositor-only) so
+   they stay at 60fps even on a busy machine -- no layout or paint thrash,
+   which is exactly what makes scroll feel laggy. `prefers-reduced-motion`
+   turns them off for users who ask for that, and nothing is removed.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Staggered card entrance: feed a `--i` index in from the card template.
+   Cards animate up & in; `min()` caps the stagger so huge grids don't
+   make the last card wait forever. */
+.card {
+    animation: card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(min(var(--i, 0), 14) * 30ms);
+    will-change: transform, opacity;
+}
+@keyframes card-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Press feedback: a quick 3D-ish squish on pointer-down feels tactile and
+   costs nothing (transform only). */
+.card:active, .card-queue-btn:active, button:active {
+    transform: scale(0.97);
+    transition: transform 0.06s ease;
+}
+.card:hover { transition: transform var(--dur) var(--ease-out), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+
+/* Queue button ripple-ish pop when it appears. */
+.card-queue-btn { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity var(--dur) var(--ease); }
+
+/* Cover shimmer: a soft diagonal sheen across a not-yet-loaded thumb so the
+   grid reads as "alive" while images stream in rather than popping. */
+.card .thumb::after {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: linear-gradient(105deg,
+        transparent 30%, rgba(255, 255, 255, 0.06) 45%,
+        rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.06) 55%,
+        transparent 70%);
+    background-size: 220% 220%;
+    animation: shimmer 1.8s ease-in-out infinite;
+    mix-blend-mode: screen;
+}
+@keyframes shimmer {
+    0%   { background-position: 130% 0; }
+    100% { background-position: -70% 0; }
+}
+
+/* Subtle lift for rows / chapters on hover, and smooth open for accordions. */
+.ch-row { transition: background var(--dur) var(--ease), transform 0.16s ease; }
+.ch-row:hover { transform: translateX(3px); }
+
+/* Buttons and pills get a gentle press + focus glow so interactions feel
+   responsive without a heavy ripple DOM. */
+button:focus-visible, .pill:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Respect users who disable motion. */
+@media (prefers-reduced-motion: reduce) {
+    .card { animation: none; transition: none; }
+    .card .thumb::after { animation: none; }
+    .card:active, .card-queue-btn:active, button:active { transform: none; }
+    .ch-row:hover { transform: none; }
+}

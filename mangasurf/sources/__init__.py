@@ -14,7 +14,7 @@ from .base import BASE_HEADERS, DEFAULT_UA, ScrapeError, Source
 from .comix import ComixSource
 from .demonicscans import DemonicScansSource
 from .flamecomics import FlameComicsSource
-from .hentaiakane import HentaiAkaneSource
+from .mewhen18 import Mewhen18Source
 from .hitomi import HitomiSource
 from .kagane import KaganeSource
 from .madaranet import MadaraNetSource
@@ -40,10 +40,14 @@ from .chikari import ChikariSource
 from .kuramanga import KuraMangaSource
 from .kurahentai import KuraHentaiSource
 from .hiperdex import HiperdexSource
+from .comicland import ComicLandSource
+from .yurivan import YurivanSource
 from .madaradex import MadaraDexSource
 from .mangak import MangaKSource
-from .kings import KingsSource
-from .kamiya import KamiyaSource
+from .mangatitan import MangaTitanSource
+from .manhwa68 import Manhwa68Source
+from .manhwabuddy import ManhwaBuddySource
+from .hentai18 import Hentai18Source
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +76,7 @@ SOURCE_CLASSES = [
     MangadassSource,
     Manhwa18Source,
     Manga18ClubSource,
-    HentaiAkaneSource,
+    Mewhen18Source,
     NhentaiSource,
     ChikariSource,
     KuraMangaSource,
@@ -80,8 +84,12 @@ SOURCE_CLASSES = [
     HiperdexSource,
     MadaraDexSource,
     MangaKSource,
-    KingsSource,
-    KamiyaSource,
+    MangaTitanSource,
+    Manhwa68Source,
+    ManhwaBuddySource,
+    Hentai18Source,
+    ComicLandSource,
+    YurivanSource,
 ]
 
 SOURCES = {cls.id: cls for cls in SOURCE_CLASSES}
@@ -95,10 +103,12 @@ __all__ = [
     "WeebCentralSource", "KaganeSource", "ComixSource", "VymangaSource",
     "MangaDotNetSource", "MangaDistrictSource", "HitomiSource", "SimplyHentaiSource",
     "NatomangaSource", "OmegaScansSource", "ManhwaReadSource", "Manhwa18Source",
-    "WebtoonsSource", "MangadassSource", "Manga18ClubSource", "HentaiAkaneSource",
+    "WebtoonsSource", "MangadassSource", "Manga18ClubSource", "Mewhen18Source",
     "NhentaiSource", "AsuraScansSource", "FlameComicsSource",
     "DemonicScansSource", "MadaraScansSource", "MadaraNetSource",
-    "WitchScansSource", "WriterScansSource", "KingsSource", "KamiyaSource",
+    "WitchScansSource", "WriterScansSource", "MangaTitanSource",
+    "Manhwa68Source", "ManhwaBuddySource", "Hentai18Source", "ComicLandSource",
+    "YurivanSource",
     "get_source", "source_for_url", "detect_source", "list_sources",
     "search_all", "browse_all", "browse_multi", "genres_all",
     "split_genres", "load_custom_sources", "reload_sources",
@@ -235,12 +245,43 @@ def source_for_url(url: str, **kwargs) -> Source:
 
 SEARCH_WORKERS = 14
 
+import threading as _threading
+from concurrent.futures import ThreadPoolExecutor as _TPE
+
+#: One shared, lazily-created executor for every fan-out helper (search_all,
+#: browse_all, genre listing). Creating and shutting down a new pool on every
+#: call churns worker threads on each search keystroke -- on a fast machine
+#: the constant spawn/join/GC is a measurable source of lag, and concurrent
+#: searches stacked 14+14+... threads on top of each other. A single reused
+#: pool keeps warm workers around and bounds total fan-out threads.
+_SEARCH_POOL = None
+_POOL_LOCK = _threading.Lock()
+
+
+def _shared_pool(min_workers: int = SEARCH_WORKERS, *_extra) -> _TPE:
+    """Return the process-wide worker pool, sizing it to the largest need."""
+    global _SEARCH_POOL
+    if _SEARCH_POOL is None:
+        with _POOL_LOCK:
+            if _SEARCH_POOL is None:
+                # A little headroom over a single fan-out so a search and a
+                # browse that overlap both keep their own workers instead of
+                # starving each other.
+                workers = max(SEARCH_WORKERS, int(min_workers), 24)
+                _SEARCH_POOL = _TPE(
+                    max_workers=workers, thread_name_prefix="mangasurf-io")
+    return _SEARCH_POOL
+
 
 def search_all(query: str, source_ids=None, limit: int = 20,
                workers: int = SEARCH_WORKERS, use_config: bool = True,
-               interleave: bool = False, **filters) -> list:
+               interleave: bool = False, page: int = 1, **filters) -> list:
     from concurrent.futures import ThreadPoolExecutor, as_completed
     import concurrent.futures
+
+    # ``page`` is a real per-call argument, not a source filter. If a caller
+    # passed it through ``**filters`` in addition, that duplicate is dropped.
+    page = int(filters.pop("page", page) or 1)
 
     ranks, limits = {}, {}
     if source_ids:
@@ -271,7 +312,7 @@ def search_all(query: str, source_ids=None, limit: int = 20,
             source = get_source(source_id)
             try:
                 return source.search(query, limit=limits.get(source_id) or limit,
-                                     **filters)
+                                     page=page, **filters)
             finally:
                 source.close()
 
@@ -283,7 +324,7 @@ def search_all(query: str, source_ids=None, limit: int = 20,
     except Exception:
         search_timeout = 30.0
 
-    pool = ThreadPoolExecutor(max_workers=max(1, min(workers, len(ids))))
+    pool = _shared_pool(workers, len(ids))
     try:
         futures = {pool.submit(run, sid): sid for sid in ids}
         done, pending = concurrent.futures.wait(futures, timeout=search_timeout)
@@ -300,7 +341,7 @@ def search_all(query: str, source_ids=None, limit: int = 20,
             logger.debug("Search timed out on %s after %.1fs", source_id, search_timeout)
             buckets[source_id] = []
     finally:
-        pool.shutdown(wait=False)
+        pass  # shared pool is reused; nothing to tear down
 
     ordered_ids = sorted(buckets, key=lambda sid: ranks.get(sid, 100))
 
@@ -382,7 +423,7 @@ def browse_all(sort: str = "Trending", genre: str = None, page: int = 1,
             BROWSE_CACHE.set(key, rows)
         return rows
 
-    pool = ThreadPoolExecutor(max_workers=max(1, min(workers, len(ids))))
+    pool = _shared_pool(workers, len(ids))
     try:
         futures = {pool.submit(run, sid): sid for sid in ids}
         done, pending = concurrent.futures.wait(futures, timeout=12.0)
@@ -398,7 +439,7 @@ def browse_all(sort: str = "Trending", genre: str = None, page: int = 1,
             source_id = futures[future]
             buckets[source_id] = []
     finally:
-        pool.shutdown(wait=False)
+        pass  # shared pool is reused; nothing to tear down
 
     ordered = sorted(buckets, key=lambda sid: ranks.get(sid, 100))
     if not interleave:
@@ -523,8 +564,7 @@ def genres_all(source_ids=None, use_config=True, workers=8,
 
     results, complete = [], True
     if ids:
-        pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=max(1, min(workers, len(ids))))
+        pool = _shared_pool(workers, len(ids))
         try:
             futures = {pool.submit(fetch, sid): sid for sid in ids}
             done, pending = concurrent.futures.wait(
@@ -542,7 +582,7 @@ def genres_all(source_ids=None, use_config=True, workers=8,
                 complete = False
                 results.append((source_id, _offline_genres(source_id)))
         finally:
-            pool.shutdown(wait=False)
+            pass  # shared pool is reused; nothing to tear down
 
     merged = {}
     for source_id, genres in results:

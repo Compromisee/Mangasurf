@@ -4,6 +4,196 @@ All notable changes to **Mangasurf**, newest first.
 
 ---
 
+## [Unreleased] — Efficiency & Motion
+
+### Fixed: onefile EXE crashing with "No module named 'curl_cffi'"
+- `curl_cffi` is Mangasurf's only HTTP layer (requests was removed), but the
+  PyInstaller spec didn't list it as a hidden import. If the build environment
+  lacked it, PyInstaller silently skipped it and shipped an exe that died at
+  runtime in the phone-server / opds / gui children with
+  `ModuleNotFoundError: No module named 'curl_cffi'`. The spec now explicitly
+  bundles `curl_cffi`, its `_wrapper.abi3` extension, and `cffi`/`_cffi_backend`,
+  and **fails the build with a clear message** if they aren't importable —
+  so a broken exe can never be produced again. (Rebuild your onefile after
+  `pip install curl_cffi`.)
+
+### TUI now matches the docs screenshots
+- Restyled `mangasurf/tui.py` to the docs' visual identity: a traffic-light
+  window chrome with a centred cyan title, letter-spaced uppercase panel
+  headings, bordered panels on a deep-navy canvas, numbered `[01]` search
+  rows with coloured source badges and a live ANSI cover preview, a chapter
+  list with two-column rows, download telemetry cards with ASCII progress
+  bars and a session-history log, and a two-column settings view with a
+  scraper matrix. All existing features, bindings and widget IDs are intact.
+
+### No more thread churn on every search
+- `search_all`, `browse_all` and the genre fan-out no longer create and tear
+  down a fresh `ThreadPoolExecutor` on every call. They now fan out through
+  one shared, lazily-grown, capped pool. Previously every search keystroke
+  spawned ~14 worker threads and joined them, which — on a fast machine —
+  was its own source of lag.
+
+### Lazy image pool in the download engine
+- The 16-thread image pool is only constructed when the thread-per-image
+  fallback actually runs. The default async engine (one libcurl multi
+  handle) streamed images itself while 16 idle threads sat around; those are
+  gone.
+
+### HentaiAkane → Mewhen18
+- `hentaiakane` has been replaced by `mewhen18` (`https://mewhen18.com`),
+  the same catalogue re-hosted, since `hentaiakane.com` was taken over by an
+  unrelated blog.
+
+### Extra GPU-friendly motion (no features removed)
+- Staggered card entrance, press feedback, a cover-load shimmer, and
+  compositor-only `transform`/`opacity` hints so animations ride the GPU and
+  never cause layout/paint thrash. A `prefers-reduced-motion` guard disables
+  them for users who ask for it.
+
+---
+
+## [1.7.3] — Mangasurf v1.7.3: Per-Chapter Downloaded Counts, Four New Verified Sources, Docs Hub & UI Polish
+
+### Search results now show the real downloaded chapter count
+- **Fixed the "1 chapter downloaded" badge.** Search result cards used to count
+  *files*, so a single bundled CBZ (which holds many chapters) showed "1
+  Downloaded" even though the manga detail view correctly showed the full
+  count. The card badge is now corrected against the same authoritative
+  `downloaded_status` the detail view uses (read from each series'
+  `manga.json`), and `getDownloadedMeta` prefers the larger of file count /
+  chapter count. The card and detail view always agree now.
+
+### New sources (38 total)
+- **Added `manhwa68`** (Madara engine) — verified search / browse / genres /
+  chapters / CDN pages.
+- **Added `manhwabuddy`** — verified search / series / chapters / page CDN.
+- **Added `hentai18`** — verified NSFW search / series / chapters / page CDN.
+- **Added `comicland`** — verified REST-API source (search / browse / detail /
+  `pages_by_index`), Referer-protected.
+- **Added `yurivan`** — best-effort; Yurivan gates every page behind a
+  client-side age gate, so this source degrades gracefully and is marked
+  unverified. Prefer the other adult sources.
+- Removed the fake `kings` and `kamiya` sources (already removed in 1.7.2).
+
+### curl_cffi HTTP layer (carried forward and hardened)
+- 100% curl_cffi; `requests` fully removed. `mangasurf/http.py` is the single
+  network layer with browser TLS/JA3+JA4 impersonation and a fast async
+  batch engine (`fetch_many` / `download_many`) used by the downloader.
+
+### Documentation Hub & website
+- Added a **Documentation hub** to the landing page linking to self-contained
+  doc pages: getting-started, sources, http-engine, downloading, roadmap,
+  troubleshooting.
+- Regenerated the README source table and landing-page source directory from
+  the live registry (rows can no longer drift).
+- Updated CHANGELOG, ROADMAP, TODO and FEATURES.
+
+### UI & fixes
+- Targeted padding/responsiveness polish in the reader shell and source grid.
+- **Custom horizontal + vertical scrollbars** site-wide — a thin accent-gradient
+  thumb on a dark track (Chromium/Safari `::-webkit-scrollbar` + Firefox
+  `scrollbar-width`), so wide code blocks, cards and tables scroll cleanly.
+- **Expandable docs sidebar tree** — every documentation page now carries a
+  sticky, collapsible tree sidebar (like most docs sites) listing all six doc
+  pages and their on-page sections. The current page's branch is expanded and
+  highlighted; the others deep-link into their anchors. On narrow screens the
+  tree collapses behind a "Documentation contents" drawer toggle.
+- Version bumped to **1.7.3**; `requires-python >=3.11`.
+
+#### Scraper fixes (this batch)
+- **Fixed `mangadotnet`** — the `/api/search` and `/api/manga` endpoints return
+  a `manga_list` array (not `data`/`results`), which the old parser ignored, so
+  search/browse always returned 0 results. Now reads `manga_list`.
+- **Fixed `witchscans` (witchtoons) result titles** — the search page is a
+  Next.js SPA returning HTML (never JSON), and the fallback parser read the
+  whole card's text, so every result was titled the type badge ("MANHWA") or a
+  chapter label. Titles now come from the cover `img[alt]` (with anchor/@title
+  fallback), chapter links are skipped, and Next.js `/_next/image` proxy cover
+  URLs are decoded to the real CDN URL.
+- **Fixed `hentai18` result titles** — the series cards carry *absolute* URLs
+  (`https://hentai18.net/read-hentai/<slug>`) that a relative-path-only regex
+  rejected, so only the sidebar "Oneshot"/"Chapter N" rows survived. The path
+  regex now accepts both, and titles come from the cover `img[alt]`.
+- **Fixed missing covers on `manhwa68`, `hentai18`, `yurivan`** — their cover
+  CDNs 403 a cross-origin browser request (a wrong Referer), so the thumbnails
+  never rendered. All three hosts are now routed through the `proxy_cover`
+  path, which fetches with the source's own Referer.
+- **Fixed one-page "No More Results" bugs** — several sources ignored the
+  `page` argument and always returned the first page:
+  - `comicland` — API pages on a row index, not `?page=`; paginates by
+    `offset` now, and the static `/comics/popular` list falls back to the
+    paginated `/comics` feed.
+  - `mangatitan` — pages ≥2 use a blog-archive layout (`.entry-archive`)
+    instead of the `.series-card` grid; both are parsed now, and per-chapter
+    posts are deduped to unique series.
+  - `yurivan` — browse/search sliced `[:limit]` so every page repeated page 1;
+    now slices by page (and search pages by offset).
+  - `mangak` — search already paginated; trending browse is a static top-50
+    list by design (no server paging).
+- **Cloudflare-only sites (`kagane`, `comix`)** remain behind a real browser
+  JS challenge that TLS impersonation alone cannot pass — they require the
+  FlareSolverr fallback. `mangadotnet` and `natomanga` now work regardless;
+  `hentaiakane.com` was taken over by an unrelated blog, so the `hentaiakane`
+  source has been replaced by `mewhen18` (`https://mewhen18.com`), the same
+  catalogue re-hosted — same theme, same `img.hentai1.io` image CDN.
+
+---
+
+## [1.7.2] — Mangasurf v1.7.2: 100% curl_cffi (no `requests`), Fast Async Engine, Removed Fake Sites, New Verified Source
+
+### HTTP layer: all-in on curl_cffi, `requests` fully removed
+- **`requests` is gone from the dependency graph.** `requirements.txt`,
+  `pyproject.toml` and every file that imported it have been migrated to
+  **curl_cffi**. TCP/HTTP in Mangasurf is now handled entirely by
+  `mangasurf/http.py`.
+- **New `mangasurf/http.py` module** — the single place Mangasurf talks to the
+  network:
+  - `Session` — a `requests`-compatible synchronous session with **real
+    browser TLS/JA3+JA4 fingerprinting** (`impersonate="chrome"`) by default,
+    so Cloudflare / Akamai bot checks that blocked plain `requests` clients are
+    passed automatically. The dozens of source plugins keep calling
+    `session.get(...).json()` with zero changes.
+  - `AsyncEngine` + `fetch_many()` / `download_many()` — a **fast async engine**
+    that drives one libcurl multi handle to fetch/download dozens of urls
+    concurrently. `MANGASURF_IMPERSONATE=safari` switches the fingerprint.
+- **Chapter downloads use the async engine.** The downloader streams every page
+  of a chapter across the shared async handle (`Source.download_many` /
+  `http.download_many`), returning a full chapter of 30 pages in roughly one
+  page's latency. Atomic `.part` → `os.replace` writes and magic-byte image
+  validation are preserved.
+- **Backwards-compatible exception aliases** (`exceptions.RequestException`,
+  `ConnectionError`, `Timeout`, `HTTPError`, ...) so existing error-handling
+  code keeps working verbatim, and `requests` is re-exported as an alias for
+  curl_cffi for any plugin that still references it.
+- Removed the old urllib3 `HTTPAdapter` pool-sizing shim (curl_cffi owns its own
+  connection pool).
+- Migrated `flaresolverr.py`, `metadata.py`, `gui/__init__.py` and `chikari.py`
+  to curl_cffi (Cloudflare fallback, cover enrichment, cover proxies and tag
+  lookups all still work).
+
+### Sources
+- **Removed `kings` (Kings Manga) and `kamiya` (Kamiya Scans)** — both pointed
+  at fake / dead domains; they were unreliable and are no longer registered.
+- **Added `mangatitan` (MangaTitan, mangatitan.com)** — a verified new scan
+  site with real browser-impersonation scraping: search, series info, chapter
+  list (oldest-first) and the lazy-loaded CDN page list all work end-to-end.
+- Source count is now **30+ (33 registered)** — the README source table is
+  regenerated from the live registry so it can't drift.
+
+### Packaging, compatibility & fixes
+- **Version bumped to 1.7.2**; `requires-python = ">=3.11"` (curl_cffi supports
+  3.8+, but Mangasurf now targets 3.11+). Verified the import/test matrix on
+  Python 3.13; code avoids 3.12+ only features so it runs cleanly on 3.11.
+- README rewritten with **curl_cffi install & troubleshooting** notes (wheel
+  install, libcurl deps, `MANGASURF_IMPERSONATE`, proxy handling, sanity check).
+- Fixed the new failures caught by the migration: connection-pool test now
+  asserts the curl_cffi session, source-genre/registry tests updated, the
+  bare-file relative-import guard test updated to the absolute imports, and the
+  live Witchtoons integration test is gated behind `READERM_NETWORK_TESTS=1`
+  (that reader now renders pages client-side).
+
+---
+
 ## [1.7.1] — Mangasurf v1.7.1: Internal Chapter Grouping & TOC Resolution, Sibling Chapter Archive Discovery & Exact Download Sync
 
 ### Highlights & Fixes

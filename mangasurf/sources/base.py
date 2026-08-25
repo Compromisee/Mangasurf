@@ -27,7 +27,10 @@ import random
 import re
 import time
 
-import requests
+from .. import http
+
+#: curl_cffi is the only HTTP transport in Mangasurf. ``requests`` is gone.
+requests = http  # Backwards-compatible alias for plugins that still read it.
 
 logger = logging.getLogger(__name__)
 
@@ -150,14 +153,13 @@ class Source:
     #: overhead and extra load on the site. Size the pool to the ceiling.
     POOL_SIZE = 16
 
-    def __init__(self, delay: float = 0.5, session: requests.Session = None,
+    def __init__(self, delay: float = 0.5, session: http.Session = None,
                  language: str = "en", **options):
         self.delay = float(delay)
         self.language = language or "en"
         self.options = options
-        self.session = session or requests.Session()
+        self.session = session or http.new_session()
         self.session.headers.update(self.headers())
-        self._size_pool(self.session)
         self._solverr = None
         #: Optional callback invoked with the size of each chunk written to
         #: disk. Set by the download engine to measure throughput; left None
@@ -166,20 +168,6 @@ class Source:
         #: Set once FlareSolverr is confirmed unreachable, so a Cloudflare
         #: site fails fast instead of sleeping through five backoffs.
         self._solverr_down = False
-
-    @classmethod
-    def _size_pool(cls, session):
-        """Widen the connection pool so worker threads do not thrash it."""
-        try:
-            from requests.adapters import HTTPAdapter
-
-            for prefix in ("http://", "https://"):
-                session.mount(prefix, HTTPAdapter(
-                    pool_connections=cls.POOL_SIZE,
-                    pool_maxsize=cls.POOL_SIZE,
-                ))
-        except Exception:      # pragma: no cover - never fatal
-            logger.debug("Could not resize the connection pool", exc_info=True)
 
     # ------------------------------------------------------------ setup
 
@@ -314,8 +302,8 @@ class Source:
         """
         if response.status_code in (204, 304):
             return False
-        return (response.request is None
-                or getattr(response.request, "method", "GET") != "HEAD")
+        req = getattr(response, "request", None)
+        return (req is None or getattr(req, "method", "GET") != "HEAD")
 
     @staticmethod
     def _retry_after(response):
@@ -435,6 +423,17 @@ class Source:
         except OSError:
             pass
         return False
+
+    def download_many(self, items: list, on_bytes=None) -> list:
+        """Download a batch of images concurrently via the curl_cffi async engine.
+
+        ``items`` is a list of ``{"url", "path", "referer", "headers"}``
+        dicts. Returns a list of booleans (True = written OK) in the same
+        order. This is the fast path the download engine uses for whole
+        chapters; it drives one libcurl multi handle instead of a thread per
+        image, so dozens of pages come back in roughly one page's latency.
+        """
+        return http.download_many(items, on_bytes=on_bytes)
 
     @staticmethod
     def _is_image(response, content: bytes) -> bool:

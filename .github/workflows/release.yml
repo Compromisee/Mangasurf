@@ -124,12 +124,6 @@ jobs:
             archive_name: mangasurf-${{ needs.prep-version.outputs.resolved_tag }}-macos-arm64.zip
             binary_src: dist/Mangasurf
             use_zip: true
-          - name: macos-x86_64
-            os: macos-13
-            artifact_name: mangasurf-macos-x86_64
-            archive_name: mangasurf-${{ needs.prep-version.outputs.resolved_tag }}-macos-x86_64.zip
-            binary_src: dist/Mangasurf
-            use_zip: true
 
     steps:
       - name: Checkout repository
@@ -160,6 +154,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
           pip install pyinstaller pytest
+          pip install curl_cffi
 
       - name: Run test suite verification before building
         if: ${{ github.event.inputs.skip_tests != 'true' }}
@@ -204,7 +199,7 @@ jobs:
             ${{ matrix.platform.artifact_name }}
             ${{ matrix.platform.archive_name }}
             *.sha256
-          if-no-files-found: error
+          if-no-files-found: error  
   # ──────────────────────────────────────────────────────────────────────────
   # 3. Extract & Format Release Notes from CHANGELOG.md
   # ──────────────────────────────────────────────────────────────────────────
@@ -235,10 +230,47 @@ jobs:
           clean_ver = os.environ.get("CLEAN_VERSION", "0.0.0")
           changelog = os.environ.get("CHANGELOG_PATH", "MD/CHANGELOG.md")
 
-          notes_body = f"### What's Changed in {tag_name}\n\nAutomated build release for target version {clean_ver}.\nPlease review the full changelog at `{changelog}` for complete details.\n"
+          notes_body = ""
 
-          # Write out to GitHub environment step output 
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          # Try parsing from CHANGELOG.md if it exists
+          if os.path.exists(changelog):
+              try:
+                  with open(changelog, 'r', encoding='utf-8') as f:
+                      lines = f.readlines()
+                  
+                  capture = False
+                  captured_lines = []
+                  
+                  # Look for headers like '##' or '## 1.7.1' or matching the clean version
+                  for line in lines:
+                      if line.startswith("## ") and clean_ver in line:
+                          capture = True
+                          captured_lines.append(line)
+                          continue
+                      elif line.startswith("## ") and capture:
+                          break
+                      if capture:
+                          captured_lines.append(line)
+                          
+                  if captured_lines:
+                      notes_body = "".join(captured_lines).strip()
+              except Exception:
+                  pass
+
+          # Fallback features list if CHANGELOG parsing is empty or missing
+          if not notes_body:
+              notes_body = (
+                  f"### What's Changed in {tag_name}\n\n"
+                  "- **32 Registered Sources**: High-speed scrapers.\n"
+                  "- **Curated List Bulk Downloading**: One-click download for lists.\n"
+                  "- **3D Depth Library Carousel**: Smooth 7-perspective cards with luminous glow, reading progress, and shelf pills.\n"
+                  "- **Offline Database Integration**: Instant omnibar suggestions and offline indexing.\n"
+                  "- **Online reading**: Read on demand online without using storage on your computer.\n"
+                  "- **LAN Web Reader & OPDS 1.2 Hub**: Native phone reader server (:8577) & OPDS catalog (:8578) with live device telemetry.\n"
+              )
+
+          # Write out to GitHub environment step output using multi-line syntax
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
               f.write("content<<EOF\n")
               f.write(notes_body)
               f.write("\nEOF\n")
@@ -246,12 +278,3 @@ jobs:
 
           # Safely execute the generated script file
           python generate_notes.py
-  
-          if not notes_body:
-              notes_body = """### What's Changed
-          - **32 Registered Sources**: High-speed scrapers.
-          - **Curated List Bulk Downloading**: One-click download for lists.
-          - **3D Depth Library Carousel**: Smooth 7-perspective cards with luminous glow, reading progress, and shelf pills.
-          - **Offline Database Integration**: Instant omnibar suggestions and offline indexing.
-          - **Online reading**: Read on demand online without using storage on your computer
-          - **LAN Web Reader & OPDS 1.2 Hub**: Native phone reader server (:8577) & OPDS catalog (:8578) with live device telemetry.

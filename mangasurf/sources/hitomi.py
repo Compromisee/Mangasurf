@@ -1,4 +1,4 @@
-"""Hitomi.la source scraper for Mangasurf.
+"""Hitomi.la (pornographic) source scraper for Mangasurf.
 
 Supports full gallery extraction, Nozomi binary search, browsing, and image streaming.
 Uses the modern gold-usergeneratedcontent.net CDN architecture.

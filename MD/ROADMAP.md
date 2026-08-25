@@ -7,11 +7,12 @@ Vision, milestones, and technical architecture evolution for **Mangasurf**.
 ## 📍 Release Roadmap
 
 ```
-v1.7.0 (Current) ──────> v1.8.0 (Q3 2026) ──────> v2.0.0 (Q4 2026) ──────> v3.0.0 (2027)
-- 34 Scrapers           - AniList / MAL Sync     - Full WebAssembly      - Peer-to-Peer
-- curl_cffi TLS         - AI OCR Translation     - Native macOS .dmg     - Distributed Mesh
-- Dual Page Spread      - Web Push for Server    - Multi-GPU WebGL       - Auto-Dubbing TTS
-- Export/Import Data    - E-Ink Optimized Mode   - PWA Installable       - Smart Panel Crop
+v1.7.3 (Current) ──────> v1.8.0 (Q3 2026) ──────> v2.0.0 (Q4 2026) ──────> v3.0.0 (2027)
+- 38 Sources            - AniList / MAL Sync     - Full WebAssembly      - Peer-to-Peer
+- 100% curl_cffi        - AI OCR Translation     - Native macOS .dmg     - Distributed Mesh
+- Async batch engine    - Web Push for Server    - Multi-GPU WebGL       - Auto-Dubbing TTS
+- Per-chapter counts    - E-Ink Optimized Mode   - PWA Installable       - Smart Panel Crop
+- Docs collection       - Verified source checks - Streaming reader       - P2P chapter mesh
 ```
 
 ---

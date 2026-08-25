@@ -52,6 +52,7 @@ class DownloadOptions:
     delay: float = 0.5              # polite delay between chapters (seconds)
     keep_images: bool = False       # keep raw images after packaging
     retries: int = 5                # retries per image download
+    use_async: bool = True          # curl_cffi async batch engine for images
     extra_formats: list = field(default_factory=list)  # additional formats to produce
     # naming templates; placeholders: {title} {chapter} {start} {end}
     name_single: str = "{title} - Chapters {chapters}"
@@ -195,11 +196,11 @@ class DownloadEngine:
         # ------------------------------------------------------- download
         # Total in-flight requests are bounded by this single pool, sized so
         # concurrent chapters cannot multiply it.
-        total_image_workers = max(1, min(16, opt.chapter_workers * opt.image_workers))
-        self._image_pool = ThreadPoolExecutor(
-            max_workers=total_image_workers,
-            thread_name_prefix="mangasurf-img",
-        )
+        # The image pool is only used by the thread-per-image fallback. The
+        # default async engine (one libcurl multi handle) streams images
+        # itself, so the pool is created lazily below instead of parking 16
+        # idle threads for the whole download.
+        _img_workers = max(1, min(16, opt.chapter_workers * opt.image_workers))
 
         chapter_dirs = {}  # chapter name -> images dir
         completed = 0
@@ -232,18 +233,14 @@ class DownloadEngine:
                 return chapter, 0, None
 
             got = 0
-            # One shared image pool for the whole job. Previously a new pool
-            # was created per chapter on top of the chapter pool, so live
-            # thread count churned and peaked at chapter_workers x
-            # image_workers.
-            pool = self._image_pool
-            futures = {}
             referer = chapter.get("referer") or chapter.get("url")
             extra_headers = chapter.get("headers")
 
             # Now that the page list is known, fold it into the ETA total.
             self.progress.set_pages(total=self.progress.pages_total + len(urls))
 
+            # Gather the pages that are not already on disk.
+            pending = []
             for i, url in enumerate(urls, 1):
                 ext = self.source.guess_extension(url)
                 path = os.path.join(target, f"{i:03d}{ext}")
@@ -252,19 +249,49 @@ class DownloadEngine:
                     self.emit("chapter_progress", chapter=name,
                               done=got, total=len(urls))
                     continue
-                futures[pool.submit(
-                    self.source.download_file, url, path, referer,
-                    self.opt.retries, extra_headers,
-                )] = url
+                pending.append({
+                    "url": url,
+                    "path": path,
+                    "referer": referer,
+                    "headers": extra_headers or {},
+                    "type": "image",
+                })
 
-            for future in as_completed(futures):
-                if self._stop:
-                    break
-                if future.result():
-                    got += 1
-                    self.progress.add_page()
-                    self.emit("chapter_progress", chapter=name,
-                              done=got, total=len(urls))
+            if pending and not self._stop:
+                if self.opt.use_async:
+                    # Fast async curl_cffi engine: one libcurl multi handle
+                    # streaming every page concurrently.
+                    results = self.source.download_many(pending)
+                    if self._stop:
+                        return chapter, 0, None
+                    for url, ok in zip(pending, results):
+                        if ok:
+                            got += 1
+                            self.progress.add_page()
+                            self.emit("chapter_progress", chapter=name,
+                                      done=got, total=len(urls))
+                else:
+                    # Fallback: thread-per-image, same parallelism as before.
+                    if self._image_pool is None:
+                        self._image_pool = ThreadPoolExecutor(
+                            max_workers=_img_workers,
+                            thread_name_prefix="mangasurf-img")
+                    pool = self._image_pool
+                    futures = {}
+                    for item in pending:
+                        futures[pool.submit(
+                            self.source.download_file, item["url"],
+                            item["path"], item["referer"],
+                            self.opt.retries, item["headers"],
+                        )] = item
+                    for future in as_completed(futures):
+                        if self._stop:
+                            break
+                        if future.result():
+                            got += 1
+                            self.progress.add_page()
+                            self.emit("chapter_progress", chapter=name,
+                                      done=got, total=len(urls))
 
             # Only a COMPLETE chapter counts; partial ones will be resumed
             # next run (existing images are skipped, missing ones refetched).
@@ -309,7 +336,8 @@ class DownloadEngine:
                     self.emit("chapter_failed", chapter=name)
                 time.sleep(opt.delay)
 
-        self._image_pool.shutdown(wait=True)
+        if self._image_pool is not None:
+            self._image_pool.shutdown(wait=True)
 
         if self._stop:
             self.progress.finish()

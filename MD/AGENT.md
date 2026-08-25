@@ -394,7 +394,7 @@ All user data and configurations persist inside `~/.mangasurf/` (`mangasurf/path
 | `mangadass` | Mangadass | `mangadass.com` | Manga / Manhwa (SFW) |
 | `manhwa18` | Manhwa18 | `manhwa18.com` | Adult Manhwa (18+) |
 | `manga18club` | Manga18Club | `manga18.club` | Adult Manhwa (18+) |
-| `hentaiakane` | HentaiAkane | `hentaiakane.com` | Hentai / Doujinshi (18+) |
+| `mewhen18` | Mewhen18 | `mewhen18.com` | Hentai / Doujinshi (18+) (successor to HentaiAkane) |
 | `nhentai` | nhentai | `nhentai.to` | Hentai / Doujinshi (18+) |
 | `chikari` | Chikari | `chikari.moe` | Manhwa / SFW + 18+ |
 | `kuramanga` | KuraManga | `kuramanga.com` | Manhwa / Webtoons (SFW) |

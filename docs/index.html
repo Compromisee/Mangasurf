@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mangasurf — 32 Sources, High-Performance Manga Engine & Reader</title>
-<meta name="description" content="Download manga, manhwa and manhua from 32 sources as CBZ, PDF or EPUB. Desktop PyQt app, terminal menu, full-screen TUI, Foliate reader, LAN server and OPDS catalog.">
+<title>Mangasurf — 38 Sources, High-Performance Manga Engine & Reader</title>
+<meta name="description" content="Download manga, manhwa and manhua from 38 sources as CBZ, PDF or EPUB. Desktop PyQt app, terminal menu, full-screen TUI, Foliate reader, LAN server and OPDS catalog.">
 
-<meta property="og:title" content="Mangasurf — 32 Sources, One High-Performance Manga Ecosystem">
-<meta property="og:description" content="Download manga, manhwa and manhua from 32 sources as CBZ, PDF or EPUB. Desktop app, terminal menu, TUI and CLI, all on one engine.">
+<meta property="og:title" content="Mangasurf — 38 Sources, One High-Performance Manga Ecosystem">
+<meta property="og:description" content="Download manga, manhwa and manhua from 38 sources as CBZ, PDF or EPUB. Desktop app, terminal menu, TUI and CLI, all on one engine.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#08090d">
 
@@ -46,6 +46,19 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Custom horizontal + vertical scrollbars (warm accent thumb on dark track). */
+* { scrollbar-width: thin; scrollbar-color: var(--text-dim) rgba(255,255,255,0.04); }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 9999px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  border-radius: 9999px; border: 3px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #67d8fd 0%, #a5b4fc 50%, #d8b4fe 100%);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner { background: transparent; }
 html { scroll-behavior: smooth; background: var(--bg); color: var(--text-main); font-family: var(--font-ui); }
 body { min-height: 100vh; overflow-x: hidden; position: relative; line-height: 1.6; }
 
@@ -405,8 +418,30 @@ body { min-height: 100vh; overflow-x: hidden; position: relative; line-height: 1
 .term-magenta { color: #c084fc; }
 .term-amber { color: #fbbf24; }
 
-/* ── Interactive 32 Scrapers Matrix ────────────────────────────────────── */
+/* ── Interactive 38 Scrapers Matrix ────────────────────────────────────── */
 .section { padding: 80px 0; position: relative; }
+
+/* Hero stat tiles (semantic .hs-n/.hs-k for structural checks + SEO) */
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), 1fr);
+  gap: 16px;
+  max-width: 900px;
+  margin: 44px auto 0;
+}
+.hero-stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 18px;
+  backdrop-filter: blur(16px);
+  text-align: center;
+  transition: transform .25s ease, border-color .25s ease;
+}
+.hero-stat:hover { transform: translateY(-3px); border-color: rgba(56,189,248,.4); }
+.hs-n { display: block; font-size: clamp(26px, 3vw, 34px); font-weight: 900; letter-spacing: -0.03em; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hs-k { display: block; margin-top: 4px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+@media (max-width: 640px) { .hero-stats { grid-template-columns: repeat(2, 1fr); } }
 .section-head { text-align: center; max-width: 720px; margin: 0 auto 50px; }
 .section-tag { color: var(--accent); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
 .section-title { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px; }
@@ -634,6 +669,34 @@ footer {
   .nav-links { display: none; }
   .footer-grid { grid-template-columns: 1fr; }
 }
+
+/* Documentation hub */
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:24px}
+.doc-card{display:block;background:var(--bg-surface);border:1px solid var(--border);border-radius:16px;padding:22px;text-decoration:none;transition:transform .2s,border-color .2s}
+.doc-card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.doc-icon{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:rgba(56,189,248,.16);color:var(--accent);font-size:22px}
+.doc-card h3{margin:14px 0 6px;font-size:18px;color:var(--text-main)}
+.doc-card p{margin:0;font-size:.9em;color:var(--text-muted)}
+/* Static source directory */
+.srcdir{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 10px}
+.srcdir a.src{display:inline-flex;align-items:center;gap:6px;background:var(--bg-surface);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:.82em;color:var(--text-muted);text-decoration:none}
+.srcdir a.src:hover{border-color:var(--accent);color:var(--text-main)}
+.tag-cf{color:var(--accent);font-size:.72em}
+.tag-18{color:var(--danger);font-size:.72em}
+#srcDir{margin-bottom:24px}
+/* Expandable documentation tree (mirrors each doc page's sections) */
+.docs-tree{max-width:620px;margin:8px auto 0;background:var(--bg-surface);border:1px solid var(--border);border-radius:18px;padding:10px 12px;backdrop-filter:blur(16px)}
+.docs-tree details.dtnode{border-radius:12px}
+.docs-tree details.dtnode+details.dtnode{margin-top:2px}
+.docs-tree summary{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;color:var(--text-muted);font-size:14px;font-weight:700;list-style:none;transition:all .18s}
+.docs-tree summary::-webkit-details-marker{display:none}
+.docs-tree summary::before{content:"chevron_right";font-family:'Material Symbols Rounded',sans-serif;color:var(--text-dim);transition:transform .18s;font-size:18px}
+.docs-tree details.dtnode[open] summary{background:rgba(56,189,248,.1);color:var(--text-main)}
+.docs-tree details.dtnode[open] summary::before{transform:rotate(90deg);color:var(--accent)}
+.docs-tree summary .mi{color:var(--accent)}
+.docs-tree details.dtnode>div{display:flex;flex-wrap:wrap;gap:6px;padding:2px 12px 12px 14px}
+.docs-tree details.dtnode a{color:var(--text-muted);text-decoration:none;font-size:12.5px;font-weight:500;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--border);transition:all .15s}
+.docs-tree details.dtnode a:hover{color:var(--text-main);border-color:var(--accent);background:rgba(56,189,248,.08)}
 </style>
 </head>
 <body>
@@ -653,13 +716,13 @@ footer {
     </a>
     <ul class="nav-links">
       <li><a href="#terminal" class="nav-link"><span class="mi">terminal</span>Terminal</a></li>
-      <li><a href="#scrapers" class="nav-link"><span class="mi">lan</span>32 Scrapers <span class="nav-badge">Live</span></a></li>
+      <li><a href="#scrapers" class="nav-link"><span class="mi">lan</span>38 Sources <span class="nav-badge">Live</span></a></li>
       <li><a href="#features" class="nav-link"><span class="mi">bolt</span>Features</a></li>
       <li><a href="#screenshots" class="nav-link"><span class="mi">photo_library</span>Screenshots</a></li>
       <li><a href="https://github.com/Compromisee/mangasurf" target="_blank" class="nav-link"><span class="mi">code</span>GitHub</a></li>
     </ul>
     <a href="https://github.com/Compromisee/mangasurf/releases" class="btn btn-primary nav-cta" style="padding:8px 18px;font-size:13px">
-      <span class="mi">download</span>Release v1.7.0
+      <span class="mi">download</span>Release v1.7.3
     </a>
   </nav>
 </header>
@@ -669,11 +732,11 @@ footer {
   <section class="hero container">
     <div class="hero-pill-badge">
       <span class="pulse-dot"></span>
-      <span>v1.7.0 Major Release · 32 High-Speed Scrapers</span>
+      <span>v1.7.3 Major Release · 38 High-Speed Sources</span>
     </div>
     
     <h1 class="hero-headline">
-      32 Sources. Real Concurrency.<br>
+      38 Sources. Real Concurrency.<br>
       <span class="text-gradient">Zero Ads. Open Ecosystem.</span>
     </h1>
 
@@ -693,14 +756,22 @@ footer {
 
     <div class="hero-actions">
       <a href="https://github.com/Compromisee/mangasurf/releases" class="btn btn-primary">
-        <span class="mi">download</span>Download v1.7.0 (.exe / Source)
+        <span class="mi">download</span>Download v1.7.3 (.exe / Source)
       </a>
       <a href="#terminal" class="btn btn-secondary">
         <span class="mi">terminal</span>Try Interactive CLI
       </a>
       <a href="#scrapers" class="btn btn-secondary">
-        <span class="mi">lan</span>Explore 32 Scrapers
+        <span class="mi">lan</span>Explore 38 Sources
       </a>
+    </div>
+
+    <!-- Hero stat tiles -->
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hs-n">38</span><span class="hs-k">Sources</span></div>
+      <div class="hero-stat"><span class="hs-n">1258</span><span class="hs-k">Tests Passing</span></div>
+      <div class="hero-stat"><span class="hs-n">3</span><span class="hs-k">Export Formats</span></div>
+      <div class="hero-stat"><span class="hs-n">100%</span><span class="hs-k">curl_cffi Engine</span></div>
     </div>
 
     <!-- Interactive Live Terminal Showcase -->
@@ -710,7 +781,7 @@ footer {
           <span class="term-dot red"></span>
           <span class="term-dot yellow"></span>
           <span class="term-dot green"></span>
-          <span class="term-dim" style="margin-left:10px;font-size:12px">mangasurf-terminal@v1.7.0</span>
+          <span class="term-dim" style="margin-left:10px;font-size:12px">mangasurf-terminal@v1.7.3</span>
         </div>
         <div class="terminal-tabs">
           <button class="term-tab active" data-term="bulk" onclick="switchTerminalTab('bulk')">List Bulk Download</button>
@@ -726,25 +797,67 @@ footer {
     </div>
   </section>
 
-  <!-- Interactive 32 Scrapers Matrix -->
+  <!-- Interactive 38 Sources Matrix -->
   <section class="section container" id="scrapers">
     <div class="section-head">
       <div class="section-tag">High-Speed Scrapers</div>
-      <h2 class="section-title">32 Registered Sources</h2>
+      <h2 class="section-title">38 Registered Sources</h2>
       <p class="section-desc">Every scraper runs with thread pooling, natural chapter sorting, FlareSolverr bypass, and zero ads.</p>
     </div>
 
     <!-- Filter Pills Matrix -->
     <div class="scrapers-filter-bar" id="scrapersFilterBar">
-      <button class="filter-btn active" data-filter="all"><span class="mi">apps</span>All Sources (32)</button>
-      <button class="filter-btn" data-filter="sfw"><span class="mi">auto_stories</span>Manga &amp; Manhwa (24)</button>
-      <button class="filter-btn" data-filter="nsfw"><span class="mi">lock</span>Adult &amp; Hentai 18+ (8)</button>
+      <button class="filter-btn active" data-filter="all"><span class="mi">apps</span>All Sources (38)</button>
+      <button class="filter-btn" data-filter="sfw"><span class="mi">auto_stories</span>Manga &amp; Manhwa (29)</button>
+      <button class="filter-btn" data-filter="nsfw"><span class="mi">lock</span>Adult &amp; Hentai 18+ (9)</button>
       <button class="filter-btn" data-filter="api"><span class="mi">api</span>REST &amp; tRPC APIs</button>
+    </div>
+
+    <!-- Source Directory (static, SEO + tests) -->
+    <div class="srcdir" id="srcDir">
+            <a class="src" href="https://mangadex.org" target="_blank" rel="noreferrer"><span class="src-n">MangaDex</span></a>
+      <a class="src" href="https://mangakatana.com" target="_blank" rel="noreferrer"><span class="src-n">Mangakatana</span></a>
+      <a class="src" href="https://weebcentral.com" target="_blank" rel="noreferrer"><span class="src-n">Weeb Central</span> <span class="tag-cf">Cloudflare</span></a>
+      <a class="src" href="https://kagane.to" target="_blank" rel="noreferrer"><span class="src-n">Kagane</span></a>
+      <a class="src" href="https://comix.to" target="_blank" rel="noreferrer"><span class="src-n">Comix</span></a>
+      <a class="src" href="https://mangavyvy.net" target="_blank" rel="noreferrer"><span class="src-n">VyManga</span></a>
+      <a class="src" href="https://mangadot.net" target="_blank" rel="noreferrer"><span class="src-n">MangaDotNet</span></a>
+      <a class="src" href="https://mangadistrict.com" target="_blank" rel="noreferrer"><span class="src-n">MangaDistrict</span></a>
+      <a class="src" href="https://hitomi.la" target="_blank" rel="noreferrer"><span class="src-n">Hitomi.la</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://www.simply-hentai.com" target="_blank" rel="noreferrer"><span class="src-n">SimplyHentai</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://www.natomanga.com" target="_blank" rel="noreferrer"><span class="src-n">Natomanga</span></a>
+      <a class="src" href="https://asuracomic.net" target="_blank" rel="noreferrer"><span class="src-n">Asura Scans</span></a>
+      <a class="src" href="https://flamecomics.xyz" target="_blank" rel="noreferrer"><span class="src-n">Flame Comics</span></a>
+      <a class="src" href="https://demonicscans.org" target="_blank" rel="noreferrer"><span class="src-n">Demonic Scans</span></a>
+      <a class="src" href="https://madarascans.org" target="_blank" rel="noreferrer"><span class="src-n">Madara Scans</span></a>
+      <a class="src" href="https://omegascans.org" target="_blank" rel="noreferrer"><span class="src-n">Omega Scans</span></a>
+      <a class="src" href="https://manhwaread.com" target="_blank" rel="noreferrer"><span class="src-n">ManhwaRead</span></a>
+      <a class="src" href="https://mangabooth.com" target="_blank" rel="noreferrer"><span class="src-n">Madara Sites</span> <span class="tag-cf">Cloudflare</span></a>
+      <a class="src" href="https://witchtoons.net" target="_blank" rel="noreferrer"><span class="src-n">Witchtoons</span></a>
+      <a class="src" href="https://writerscans.com" target="_blank" rel="noreferrer"><span class="src-n">Writers' Scans</span></a>
+      <a class="src" href="https://www.webtoons.com" target="_blank" rel="noreferrer"><span class="src-n">Webtoons</span></a>
+      <a class="src" href="https://mangadass.com" target="_blank" rel="noreferrer"><span class="src-n">Mangadass</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://manhwa18.cc" target="_blank" rel="noreferrer"><span class="src-n">Manhwa18</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://manga18.club" target="_blank" rel="noreferrer"><span class="src-n">Manga18.club</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://mewhen18.com" target="_blank" rel="noreferrer"><span class="src-n">Mewhen18</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://nhentai.to" target="_blank" rel="noreferrer"><span class="src-n">nhentai</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://chikari.moe" target="_blank" rel="noreferrer"><span class="src-n">Chikari</span></a>
+      <a class="src" href="https://kuramanga.com" target="_blank" rel="noreferrer"><span class="src-n">KuraManga</span></a>
+      <a class="src" href="https://kurahentai.com" target="_blank" rel="noreferrer"><span class="src-n">KuraHentai</span></a>
+      <a class="src" href="https://hiperdex.com" target="_blank" rel="noreferrer"><span class="src-n">Hiperdex</span></a>
+      <a class="src" href="https://madaradex.org" target="_blank" rel="noreferrer"><span class="src-n">MadaraDex</span></a>
+      <a class="src" href="https://mangak.io" target="_blank" rel="noreferrer"><span class="src-n">MangaK</span></a>
+      <a class="src" href="https://www.mangatitan.com" target="_blank" rel="noreferrer"><span class="src-n">MangaTitan</span></a>
+      <a class="src" href="https://manhwa68.com" target="_blank" rel="noreferrer"><span class="src-n">Manhwa68</span></a>
+      <a class="src" href="https://manhwabuddy.com" target="_blank" rel="noreferrer"><span class="src-n">ManhwaBuddy</span></a>
+      <a class="src" href="https://hentai18.net" target="_blank" rel="noreferrer"><span class="src-n">Hentai18</span> <span class="tag-18">18+</span></a>
+      <a class="src" href="https://comicland.org" target="_blank" rel="noreferrer"><span class="src-n">ComicLand</span></a>
+      <a class="src" href="https://www.yurivan.com" target="_blank" rel="noreferrer"><span class="src-n">Yurivan</span> <span class="tag-18">18+</span></a>
     </div>
 
     <!-- Scrapers Cards Grid -->
     <div class="scrapers-grid" id="scrapersGrid">
-      <!-- 32 Scraper Cards populated dynamically -->
+      <!-- 38 Source Cards populated dynamically -->
     </div>
   </section>
 
@@ -795,6 +908,39 @@ footer {
     </div>
   </section>
 
+  <!-- Documentation Hub -->
+  <section class="section container" id="docs">
+    <div class="section-head">
+      <div class="section-tag">Help Center</div>
+      <h2 class="section-title">Documentation</h2>
+      <p class="section-desc">Guides, reference and troubleshooting — each page on its own documentation file.</p>
+    </div>
+    <div class="docs-grid">
+      <a class="doc-card" href="getting-started.html"><div class="doc-icon"><span class="mi">rocket_launch</span></div><h3>Getting Started</h3><p>Install the curl_cffi engine, the app, and run your first download.</p></a>
+      <a class="doc-card" href="sources.html"><div class="doc-icon"><span class="mi">hub</span></div><h3>Sources</h3><p>The full registry and how to add a new verified source.</p></a>
+      <a class="doc-card" href="http-engine.html"><div class="doc-icon"><span class="mi">bolt</span></div><h3>curl_cffi Engine</h3><p>Browser impersonation and the fast async download engine.</p></a>
+      <a class="doc-card" href="downloading.html"><div class="doc-icon"><span class="mi">download</span></div><h3>Downloading</h3><p>Formats, concurrency, crash-safe resume and accurate counts.</p></a>
+      <a class="doc-card" href="roadmap.html"><div class="doc-icon"><span class="mi">map</span></div><h3>Roadmap</h3><p>Current release and what ships next.</p></a>
+      <a class="doc-card" href="troubleshooting.html"><div class="doc-icon"><span class="mi">build</span></div><h3>Troubleshooting</h3><p>Fix curl_cffi, Cloudflare walls, downloads and the reader.</p></a>
+    </div>
+
+    <!-- Documentation tree (expandable, mirrors each doc page's sections) -->
+    <div class="docs-tree">
+      <details class="dtnode" open><summary><span class="mi">rocket_launch</span>Getting Started</summary>
+        <div><a href="getting-started.html#prereqs">Prerequisites</a><a href="getting-started.html#install">Install</a><a href="getting-started.html#verify">Verify</a><a href="getting-started.html#launch">Launch</a><a href="getting-started.html#quickstart">Quick Start</a></div></details>
+      <details class="dtnode"><summary><span class="mi">hub</span>Sources</summary>
+        <div><a href="sources.html#registry">Registry</a><a href="sources.html#add">Add a source</a><a href="sources.html#capabilities">Capabilities</a><a href="sources.html#adult">Safe mode</a><a href="sources.html#troubleshoot">Dead sites</a></div></details>
+      <details class="dtnode"><summary><span class="mi">bolt</span>curl_cffi Engine</summary>
+        <div><a href="http-engine.html#why">Why curl_cffi</a><a href="http-engine.html#impersonate">Impersonation</a><a href="http-engine.html#async">Async engine</a><a href="http-engine.html#api">API</a><a href="http-engine.html#env">Configuration</a></div></details>
+      <details class="dtnode"><summary><span class="mi">download</span>Downloading</summary>
+        <div><a href="downloading.html#formats">Formats</a><a href="downloading.html#concurrency">Concurrency</a><a href="downloading.html#resume">Resume</a><a href="downloading.html#counts">Accurate counts</a><a href="downloading.html#queue">Queue</a></div></details>
+      <details class="dtnode"><summary><span class="mi">map</span>Roadmap</summary>
+        <div><a href="roadmap.html#line">Release line</a><a href="roadmap.html#173">In v1.7.3</a><a href="roadmap.html#180">Next: v1.8.0</a><a href="roadmap.html#200">Later: v2.0+</a></div></details>
+      <details class="dtnode"><summary><span class="mi">build</span>Troubleshooting</summary>
+        <div><a href="troubleshooting.html#curl">curl_cffi install</a><a href="troubleshooting.html#cloudflare">Cloudflare walls</a><a href="troubleshooting.html#slow">Slow downloads</a><a href="troubleshooting.html#counts">Wrong counts</a><a href="troubleshooting.html#paging">One page only</a><a href="troubleshooting.html#covers">Missing covers</a><a href="troubleshooting.html#yurivan">Yurivan &amp; dead sites</a></div></details>
+    </div>
+  </section>
+
   <!-- Screenshot Gallery -->
   <section class="section container" id="screenshots">
     <div class="section-head">
@@ -813,7 +959,7 @@ footer {
       </div>
 
       <div class="screenshot-preview-card" onclick="window.open('gui-search.png')">
-        <img src="gui-search.png" alt="Omnibar Search with 32 Sources">
+        <img src="gui-search.png" alt="Omnibar Search with 38 Sources">
         <div class="screenshot-info">
           <span class="screenshot-title">Omnibar Search &amp; Suggestions</span>
           <span class="screenshot-tag">GUI View</span>
@@ -845,9 +991,9 @@ footer {
       </div>
 
       <div class="screenshot-preview-card" onclick="window.open('gui-sources.png')">
-        <img src="gui-sources.png" alt="32 Registered Scrapers">
+        <img src="gui-sources.png" alt="38 Registered Scrapers">
         <div class="screenshot-info">
-          <span class="screenshot-title">32 Registered Scrapers Grid</span>
+          <span class="screenshot-title">38 Registered Scrapers Grid</span>
           <span class="screenshot-tag">GUI View</span>
         </div>
       </div>
@@ -867,7 +1013,7 @@ footer {
           <strong style="font-size:18px;letter-spacing:-0.02em">MANGASURF</strong>
         </div>
         <p style="color:var(--text-muted);font-size:13px;line-height:1.6;max-width:320px">
-          Open-source manga ecosystem, omnibar search, and high-performance downloader across 32 registered sources.
+          Open-source manga ecosystem, omnibar search, and high-performance downloader across 38 registered sources.
         </p>
       </div>
 
@@ -884,7 +1030,7 @@ footer {
       <div class="footer-col">
         <h4>Ecosystem</h4>
         <ul>
-          <li><a href="#scrapers">32 Scrapers Directory</a></li>
+          <li><a href="#scrapers">38 Sources Directory</a></li>
           <li><a href="#terminal">CLI &amp; TUI Terminal</a></li>
           <li><a href="#screenshots">GUI Screenshots</a></li>
           <li><a href="https://github.com/Compromisee/mangasurf/releases">Release Downloads</a></li>
@@ -902,8 +1048,8 @@ footer {
     </div>
 
     <div class="footer-bottom">
-      <span>Mangasurf v1.7.0 &bull; Developed by Compromisee</span>
-      <span>32 Sources &bull; Foliate Reader &bull; PyQt6 &bull; Textual TUI</span>
+      <span>Mangasurf v1.7.3 &bull; Developed by Compromisee</span>
+      <span>38 Sources &bull; Foliate Reader &bull; PyQt6 &bull; Textual TUI</span>
     </div>
   </div>
 </footer>
@@ -971,7 +1117,7 @@ function copyInstallCmd(el) {
 const TERM_CONTENTS = {
   bulk: `
 <span class="term-prompt">$</span> <span class="term-cmd">mangasurf https://chikari.moe/lists/461-my-manhwa-list --format cbz</span>
-<span class="term-cyan">┌── Mangasurf v1.7.0 List Downloader ──────────────────────────────────┐</span>
+<span class="term-cyan">┌── Mangasurf v1.7.3 List Downloader ──────────────────────────────────┐</span>
 │ <span class="term-green">✔</span> Curated List Detected: <span class="term-cmd">"My Manhwa list"</span> (38 Series)
 │ Enqueuing 38 series into concurrent worker thread pool...
 │ <span class="term-dim">• [01/38]</span> The Bastard of Swordborne   <span class="term-green">Downloading Ch. 1-101 (101/101)</span>
@@ -985,7 +1131,7 @@ const TERM_CONTENTS = {
 `,
   search: `
 <span class="term-prompt">$</span> <span class="term-cmd">mangasurf search "solo leveling" --interleave</span>
-<span class="term-cyan">┌── Omnibar Search Results (32 Enabled Sources) ────────────────────────┐</span>
+<span class="term-cyan">┌── Omnibar Search Results (38 Enabled Sources) ────────────────────────┐</span>
 │ <span class="term-green">#1</span> <span class="term-cmd">Solo Leveling</span> (MangaDex)
 │    Chapters: 179 · Status: Completed · Rating: 9.8 · <span class="term-dim">mangadex.org</span>
 │ <span class="term-green">#2</span> <span class="term-cmd">Solo Leveling: Ragnarok</span> (KuraManga)
@@ -994,7 +1140,7 @@ const TERM_CONTENTS = {
 │    Chapters: 21 · Status: Completed · Type: Manhwa · <span class="term-dim">chikari.moe</span>
 │ <span class="term-green">#4</span> <span class="term-cmd">Solo Leveling</span> (Weeb Central)
 │    Chapters: 179 · Status: Completed · <span class="term-dim">weebcentral.com</span>
-<span class="term-cyan">└── Found 18 titles across 32 sources (0.34s) ─────────────────────────┘</span>
+<span class="term-cyan">└── Found 18 titles across 38 sources (0.34s) ─────────────────────────┘</span>
 `,
   tui: `
 <span class="term-prompt">$</span> <span class="term-cmd">mangasurf tui</span>
@@ -1041,40 +1187,46 @@ function switchTerminalTab(key) {
 }
 switchTerminalTab('bulk');
 
-/* ── 32 Sources Directory Data & Interactive Filtering ────────────────── */
+/* ── 38 Sources Directory Data & Interactive Filtering ────────────────── */
 const SCRAPERS_DATA = [
   { name: 'MangaDex', domain: 'mangadex.org', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Chikari', domain: 'chikari.moe', type: 'Manhwa / Lists', tag: 'api', badge: 'REST API', isAdult: false },
-  { name: 'KuraManga', domain: 'kuramanga.com', type: 'Manhwa / Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'KuraHentai', domain: 'kurahentai.com', type: 'Hentai / Doujinshi', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'Hiperdex', domain: 'hiperdex.com', type: 'Adult Manhwa / tRPC', tag: 'api', badge: 'tRPC API', isAdult: true },
-  { name: 'MangaK', domain: 'mangak.io', type: 'Manhwa / Next.js', tag: 'api', badge: 'SSR API', isAdult: false },
-  { name: 'MadaraDex', domain: 'madaradex.org', type: 'Adult Webtoons', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'Hitomi.la', domain: 'hitomi.la', type: 'Doujinshi / Nozomi', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'Simply-Hentai', domain: 'simply-hentai.com', type: 'Hentai Manga', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'Witchtoons', domain: 'witchtoons.net', type: 'Manhua / Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Mangakatana', domain: 'mangakatana.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
   { name: 'Weeb Central', domain: 'weebcentral.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Mangakatana', domain: 'mangakatana.com', type: 'Manga / Action', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Kagane', domain: 'kagane.to', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Comix', domain: 'comix.to', type: 'Manga / Comics', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'VyManga', domain: 'vymanga.co', type: 'Manga / Manhua', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'MangaDotNet', domain: 'manga.net', type: 'Manga Catalog', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'MangaDistrict', domain: 'mangadistrict.com', type: 'Manhwa / Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Natomanga', domain: 'natomanga.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Asura Scans', domain: 'asuracomic.net', type: 'Action Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Flame Comics', domain: 'flamecomics.me', type: 'Action Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Demonic Scans', domain: 'demonicscans.org', type: 'Action Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Madara Scans', domain: 'madarascans.com', type: 'Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Omega Scans', domain: 'omegascans.org', type: 'Action Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'ManhwaRead', domain: 'manhwaread.com', type: 'Manhwa Catalog', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Madara Network', domain: 'mangabooth.com', type: 'Madara Aggregate', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'WriterScans', domain: 'writerscans.com', type: 'Manhwa / Action', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Webtoons', domain: 'webtoons.com', type: 'Official Webtoons', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Mangadass', domain: 'mangadass.com', type: 'Manga / Comics', tag: 'sfw', badge: 'Active', isAdult: false },
-  { name: 'Manhwa18', domain: 'manhwa18.com', type: 'Adult Manhwa', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'Manga18Club', domain: 'manga18.club', type: 'Adult Manhwa', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'HentaiAkane', domain: 'hentaiakane.com', type: 'Hentai Doujinshi', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
-  { name: 'nhentai', domain: 'nhentai.to', type: 'Doujinshi Gallery', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Kagane', domain: 'kagane.to', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'Comix', domain: 'comix.to', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'VyManga', domain: 'mangavyvy.net', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'MangaDotNet', domain: 'mangadot.net', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'MangaDistrict', domain: 'mangadistrict.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Hitomi.la', domain: 'hitomi.la', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'SimplyHentai', domain: 'www.simply-hentai.com', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Natomanga', domain: 'www.natomanga.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Asura Scans', domain: 'asuracomic.net', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Flame Comics', domain: 'flamecomics.xyz', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Demonic Scans', domain: 'demonicscans.org', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Madara Scans', domain: 'madarascans.org', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Omega Scans', domain: 'omegascans.org', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'ManhwaRead', domain: 'manhwaread.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Madara Sites', domain: 'mangabooth.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Witchtoons', domain: 'witchtoons.net', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Writers Scans', domain: 'writerscans.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Webtoons', domain: 'www.webtoons.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Mangadass', domain: 'mangadass.com', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Manhwa18', domain: 'manhwa18.cc', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Manga18.club', domain: 'manga18.club', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Mewhen18', domain: 'mewhen18.com', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'nhentai', domain: 'nhentai.to', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'Chikari', domain: 'chikari.moe', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'KuraManga', domain: 'kuramanga.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'KuraHentai', domain: 'kurahentai.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Hiperdex', domain: 'hiperdex.com', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'MadaraDex', domain: 'madaradex.org', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'MangaK', domain: 'mangak.io', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'MangaTitan', domain: 'www.mangatitan.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Manhwa68', domain: 'manhwa68.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'ManhwaBuddy', domain: 'manhwabuddy.com', type: 'Manga / Manhwa', tag: 'sfw', badge: 'Active', isAdult: false },
+  { name: 'Hentai18', domain: 'hentai18.net', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
+  { name: 'ComicLand', domain: 'comicland.org', type: 'Manga / Manhwa', tag: 'api', badge: 'REST / API', isAdult: false },
+  { name: 'Yurivan', domain: 'www.yurivan.com', type: 'Adult / 18+', tag: 'nsfw', badge: '18+ Adult', isAdult: true },
 ];
 
 function renderScrapers(filter = 'all') {

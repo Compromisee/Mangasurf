@@ -104,12 +104,24 @@ def test_search_and_browse_share_the_pool_size():
         assert default == sources.SEARCH_WORKERS, fn.__name__
 
 
-def test_the_pool_never_exceeds_the_number_of_sources():
-    """A pool wider than the work just makes idle threads."""
-    source = read("../../sources/__init__.py") if False else open(
+def test_the_pool_is_shared_and_capped():
+    """search/browse/genres fan out through ONE reused, capped pool.
+
+    A fresh ``ThreadPoolExecutor`` used to be created and torn down on every
+    call, churning 14 worker threads on each search keystroke (the search box
+    is live-filtered). Reusing a single lazily-grown pool keeps warm workers
+    around and bounds total fan-out threads; the pool must never be shut down
+    per call.
+    """
+    source = open(
         os.path.join(ROOT, "mangasurf", "sources", "__init__.py"),
         encoding="utf-8").read()
-    assert "min(workers, len(ids))" in source
+    assert "_shared_pool" in source          # a shared, reused executor
+    assert "pool.shutdown" not in source     # never torn down per call
+    body = source[source.index("def _shared_pool"):]
+    # Grown to the largest fan-out but capped, so it cannot over-provision.
+    assert "thread_name_prefix" in body
+    assert "max_workers" in body
 
 
 # ────────────────────────────────────────────── scrolling and the sliders

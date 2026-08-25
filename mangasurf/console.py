@@ -77,7 +77,7 @@ SOURCE_COLORS = {
     "mangadass": "bold #38bdf8",
     "manhwa18": "bold #f43f5e",
     "manga18club": "bold #e11d48",
-    "hentaiakane": "bold #fb7185",
+    "mewhen18": "bold #fb7185",
     "nhentai": "bold #ec4899",
 }
 

@@ -4,20 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mangasurf"
-version = "1.7.1"
-description = "Download manga, manhwa and manhua from 32+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader"
+version = "1.7.3"
+description = "Download manga, manhwa and manhua from 30+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader. HTTP is 100% curl_cffi (TLS/JA3 browser impersonation + async engine)."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
-    "requests>=2.31",
     "beautifulsoup4>=4.12",
     "rich>=13.0",
     "Pillow>=10.0",
     "fpdf2>=2.7",
     "EbookLib>=0.18",
     "PyQt6>=6.5.0",
-    "curl_cffi>=0.7.0; python_version<'3.14'",
+    "curl_cffi>=0.7.0",
 ]
 
 [project.optional-dependencies]

@@ -717,7 +717,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         from .. import library, features
         try:
             payload = {
-                "version": "1.7.0",
+                "version": "1.7.3",
                 "exported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "settings": load_settings(),
                 "library": library.load_library(),
@@ -1210,7 +1210,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                 blob = response.content
                 mime = (response.headers.get("Content-Type") or "").split(";")[0].strip()
             else:
-                import requests
+                from .. import http as requests  # curl_cffi-backed
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
                 if "shadowabyss" in url:
                     headers["Referer"] = "https://kuramanga.com/"
@@ -2183,7 +2183,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
 
     def flaresolverr_test(self, url: str = None):
         """Test connection to FlareSolverr server."""
-        import requests
+        from .. import http as requests  # curl_cffi-backed
         from ..config import load_settings
         target_url = (url or load_settings().get("flaresolverr_url") or "http://localhost:8191/v1").strip()
         try:

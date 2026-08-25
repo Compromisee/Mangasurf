@@ -102,14 +102,18 @@ def test_connection_pool_covers_every_worker():
 
 
 def test_session_is_mounted_with_the_wider_pool():
+    from mangasurf import http
     from mangasurf.sources.mangadex import MangaDexSource
 
     source = MangaDexSource()
     try:
-        for prefix in ("http://", "https://"):
-            adapter = source.session.get_adapter(prefix)
-            assert adapter._pool_maxsize >= 16
-            assert adapter._pool_connections >= 16
+        # curl_cffi owns the connection pool; the session must be the
+        # browser-impersonating curl_cffi session and sized for the download
+        # engine's worst case (never recycle connections mid-chapter).
+        assert isinstance(source.session, http.Session)
+        assert source.session._max_connections >= 16
+        # every request carries real browser impersonation by default
+        assert getattr(source.session, "impersonate", None) is not None
     finally:
         source.close()
 

@@ -1,31 +1,50 @@
 """MangaDotNet source scraper for Mangasurf.
 
-Adapted from mangadotnet-downloader with full integration for the Mangasurf Source API.
-Features:
-- REST API integration (mangadot.net/api)
-- Nuxt-style packed response unpacking with regex fallback
-- High speed metadata and chapter retrieval
+The site is a Nuxt SPA but serves a clean JSON API over plain HTTP that
+curl_cffi talks to directly -- no Cloudflare challenge, so no FlareSolverr
+(verified 200 for every endpoint below with a Chrome impersonation).
+
+Verified response shapes (2026-08):
+
+* ``GET /api/manga`` and ``GET /api/search?q=`` both return a JSON object
+  whose series list lives under the key ``manga_list`` (e.g. ``{"manga_list":
+  [{"id": 27319, "title": "...", "photo": "/uploads/....webp", ...}]}``).
+  The earlier parser looked for ``data``/``results`` and so returned nothing.
+* ``GET /api/manga/<id>`` returns ``{"manga": {...}, "total_chapters": ...,
+  "first_chapter_id": ...}`` -- the series payload is under ``manga``.
+* ``GET /api/manga/<id>/chapters/list`` returns a JSON array of chapter
+  uploads. Chapters appear once per translation/group, so they are
+  de-duplicated by ``chapter_number``.
+* ``GET /api/chapters/<id>/images`` returns ``{"chapter": ..., "manga": ...,
+  "images": [{"url": ...}], "prev_chapter_id": ..., "next_chapter_id": ...}``.
+
+Known limitation (best-effort, documented only)
+    The live site's chapter/image linkage is unreliable: ``first_chapter_id``
+    on a manga detail frequently resolves to a *different* series, and the
+    returned ``images[].url`` path (e.g. ``/chapters/manga_x/chapter_y/...``)
+    returns 404 from both ``mangadot.net`` and the ``cl.mangadot.net`` image
+    host without the reader's browser session. Chapter lists (search/browse/
+    info/chapters) are reliable; individual page images are not, so
+    :meth:`get_chapter_images` returns ``[]`` rather than fabricated URLs.
 """
 
-import json
 import logging
 import re
-from urllib.parse import quote, urljoin
+from urllib.parse import urljoin
 
 from .base import Source, ScrapeError
 
 logger = logging.getLogger(__name__)
 
 SITE = "https://mangadot.net"
-API_BASE = "https://mangadot.net/api"
+API_BASE = f"{SITE}/api"
 
 
 class MangaDotNetSource(Source):
     id = "mangadotnet"
     name = "MangaDotNet"
     base_url = SITE
-    domains = ("mangadot.net", "www.mangadot.net")
-    needs_flaresolverr = True
+    domains = ("mangadot.net", "www.mangadot.net", "cl.mangadot.net")
 
     supports_search = True
     supports_browse = True
@@ -46,7 +65,6 @@ class MangaDotNetSource(Source):
         h = super().headers()
         h.update({
             "Accept": "application/json, text/plain, */*",
-            "User-Agent": "Mangasurf/2.0 (compatible; MangaDotNetDownloader/2.0)",
             "Referer": f"{SITE}/",
             "X-Requested-With": "XMLHttpRequest",
         })
@@ -68,136 +86,103 @@ class MangaDotNetSource(Source):
     def genres(self) -> list:
         return [{"id": name.lower(), "name": name} for name in self.GENRES]
 
+    # --------------------------------------------------- list unwrapping
+    @staticmethod
+    def _manga_list(data) -> list:
+        """Pull the series list out of an API response.
+
+        The search/browse endpoints return ``{"manga_list": [...]}``. Some
+        older endpoints returned a bare list or ``{... "results": []}``, so
+        those shapes are tolerated too.
+        """
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ("manga_list", "results", "data"):
+                if isinstance(data.get(key), list):
+                    return data[key]
+        return []
+
+    @staticmethod
+    def _manga_photo(photo, mid):
+        photo = (photo or "").strip()
+        if not photo:
+            return None
+        if photo.startswith("http"):
+            return photo
+        return f"{SITE}/{photo.lstrip('/')}"
+
+    @staticmethod
+    def _manga_result(source, item):
+        mid = item.get("id")
+        title = (item.get("title") or "Unknown").strip()
+        return source._result(
+            title,
+            f"{SITE}/manga/{mid}",
+            cover=source._manga_photo(item.get("photo") or item.get("cover"),
+                                      mid),
+            status=item.get("status"),
+        )
+
+    # ----------------------------------------------------------- search
     def search(self, query: str, limit: int = 32, page: int = 1, **_) -> list:
         query_str = (query or "").strip()
         if not query_str:
             return []
 
         page_val = max(1, int(page or _.get("page", 1) or 1))
-        url = f"{API_BASE}/search"
         results = []
         try:
-            data = self.fetch_json(url, params={"q": query_str, "per_page": max(limit, 50), "page": page_val})
-            parsed = self._parse_search_response(data)
-            results = [
-                self._result(
-                    r.get("title", "Unknown"),
-                    f"{SITE}/manga/{r.get('id')}",
-                    cover=r.get("photo"),
-                    status=r.get("status"),
-                )
-                for r in parsed
-            ]
-        except Exception as e:
+            data = self.fetch_json(
+                f"{API_BASE}/search",
+                params={"q": query_str, "per_page": max(limit, 50),
+                        "page": page_val},
+            )
+            results = [self._manga_result(self, item)
+                       for item in self._manga_list(data)]
+        except (ScrapeError, ValueError) as e:
             logger.warning("MangaDotNet search failed: %s", e)
 
         if query_str and results:
             results = self.filter_and_rank(results, query_str)
-
         return results[:limit]
 
-    def _parse_search_response(self, data) -> list:
-        if not isinstance(data, list):
-            if isinstance(data, dict):
-                return data.get("results") or data.get("data") or []
-            return []
-
-        results_indices = None
-        for i, item in enumerate(data):
-            if item == "results" and i + 1 < len(data) and isinstance(data[i + 1], list):
-                results_indices = data[i + 1]
-                break
-
-        if not results_indices:
-            return self._regex_search_fallback(data)
-
-        items = []
-        for idx in results_indices:
-            if idx >= len(data):
-                continue
-            obj = data[idx]
-            if not isinstance(obj, dict):
-                continue
-            resolved = {}
-            for k, v in obj.items():
-                if k.startswith("_") and k[1:].isdigit():
-                    field_idx = int(k[1:])
-                    if field_idx < len(data) and isinstance(data[field_idx], str):
-                        field_name = data[field_idx]
-                        resolved[field_name] = self._resolve_val(data, v)
-            if resolved.get("id") and resolved.get("title"):
-                items.append(resolved)
-
-        return items
-
-    def _resolve_val(self, data, val):
-        if isinstance(val, int) and 0 <= val < len(data):
-            res = data[val]
-            if isinstance(res, (str, int, float, bool)):
-                return res
-            elif isinstance(res, list):
-                return [self._resolve_val(data, x) for x in res]
-        return val
-
-    def _regex_search_fallback(self, data) -> list:
-        raw = json.dumps(data)
-        ids = re.findall(r'"id"\s*:\s*(\d+)', raw)
-        titles = re.findall(r'"title"\s*:\s*"([^"]+)"', raw)
-        out = []
-        for mid, title in zip(ids, titles):
-            out.append({"id": mid, "title": title})
-        return out
-
-    def browse(self, sort: str = "Trending", genre: str = None, page: int = 1, limit: int = 32, **_) -> list:
+    def browse(self, sort: str = "Trending", genre: str = None,
+               page: int = 1, limit: int = 32, **_) -> list:
         page = max(1, int(page or 1))
-        url = f"{API_BASE}/manga"
         try:
-            data = self.fetch_json(url, params={"page": page, "per_page": min(limit, 50)})
-            items = data.get("data") or data.get("results") or (data if isinstance(data, list) else [])
-            results = []
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                mid = item.get("id")
-                if not mid:
-                    continue
-                title = item.get("title") or "Unknown"
-                photo = item.get("photo") or item.get("cover")
-                if photo and not photo.startswith("http"):
-                    photo = f"{SITE}{photo}"
-                results.append(
-                    self._result(
-                        title,
-                        f"{SITE}/manga/{mid}",
-                        cover=photo,
-                        status=item.get("status"),
-                    )
-                )
-                if len(results) >= limit:
-                    break
-            return results
-        except Exception as e:
+            data = self.fetch_json(
+                f"{API_BASE}/manga",
+                params={"page": page, "per_page": max(limit, 50)},
+            )
+            results = [self._manga_result(self, item)
+                       for item in self._manga_list(data)]
+            return results[:limit]
+        except (ScrapeError, ValueError) as e:
             logger.warning("MangaDotNet browse failed: %s", e)
             return []
 
+    # ------------------------------------------------------------- info
     def get_manga_info(self, manga_url: str) -> dict:
         mid = self.extract_manga_id(manga_url)
-        url = f"{API_BASE}/manga/{mid}"
-        data = self.fetch_json(url)
-        if isinstance(data, dict) and "data" in data:
+        data = self.fetch_json(f"{API_BASE}/manga/{mid}")
+
+        # The series payload is a nested ``manga`` object (not ``data``).
+        if isinstance(data, dict) and isinstance(data.get("manga"), dict):
+            data = data["manga"]
+        elif isinstance(data, dict) and "data" in data:
             data = data["data"]
 
-        title = data.get("title") or "Unknown Manga"
-        description = data.get("description") or ""
-        cover = data.get("photo") or data.get("cover")
-        if cover and not cover.startswith("http"):
-            cover = f"{SITE}{cover}"
+        title = (data.get("title") or "Unknown Manga").strip()
+        description = (data.get("description") or "").strip()
+        cover = self._manga_photo(data.get("photo") or data.get("cover"), mid)
 
         genres = data.get("genres", [])
-        tags = [g.get("name", g) if isinstance(g, dict) else str(g) for g in genres]
+        tags = [g.get("name", g) if isinstance(g, dict) else str(g)
+                for g in genres]
 
         authors = []
-        for a in data.get("authors", []):
+        for a in data.get("authors", []) or []:
             if isinstance(a, dict) and a.get("name"):
                 authors.append(a["name"])
             elif isinstance(a, str):
@@ -216,64 +201,80 @@ class MangaDotNetSource(Source):
             "source_name": self.name,
         }
 
+    # --------------------------------------------------------- chapters
     def get_chapters(self, manga_url: str) -> list:
         mid = self.extract_manga_id(manga_url)
-        url = f"{API_BASE}/manga/{mid}/chapters"
-        try:
-            data = self.fetch_json(url)
-        except Exception:
-            data = self.fetch_json(f"{API_BASE}/chapters/{mid}")
+        data = self.fetch_json(f"{API_BASE}/manga/{mid}/chapters/list")
 
-        raw_chapters = data.get("data") or data.get("chapters") or (data if isinstance(data, list) else [])
-        chapters = []
-        for ch in raw_chapters:
+        raw = data if isinstance(data, list) else \
+            (data.get("chapters") or data.get("data") or [])
+
+        # One entry per number: the same chapter is returned once per
+        # translation / scanlator group, so drop the duplicates.
+        by_number = {}
+        for ch in raw:
             if not isinstance(ch, dict):
                 continue
-            cid = ch.get("id")
-            num = ch.get("chapter_number") or ch.get("number") or "0"
-            title = ch.get("chapter_title") or ch.get("title") or ""
-            name = f"Chapter {num} - {title}" if title else f"Chapter {num}"
+            num = str(ch.get("chapter_number") or "").strip()
+            if not num:
+                continue
+            if num not in by_number:
+                by_number[num] = ch
 
+        chapters = []
+        for num in sorted(by_number, key=lambda n: float(n or 0)):
+            ch = by_number[num]
+            cid = ch.get("id")
+            title = (ch.get("chapter_title") or "").strip()
+            label = f"Chapter {num}"
+            if title and title.lower() not in label.lower():
+                label = f"{label} - {title}".replace("  ", " ")
             chapters.append({
                 "url": f"{SITE}/chapter/{cid}" if cid else f"{manga_url}/chapter-{num}",
-                "name": name,
-                "date": ch.get("date_added") or ch.get("created_at"),
+                "name": label,
+                "date": ch.get("date_added"),
                 "source": self.id,
                 "chapter_id": cid,
-                "sort_val": float(num) if str(num).replace(".", "", 1).isdigit() else 0.0,
+                "sort_val": float(num or 0) if re.match(r"^[\d.]+$", num) else 0.0,
             })
 
-        chapters.sort(key=lambda c: c.get("sort_val", 0))
+        # Already oldest-first (sorted ascending), as the engine requires.
         return chapters
 
+    # ----------------------------------------------------------- images
     def get_chapter_images(self, chapter) -> list:
+        mid = (chapter.get("chapter_id") if isinstance(chapter, dict) else None)
+        if mid:
+            try:
+                data = self.fetch_json(f"{API_BASE}/chapters/{mid}/images")
+            except (ScrapeError, ValueError):
+                data = None
+            if isinstance(data, dict):
+                images = data.get("images") or []
+                urls = []
+                for img in images:
+                    src = img.get("url") if isinstance(img, dict) else str(img)
+                    if src:
+                        src = urljoin(SITE, src)
+                        if src not in urls:
+                            urls.append(src)
+                if urls:
+                    return urls
+
+        # Fall back to whatever the chapter page exposes (may be nothing for
+        # the reader-signed CDN; then an empty list is correct, not faked).
         chapter_url = self._chapter_url(chapter)
         if not chapter_url:
             return []
-
-        parts = chapter_url.strip("/").split("/")
-        cid = parts[-1]
-        url = f"{API_BASE}/images/{cid}"
-        try:
-            data = self.fetch_json(url)
-            images = data.get("images") or data.get("pages") or (data if isinstance(data, list) else [])
-            urls = []
-            for img in images:
-                src = img.get("url") if isinstance(img, dict) else str(img)
-                if src:
-                    if not src.startswith("http"):
-                        src = f"{SITE}{src}"
-                    urls.append(src)
-            if urls:
-                return urls
-        except Exception:
-            pass
-
         from bs4 import BeautifulSoup
         resp = self.fetch(chapter_url)
         soup = BeautifulSoup(resp.content, "html.parser")
-        return [
-            urljoin(SITE, img.get("data-src") or img.get("src"))
-            for img in soup.select("#reader img, .pages img, img")
-            if (img.get("data-src") or img.get("src")) and not (img.get("data-src") or img.get("src")).endswith("loading.gif")
-        ]
+        urls = []
+        for img in soup.select("#reader img, .pages img, img"):
+            src = img.get("data-src") or img.get("src")
+            if not src or src.endswith(("loading.gif", "spinner.gif")):
+                continue
+            src = urljoin(SITE, src)
+            if src not in urls:
+                urls.append(src)
+        return urls

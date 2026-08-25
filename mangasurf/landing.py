@@ -38,6 +38,7 @@ import platform
 import shlex
 import shutil
 import subprocess
+import tempfile
 import sys
 import threading
 import time
@@ -85,6 +86,16 @@ def _venv_python(root):
             if os.path.isfile(candidate):
                 return candidate
     return None
+
+
+def _read_log_tail(path):
+    """Return the last non-empty lines of a launch log, or [] if unavailable."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            lines = [l.rstrip() for l in f]
+    except OSError:
+        return []
+    return [l for l in lines if l.strip()]
 
 
 def find_python():
@@ -306,15 +317,33 @@ class Launcher:
 
         self.add("info", f"Starting {label}…")
         self.add("cmd", " ".join(command))
+        # Graphical children are spawned in the background, so their stderr
+        # would normally be lost. Instead of DEVNULL, send it to a per-target
+        # log file: if the child dies instantly the real traceback is there,
+        # and the window can quote it rather than guessing at a "venv" that
+        # does not even exist for a packaged build.
+        log_path = os.path.join(
+            tempfile.gettempdir(), f"mangasurf-launch-{target}.log")
+        log_file = None
+        if not needs_terminal and not shell_hint:
+            try:
+                log_file = open(log_path, "wb")
+            except OSError:
+                log_file = None
         try:
             proc = subprocess.Popen(
                 command, cwd=HERE,
-                # Terminal launchers exit immediately after spawning the
-                # window, so their output is noise; graphical children are
-                # detached the same way for consistency.
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                start_new_session=(os.name != "nt"))
+                # Terminal launchers open their own titled console, so their
+                # output arrives there; graphical children are detached and
+                # their output lands in the log file above.
+                stdout=(log_file or subprocess.DEVNULL),
+                stderr=(log_file or subprocess.DEVNULL),
+                start_new_session=(os.name != "nt"),
+                stdin=subprocess.DEVNULL,
+            )
         except Exception as exc:
+            if log_file:
+                log_file.close()
             self.add("error", f"Could not start {label}: {exc}")
             return {"ok": False, "error": str(exc)}
 
@@ -325,10 +354,26 @@ class Launcher:
         # so rather than showing a launch that already died.
         time.sleep(0.6)
         if proc.poll() is not None and proc.returncode != 0 and not needs_terminal:
+            detail = _read_log_tail(log_path)
+            if detail:
+                detail = "\n".join(detail[-12:])
+            hint = ("This is a packaged build — there is no venv to check. "
+                    "The error below is what the child printed. If it is a "
+                    "missing GUI backend, rebuild with the GUI dependencies "
+                    "(pywebview / pythonnet on Windows)."
+                    if FROZEN else
+                    "Check the venv, or read the error below.")
             self.add("error", f"{label} exited immediately "
-                              f"(code {proc.returncode}). Check the venv.")
-            return {"ok": False,
-                    "error": f"{label} exited immediately", "state": self.get_state()}
+                              f"(code {proc.returncode}). {hint}")
+            if detail:
+                self.add("error", f"[{label}] {detail}")
+            if log_file:
+                log_file.close()
+            return {"ok": False, "error": f"{label} exited (code "
+                                          f"{proc.returncode})",
+                    "details": detail or ""}
+        if log_file:
+            log_file.close()
 
         self.add("info", f"{label} started.")
         return {"ok": True, "state": self.get_state()}

@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import xml.etree.ElementTree as ET
-from urllib.parse import quote, urljoin, urlparse
+from urllib.parse import parse_qs, quote, unquote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -177,22 +177,48 @@ class WitchScansSource(Source):
             return []
 
     def _cards_from_html(self, soup, limit):
+        """Parse the ``/series`` grid.
+
+        The site is a Next.js SPA, so search returns HTML (never JSON) and
+        every card is an ``<a href="/series/comic/<slug>">`` wrapping an
+        ``<img alt="<TITLE>">`` plus a type badge ("MANHWA") and chapter
+        entries. The whole card is one link, so ``get_text`` returns the
+        badge/any chapter label first -- not the title. The real series title
+        lives in the ``img[alt]`` (and on the anchor via ``title``). Also,
+        chapter links match ``/series/comic/<slug>/chapter/...`` and must be
+        skipped, or a single series appears N times with its chapter numbers
+        as the "title".
+        """
         results, seen = [], set()
         for link in soup.select('a[href*="/series/comic/"]'):
-            href = urljoin(SITE, link["href"].split("?")[0])
+            href = link["href"].split("?")[0]
+            # skip per-chapter links: they are not series entries
+            if "/chapter/" in href or "/series/comic/" + href.rstrip("/").rsplit("/", 1)[-1] in ("/series/comic/comic",):
+                continue
+            href = urljoin(SITE, href)
             if href in seen or href == f"{SITE}/series/comic":
                 continue
-            
-            title = link.get("title") or link.get_text(" ", strip=True)
+
+            # Title from the cover alt, else the anchor title attr, else the
+            # .title / nearest heading inside the card.
+            title = ""
+            img = link.select_one("img")
+            if img is not None:
+                title = (img.get("alt") or "").strip()
+            if not title:
+                title = (link.get("title") or "").strip()
+            if not title:
+                title_el = link.select_one(".title, [class*='title'], h3, h2")
+                if title_el is not None:
+                    title = title_el.get_text(" ", strip=True)
             if not title:
                 continue
 
             cover = None
-            img = link.select_one("img")
-            if img:
+            if img is not None:
                 cover = (img.get("data-src") or img.get("src") or "").strip()
                 if cover:
-                    cover = urljoin(SITE, cover)
+                    cover = self._cover_url(cover)
 
             seen.add(href)
             results.append(self._result(
@@ -202,6 +228,26 @@ class WitchScansSource(Source):
             if len(results) >= limit:
                 break
         return results
+
+    @staticmethod
+    def _cover_url(src: str) -> str:
+        """Decode a Next.js ``/_next/image?url=...`` proxy to the real URL.
+
+        The site serves every cover through ``/_next/image``; those URLs are
+        slower and re-encode on each load, and the GUI's proxy path prefers
+        the direct CDN. If ``src`` already points at ``media.witchtoons.net``
+        leave it as-is.
+        """
+        src = urljoin(SITE, src)
+        try:
+            parsed = urlparse(src)
+            if "next/image" in parsed.path:
+                url_param = parse_qs(parsed.query).get("url", [""])[0]
+                if url_param:
+                    return unquote(url_param)
+        except Exception:
+            pass
+        return src
 
     @classmethod
     def _genre_slug(cls, genre) -> str:

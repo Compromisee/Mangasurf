@@ -211,7 +211,7 @@ def test_a_500_is_still_retried():
     from mangasurf.sources.base import ScrapeError
     from mangasurf.sources.witchscans import WitchScansSource
 
-    import requests
+    from mangasurf import http as requests  # curl_cffi-backed
 
     class Broken:
         status_code = 500

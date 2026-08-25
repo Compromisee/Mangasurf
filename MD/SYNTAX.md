@@ -285,7 +285,7 @@ mangasurf sources                   # every site, with capabilities
 | `mangadass` | Mangadass | `mangadass.com` | Search, Browse | Manga/Manhwa (SFW) |
 | `manhwa18` | Manhwa18 | `manhwa18.com` | Search, Browse | Adult Manhwa (18+) |
 | `manga18club` | Manga18Club | `manga18.club` | Search, Browse | Adult Manhwa (18+) |
-| `hentaiakane` | HentaiAkane | `hentaiakane.com` | Search, Browse | Hentai (18+) |
+| `mewhen18` | Mewhen18 | `mewhen18.com` | Search, Browse | Hentai (18+) |
 | `nhentai` | nhentai | `nhentai.to` | Search, Tag routing | Doujinshi/Hentai (18+) |
 | `chikari` | Chikari | `chikari.moe` | Search, Browse, Lists, Tag IDs | Manhwa (SFW + 18+) |
 | `kuramanga` | KuraManga | `kuramanga.com`, `shadowabyss.com` | Search, Browse, Infinite IDs | Manhwa (SFW) |

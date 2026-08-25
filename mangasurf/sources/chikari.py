@@ -201,7 +201,7 @@ class ChikariSource(Source):
     def _resolve_tag_id(cls, tag_name: str) -> str:
         if not cls._TAG_CACHE:
             try:
-                import requests
+                from .. import http as requests  # curl_cffi-backed
                 r = requests.get(f"{API_BASE}/tags", headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
                 if r.status_code == 200:
                     for t in r.json():

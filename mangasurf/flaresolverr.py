@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Optional
 
-import requests
+from mangasurf import http as requests  # curl_cffi-backed, requests-compatible API
 
 logger = logging.getLogger(__name__)
 

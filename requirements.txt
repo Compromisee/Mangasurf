@@ -8,13 +8,18 @@
 # This file is the "give me everything" list.
 
 # --- core -------------------------------------------------------------
-requests>=2.31
+# NOTE: HTTP in Mangasurf is 100% curl_cffi. We deliberately do NOT use
+# `requests` at all — curl_cffi gives real TLS/JA3+JA4 browser
+# fingerprinting (bypasses Cloudflare bot checks) and a much faster,
+# connection-reusing async engine. The installation requires Python 3.11+.
+# Install the libcurl native binding:
+#     pip install curl_cffi
+curl_cffi>=0.7.0
 beautifulsoup4>=4.12
 rich>=13.0
 Pillow>=10.0
 fpdf2>=2.7
 EbookLib>=0.18
-curl_cffi>=0.7.0; python_version<'3.14'
 
 # --- desktop app and reader (PyQt6 and pywebview) ---------------------
 PyQt6>=6.5.0

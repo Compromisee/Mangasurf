@@ -15,10 +15,18 @@ Prioritized roadmap, task breakdown, and technical backlog for **Mangasurf**.
 - [x] **Dual Metadata Architecture**: Generates both `manga.json` (chapters, local paths, pages, reading progress) and `ComicInfo.xml` (Title, Series, Writer, Genre, Rating, Year) in every folder.
 - [x] **Library Maintenance Suite**: Settings tools to Rescan All Books, Fix Missing Covers, Rebuild XML & JSON, and Clean Cache.
 - [x] **Title Decluttering**: Automated stripping of scanlator tags, brackets, and resolution stamps in File Explorer & OPDS.
-- [x] **Kings Manga & Kamiya Scans**: Registered scrapers 33 and 34.
+- [x] **Removed fake sources**: Kings Manga and Kamiya Scans removed from the registry.
 - [x] **Modular Plugin Architecture**: Hot-reloading of custom Python `.py` and `.source` plugins from `~/.mangasurf/sources/`.
 - [x] **High-Speed `curl_cffi` Solver**: Sub-millisecond TLS JA3/JA4 Chrome 124 impersonation with automatic fallback to FlareSolverr.
 - [x] **Dual Page Spread Reader**: 2-page side-by-side reading mode for desktop screens and tablets.
+- [x] **Per-Chapter Downloaded Counts**: Search badges now match the detail view for bundled CBZs (fixed "1 chapter downloaded").
+- [x] **Four new verified sources**: Manhwa68, ManhwaBuddy, Hentai18, ComicLand.
+- [x] **Best-effort Yurivan source**: degrades gracefully behind its age gate.
+- [x] **Documentation Hub**: standalone HTML doc pages linked from the landing page.
+- [ ] **Verify Yurivan end-to-end** once its age gate can be passed.
+- [ ] **AniList / MyAnimeList read-write sync** (v1.8.0).
+- [ ] **AI OCR translation overlay** (v1.8.0).
+- [ ] **E-ink-optimized reading mode** (v1.8.0).
 - [x] **Complete Data Backup Hub**: Export, import, and selective deletion of search history, suggestions, and reading stats.
 
 ---
