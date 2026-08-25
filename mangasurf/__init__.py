@@ -1,5 +1,9 @@
 """Mangasurf - High-performance manga reader, downloader, and omnibar search engine."""
+# 1. Define or import http first
 
+
+from . import http
+from . import sources
 import os as _os
 import sys as _sys
 
