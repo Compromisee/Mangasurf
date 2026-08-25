@@ -2,7 +2,7 @@
 
 from . import paths
 
-__version__ = "1.7.1"
+__version__ = "1.7.3"
 __app_name__ = "Mangasurf"
 __author__ = "Mangasurf Team"
 

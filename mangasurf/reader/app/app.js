@@ -466,7 +466,7 @@ function renderLibrary() {
         if (pagBar) pagBar.hidden = true
     }
 
-    grid.innerHTML = displayBooks.map(b => {
+    grid.innerHTML = displayBooks.map((b, __i) => {
         const first = b.items[0]
         const art = coverAttrs(b.cover, b.source)
         // Clicking the cover of something you already downloaded opens it to
@@ -478,7 +478,7 @@ function renderLibrary() {
             : `data-manga="${esc(b.url)}"`
         const metaAttrs = `data-key="${esc(b.key || b.url || b.directory || '')}" data-manga="${esc(b.url || '')}" data-directory="${esc(b.directory || '')}" data-title="${esc(b.title || '')}" data-source="${esc(b.source || '')}"`
         const colorAttr = b.color ? `data-card-color="${esc(b.color)}" style="--card-color:${esc(b.color)}"` : ''
-        return `<div class="card" ${target} ${metaAttrs} ${colorAttr}>
+        return `<div class="card" style="--i:${__i}" ${target} ${metaAttrs} ${colorAttr}>
           <div class="thumb" style="${art.style}"${art.data}>
             ${art.fallback ? '<span class="mi">image</span>' : ''}
             ${b.url ? `<button class="thumb-info" title="Series info"
@@ -526,10 +526,15 @@ function getDownloadedMeta(url, title) {
     })
     if (!match) return null
 
+    // Prefer the larger of the two: a bundled archive is a single file but
+    // holds many chapters, so `items.length` alone underreports badly.
     let count = 0
     if (Array.isArray(match.items)) count = match.items.length
-    else if (match.chapters && typeof match.chapters === 'object') count = Object.keys(match.chapters).length
-    else if (typeof match.chapters === 'number') count = match.chapters
+    if (match.chapters && typeof match.chapters === 'object') {
+        count = Math.max(count, Object.keys(match.chapters).length)
+    } else if (typeof match.chapters === 'number') {
+        count = Math.max(count, match.chapters)
+    }
     if (!count && match.outputs) count = match.outputs.length
     if (!count) count = 1
 
@@ -538,6 +543,45 @@ function getDownloadedMeta(url, title) {
         title: match.title,
         readCount: match.read || 0,
         directory: match.directory || '',
+    }
+}
+
+// The card badge above counts *files* (a single CBZ bundle is one file even
+// though it holds many chapters), so it can underreport. Correct it against
+// the same authoritative `downloaded_status` the detail view uses, which
+// reads the real chapter list from each series' `manga.json`/library entry.
+async function enrichSearchDownloadedCounts(results) {
+    const urls = (results || []).map(r => r.url).filter(Boolean)
+    if (!urls.length) return
+    let status
+    try {
+        status = await call('downloaded_status', urls)
+    } catch {
+        return
+    }
+    const map = (status && status.status) || {}
+    const cards = [...($('#search-grid')?.querySelectorAll('.card') || [])]
+    if (!cards.length) return
+    for (const r of (results || [])) {
+        const st = map[r.url]
+        if (!st || !(st.chapters > 0)) continue
+        const card = cards.find(c => (c.dataset.manga || '') === (r.url || ''))
+        if (!card) continue
+        const count = st.chapters
+        card.classList.add('is-downloaded')
+        const badge = card.querySelector('.thumb-dl-badge')
+        if (badge) {
+            badge.title = `${count} chapters downloaded`
+            const span = badge.querySelector('span:last-child')
+            if (span) span.textContent = `${count} Downloaded`
+        }
+        const thumb = card.querySelector('.thumb-hover-overlay .dl-hover-content .dl-hover-fraction')
+        if (thumb) thumb.textContent = `${count} ${count === 1 ? 'Chapter' : 'Chapters'} Downloaded`
+        const pill = card.querySelector('.meta-dl-pill')
+        if (pill) {
+            pill.title = `${count} chapters downloaded`
+            pill.innerHTML = `<span class="mi">download_done</span>${count} Downloaded`
+        }
     }
 }
 
@@ -699,21 +743,21 @@ async function doSearch(isAppend = false) {
     }
 
     if (freshResults.length > 0) {
-        const newCardsHtml = freshResults.map(r => {
+        const newCardsHtml = freshResults.map((r, __i) => {
             const art = coverAttrs(r.cover, r.source)
             const dlMeta = getDownloadedMeta(r.url, r.title)
             const isDownloaded = dlMeta && dlMeta.downloadedCount > 0
             const dlCount = dlMeta ? dlMeta.downloadedCount : 0
 
             return `
-            <div class="card ${isDownloaded ? 'is-downloaded' : ''}" data-manga="${esc(r.url)}" data-source="${esc(r.source || '')}">
+            <div class="card ${isDownloaded ? 'is-downloaded' : ''}" style="--i:${__i}" data-manga="${esc(r.url)}" data-source="${esc(r.source || '')}">
               <div class="thumb" style="${art.style}"${art.data}>
                 ${art.fallback ? '<span class="mi thumb-fallback">image</span>' : ''}
                 
                 ${isDownloaded ? `
                   <div class="thumb-dl-badge" title="${dlCount} chapters downloaded">
                     <span class="mi">download_done</span>
-                    <span>${dlCount} Downloaded</span>
+                    <span>${dlCount}</span>
                   </div>
                   <div class="thumb-hover-overlay">
                     <div class="dl-hover-content">
@@ -733,7 +777,6 @@ async function doSearch(isAppend = false) {
                 <div class="name">${esc(r.title)}</div>
                 <div class="sub">
                   <span>${esc(r.source_name || r.source || '')}</span>
-                  ${isDownloaded ? `<span class="meta-dl-pill" title="${dlCount} chapters downloaded"><span class="mi">download_done</span>${dlCount} Downloaded</span>` : ''}
                 </div>
               </div>
             </div>`
@@ -746,6 +789,7 @@ async function doSearch(isAppend = false) {
         }
 
         hydrateCovers($('#search-grid'))
+        enrichSearchDownloadedCounts(freshResults)
     }
 
     if (moreWrap) {
@@ -883,6 +927,9 @@ const HOTLINK_PROTECTED = new RegExp(
         'kurahentai\\.com',
         'mangak\\.io',
         'madaradex\\.org',
+        'manhwa68\\.com',
+        'hentai18\\.net',
+        'yurivan\\.com',
     ].join('|') + ')$', 'i')
 
 function needsProxy(url) {
@@ -2630,10 +2677,10 @@ function renderMarks() {
         ? `${markCache.length} saved series`
         : 'Series you saved for later'
 
-    $('#marks-grid').innerHTML = items.map(b => {
+    $('#marks-grid').innerHTML = items.map((b, __i) => {
         const art = coverAttrs(b.cover, b.source)
         return `
-        <div class="card" data-manga="${esc(b.url)}" data-source="${esc(b.source || '')}">
+        <div class="card" style="--i:${__i}" data-manga="${esc(b.url)}" data-source="${esc(b.source || '')}">
           <div class="thumb" style="${art.style}"${art.data}>
             ${art.fallback ? '<span class="mi">bookmark</span>' : ''}
           </div>

@@ -25,6 +25,8 @@ SRC = os.path.join(ROOT, "mangasurf", "sources")
 #: no longer registered individually -- they are reached as its members.
 NEW_SOURCES = [
     "witchscans", "writerscans", "demonicscans", "asurascans", "flamecomics",
+    # v1.7.2 / v1.7.3 additions
+    "mangatitan", "manhwa68", "manhwabuddy", "hentai18", "comicland", "yurivan",
 ]
 
 #: The Madara-theme sites, now members of the aggregate rather than sources.
@@ -140,13 +142,16 @@ def test_new_sources_are_instantiable_and_declare_capabilities():
 
 
 def test_none_of_the_new_sources_are_adult_flagged():
-    """All eleven are general-audience scanlation sites. Flagging one adult
-    would hide it behind Safe mode; failing to flag a real adult site would
-    leak it into a filtered search. These are the former."""
+    """The general-audience scanlation additions are not adult-flagged;
+    the dedicated adult sources (hentai18, yurivan) must be. Flagging a
+    general site adult would hide it behind Safe mode; failing to flag a real
+    adult site would leak it into a filtered search."""
     from mangasurf.sources import SOURCES
 
+    adult_new = {"hentai18", "yurivan"}
     for source_id in NEW_SOURCES:
-        assert not getattr(SOURCES[source_id], "adult_only", False), source_id
+        flagged = bool(getattr(SOURCES[source_id], "adult_only", False))
+        assert flagged == (source_id in adult_new), source_id
 
 
 # ====================================================== Cloudflare timeout
@@ -734,5 +739,6 @@ def test_every_new_source_module_records_its_measurements():
         text = source_code(source_id)
         assert text.lstrip().startswith('"""'), source_id
         head = text.split('"""')[1]
-        assert "2026-07" in head or "measured" in head.lower() \
+        assert "2026-07" in head or "2026-08" in head \
+            or "measured" in head.lower() \
             or "Measured" in head, source_id

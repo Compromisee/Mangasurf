@@ -12,7 +12,8 @@ There are two unrelated things called "Madara" in this codebase:
 
 Despite the name, Madara Scans does **not** run the Madara theme: its
 ``wp-content/themes/mangareader`` is the Themesia build, the same family as
-Witch Scans and HentaiAkane. So it subclasses nothing from ``madara.py``.
+Witch Scans and Mewhen18 (ex-HentaiAkane). So it subclasses nothing from
+``madara.py``.
 
 Notes from probing the live site (2026-07):
 

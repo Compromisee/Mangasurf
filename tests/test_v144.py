@@ -6,7 +6,8 @@ Covers the three reported bugs and the three new sources:
   genre list was invented (7 of 12 slugs were 404s).
 * Webtoons covers 403'd because the GUI sends ``no-referrer`` for MangaDex.
 * Natomanga covers were rewritten onto sibling hosts that do not hold them.
-* Mangadass / Manga18.club / HentaiAkane added.
+* Mangadass / Manga18.club / Mewhen18 added (Mewhen18 replaces HentaiAkane,
+  which is no longer serving its series pages).
 
 Everything here is offline: the live behaviour these encode was measured
 while writing the sources and is quoted in each source's module docstring.
@@ -146,7 +147,7 @@ def test_proxy_cover_rejects_non_http_urls():
 # ====================================================== the new sources
 
 
-NEW_SOURCES = ["mangadass", "manga18club", "hentaiakane"]
+NEW_SOURCES = ["mangadass", "manga18club", "mewhen18"]
 
 
 @pytest.mark.parametrize("source_id", NEW_SOURCES)
@@ -166,7 +167,7 @@ def test_new_source_is_flagged_adult(source_id):
 @pytest.mark.parametrize("source_id, url", [
     ("mangadass", "https://mangadass.com/manga/single-daddy"),
     ("manga18club", "https://manga18.club/manhwa/dirty-talk-raw"),
-    ("hentaiakane", "https://hentaiakane.com/manga/love-cheer/"),
+    ("mewhen18", "https://mewhen18.com/category/secret-class/"),
 ])
 def test_new_source_claims_its_urls(source_id, url):
     from mangasurf.sources import detect_source
@@ -265,50 +266,56 @@ def test_manga18club_cover_does_not_come_from_the_sidebar():
     assert ".story_images" not in body
 
 
-# --------------------------------------------------------- hentaiakane
+# ------------------------------------------------------------ mewhen18
 
 
-def test_hentaiakane_parses_the_ts_reader_payload():
-    from mangasurf.sources.hentaiakane import HentaiAkaneSource
+def test_mewhen18_parses_the_ts_reader_payload():
+    from mangasurf.sources.mewhen18 import Mewhen18Source
 
     payload = {"sources": [{"images": ["https://img.hentai1.io/a/1.jpg",
                                        "https://img.hentai1.io/a/2.jpg"]}]}
     html = "ts_reader.run(%s);" % json.dumps(payload)
-    assert HentaiAkaneSource.parse_reader(html) == payload["sources"][0]["images"]
+    assert Mewhen18Source.parse_reader(html) == payload["sources"][0]["images"]
 
 
-def test_hentaiakane_reader_parse_is_safe_on_junk():
-    from mangasurf.sources.hentaiakane import HentaiAkaneSource
+def test_mewhen18_reader_parse_is_safe_on_junk():
+    from mangasurf.sources.mewhen18 import Mewhen18Source
 
-    assert HentaiAkaneSource.parse_reader("") == []
-    assert HentaiAkaneSource.parse_reader("ts_reader.run({broken);") == []
+    assert Mewhen18Source.parse_reader("") == []
+    assert Mewhen18Source.parse_reader("ts_reader.run({broken);") == []
 
 
-def test_hentaiakane_cards_ignore_the_sidebar_series_links():
-    """a.series matches 60 sidebar links on a search page; only .bs is real."""
+def test_mewhen18_cards_ignore_the_sidebar_series_links():
+    """Stray ``a.series`` sidebar links must not pollute the .bs grid."""
     from bs4 import BeautifulSoup
 
-    from mangasurf.sources.hentaiakane import HentaiAkaneSource
+    from mangasurf.sources.mewhen18 import Mewhen18Source
 
-    html = '''<a class="series" href="/manga/sidebar/" title="Sidebar"></a>
+    html = '''<a class="series" href="/category/sidebar/" title="Sidebar"></a>
       <div class="bs"><div class="bsx"><a href="/manga/real/" title="Real">
       <img src="/c.jpg"><div class="tt">Real</div></a></div></div>'''
-    results = HentaiAkaneSource()._cards(BeautifulSoup(html, "html.parser"), 10)
+    results = Mewhen18Source()._cards(BeautifulSoup(html, "html.parser"), 10)
     assert [r["title"] for r in results] == ["Real"]
 
 
-def test_hentaiakane_uses_the_plural_genres_path():
-    """/genre/<slug>/ is a 404; the site uses /genres/<slug>/."""
-    src = read(os.path.join(ROOT, "mangasurf", "sources", "hentaiakane.py"))
-    body = src[src.index("def browse"):src.index("def genres")]
-    assert "/genres/" in body
+def test_mewhen18_rewrites_dead_manga_links_to_the_category_archive():
+    """``/manga/<slug>/`` is a 404 on this install; the category archive
+    ``/category/<slug>/`` is the real series page."""
+    from mangasurf.sources.mewhen18 import Mewhen18Source
+
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "mewhen18.py"))
+    assert "_series_href" in src
+    assert "/category/" in src
+    assert Mewhen18Source._series_href(
+        "https://mewhen18.com/manga/secret-class/") == \
+        "https://mewhen18.com/category/secret-class/"
 
 
-def test_hentaiakane_documents_the_domain_correction():
-    """The request said "hentaikane"; that domain does not resolve."""
-    src = read(os.path.join(ROOT, "mangasurf", "sources", "hentaiakane.py"))
-    assert "hentaikane" in src           # the spelling is explained
-    assert "NXDOMAIN" in src
+def test_mewhen18_documents_the_domain_correction():
+    """The original request was "hentaiakane"; that domain is now dead."""
+    src = read(os.path.join(ROOT, "mangasurf", "sources", "mewhen18.py"))
+    assert "hentaiakane" in src           # the spelling is explained
+    assert "taken over" in src
 
 
 # ================================================================ misc

@@ -22,7 +22,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        # Mangasurf 1.7.2 targets Python 3.11+ (curl_cffi-based HTTP layer).
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout repository

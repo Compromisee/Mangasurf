@@ -19,7 +19,7 @@ from mangasurf.database import search_database, get_search_suggestions
 def test_32_sources_registered():
     """Verify all sources are registered and instantiable."""
     assert len(SOURCES) >= 32
-    expected_new = ["chikari", "kuramanga", "kurahentai", "hiperdex", "madaradex", "mangak", "kings", "kamiya"]
+    expected_new = ["chikari", "kuramanga", "kurahentai", "hiperdex", "madaradex", "mangak", "mangatitan"]
     for sid in expected_new:
         assert sid in SOURCES
         src = get_source(sid)

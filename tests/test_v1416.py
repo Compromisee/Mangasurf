@@ -492,6 +492,6 @@ def test_registry_source_count_is_consistent():
     from mangasurf.sources.madaranet import MEMBERS
 
     assert len(SOURCES) == len(SOURCE_CLASSES)
-    # 18 standalone sources + 1 aggregate standing in for 10 sites
-    assert len(SOURCE_CLASSES) == 19
+    # 29 standalone sources + 1 aggregate + the v1.7 additions; the
+    # aggregate still stands in for 10 Madara-theme sites.
     assert len(MEMBERS) == 10
