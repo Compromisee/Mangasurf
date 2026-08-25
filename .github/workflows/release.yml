@@ -277,3 +277,37 @@ jobs:
 
           # Safely execute the generated script file
           python generate_notes.py
+          
+# ──────────────────────────────────────────────────────────────────────────
+  # 4. Create Official GitHub Release & Attach Binaries
+  # ──────────────────────────────────────────────────────────────────────────
+  publish-release:
+    name: Publish GitHub Release
+    needs: [prep-version, build, release-notes]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prep-version.outputs.resolved_tag }}
+          name: ${{ needs.prep-version.outputs.resolved_tag }}
+          body: ${{ needs.release-notes.outputs.release_notes }}
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          files: |
+            release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
