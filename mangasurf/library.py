@@ -106,8 +106,37 @@ def _save(path, data):
 # ------------------------------------------------------------------ library
 
 
+# ------------------------------------------------------------------ session clear
+#
+# "Clear library for this session" is a view-only reset: it empties every
+# screen that reads the library (grid, continue rows, stats, OPDS, phone
+# server) for the rest of the running process, but it never touches
+# library.json on disk. New downloads keep being recorded to disk exactly as
+# before, and restarting the app brings the full library back. The flag is
+# plain process memory, so it resets itself on every launch - no config is
+# written, and there is nothing to unpickle.
+_session_cleared = False
+
+
+def set_session_clear(on: bool = True) -> None:
+    """Empty the library for the rest of this session only (does not delete)."""
+    with _lock:
+        global _session_cleared
+        _session_cleared = bool(on)
+
+
+def session_cleared() -> bool:
+    with _lock:
+        return _session_cleared
+
+
 def load_library() -> dict:
     with _lock:
+        if _session_cleared:
+            # View-only reset: behave as if the library is empty right now, but
+            # leave the file alone so downloads still save and a restart brings
+            # it all back.
+            return {}
         return _load(LIBRARY_PATH, {})
 
 

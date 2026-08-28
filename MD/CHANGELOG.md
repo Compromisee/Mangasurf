@@ -6,6 +6,21 @@ All notable changes to **Mangasurf**, newest first.
 
 ## [Unreleased] — Efficiency & Motion
 
+### Added: "Clear library for this session" toggle (Library & Folders → settings)
+- **Gotcha fixed:** previously the only way to empty the library was `Clear
+  library`, which permanently erased `library.json`. A session-only reset did
+  not exist, so there was no way to hide everything without deleting it.
+- New **"Clear library for this session"** switch in *Settings → Library &
+  Folders*. Turning it on empties the library **for this run only**: the grid,
+  continue strip, stats, OPDS catalog and phone server all show nothing, but it
+  **never touches the files or `library.json` on disk** — new downloads keep
+  being recorded as normal, and the full library returns on the next launch.
+- Backed by a process-memory flag in `library.py`
+  (`set_session_clear()` / `session_cleared()`): `load_library()` returns `{}`
+  while active, while `record_chapter`/`downloaded_chapters`/`get_entry` keep
+  reading and writing `library.json` unchanged. Nothing is persisted, so the
+  state self-resets on restart.
+
 ### Fixed: onefile EXE crashing with "No module named 'curl_cffi'"
 - `curl_cffi` is Mangasurf's only HTTP layer (requests was removed), but the
   PyInstaller spec didn't list it as a hidden import. If the build environment

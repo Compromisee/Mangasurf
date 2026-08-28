@@ -4562,6 +4562,21 @@ function wire() {
         pushSettings({ lib_autoscan: e.target.checked }))
     $('#set-lib-autodiscover')?.addEventListener('change', e =>
         pushSettings({ lib_autodiscover: e.target.checked }))
+    // "Clear library for this session" is a view-only reset: it empties the
+    // library for the rest of this run without deleting anything, and new
+    // downloads still save to disk. It is process memory, so it does not use
+    // pushSettings() (which would persist it across restarts).
+    $('#set-lib-session-clear')?.addEventListener('change', async e => {
+        const res = await call('set_session_clear', !!e.target.checked)
+        const cleared = !!(res?.cleared ?? e.target.checked)
+        const box = $('#set-lib-session-clear')
+        if (box) box.checked = cleared
+        refreshLibrary()
+        refreshLibraryFolders()
+        toast(cleared
+            ? 'Library cleared for this session — nothing was deleted, and downloads still save'
+            : 'Library restored for this session')
+    })
 
     // ---- library maintenance & metadata tools
     $('#btn-tools-rescan')?.addEventListener('click', async () => {
@@ -5266,6 +5281,12 @@ async function boot() {
     if (autoScanEl) autoScanEl.checked = s.lib_autoscan !== false
     const autoDiscEl = $('#set-lib-autodiscover')
     if (autoDiscEl) autoDiscEl.checked = s.lib_autodiscover !== false
+    // Session-library clear lives in process memory (not settings), so query
+    // the backend to restore the switch after a reload / window refresh.
+    call('session_clear_state').then(res => {
+        const scEl = $('#set-lib-session-clear')
+        if (scEl) scEl.checked = !!(res?.cleared)
+    }).catch(() => {})
     const libDispSelect = $('#set-lib-display-mode')
     if (libDispSelect) libDispSelect.value = s.lib_display_mode || 'carousel'
     const libPagCheck = $('#set-lib-paginate')

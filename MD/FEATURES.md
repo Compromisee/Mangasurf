@@ -472,6 +472,9 @@ glancing at your library; it is not a vault.
 - Export the library as JSON, CSV or Markdown; import merges rather than
   overwrites.
 - Notes, 0–5 star ratings, custom tags and named collections per series.
+- **Clear library for this session** (Settings → Library & Folders): empties
+  the library view for the current run only — nothing is deleted from disk and
+  new downloads still save. The full library returns on the next launch.
 
 ---
 

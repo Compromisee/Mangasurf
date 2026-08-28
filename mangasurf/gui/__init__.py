@@ -1721,6 +1721,20 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         library.clear_library()
         return {"ok": True}
 
+    def session_clear_state(self):
+        """Is the library currently hidden for this session? (view-only reset)"""
+        return {"ok": True, "cleared": library.session_cleared()}
+
+    def set_session_clear(self, on: bool):
+        """Empty the library for this session only. Downloading still saves.
+
+        Unlike clear_library() this does not touch library.json: it makes every
+        screen that reads the library show nothing until the app is restarted,
+        while downloads keep being recorded to disk.
+        """
+        library.set_session_clear(bool(on))
+        return {"ok": True, "cleared": library.session_cleared()}
+
     def clear_bookmarks(self):
         library.clear_bookmarks()
         return {"ok": True}
