@@ -130,9 +130,18 @@ def session_cleared() -> bool:
         return _session_cleared
 
 
-def load_library() -> dict:
+def load_library(include_session: bool = True) -> dict:
+    """The library as ``dict`` of series.
+
+    ``include_session`` (default True) honours the "Clear library for this
+    session" flag, returning ``{}`` while it is active. Pass ``False`` for
+    callers that must always see the real contents — the OPDS catalog keeps
+    serving every book even when the GUI/phone server is showing an empty
+    library, and data exports/backups must never be emptied by a view-only
+    reset.
+    """
     with _lock:
-        if _session_cleared:
+        if include_session and _session_cleared:
             # View-only reset: behave as if the library is empty right now, but
             # leave the file alone so downloads still save and a restart brings
             # it all back.

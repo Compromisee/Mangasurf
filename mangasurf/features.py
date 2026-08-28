@@ -721,7 +721,7 @@ def export_library(path, fmt="json"):
     """Export the library to JSON, CSV or Markdown."""
     from . import library
 
-    data = library.load_library()
+    data = library.load_library(include_session=False)  # export always sees everything
     entries = list(data.values())
     fmt = (fmt or "json").lower()
 
@@ -767,7 +767,7 @@ def import_library(path, merge=True):
         payload = json.load(f)
     entries = payload if isinstance(payload, list) else list(payload.values())
 
-    current = library.load_library() if merge else {}
+    current = library.load_library(include_session=False) if merge else {}
     added = 0
     for entry in entries:
         url = (entry.get("url") or "").rstrip("/")
@@ -794,7 +794,7 @@ def snapshot(label=""):
             "id": str(int(time.time())),
             "label": label or _now(),
             "date": _now(),
-            "library": library.load_library(),
+            "library": library.load_library(include_session=False),  # backup includes all
             "bookmarks": library.load_bookmarks(),
             "config": cfg.load_config(),
         })
@@ -828,7 +828,7 @@ def library_insights():
     """Aggregate view of the library, for a dashboard."""
     from . import library
 
-    entries = list(library.load_library().values())
+    entries = list(library.load_library(include_session=False).values())
     sources = Counter(e.get("source") or "?" for e in entries)
     total_chapters = sum(len(e.get("chapters", {})) for e in entries)
     total_pages = sum(c.get("pages", 0) for e in entries

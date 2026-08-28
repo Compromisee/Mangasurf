@@ -44,6 +44,10 @@ def test_cleared_library_loads_empty_but_disk_is_untouched(tmp_path, monkeypatch
     library.record_chapter("https://x.example/manga", "Title", "Chapter 2", pages=5)
     assert library.downloaded_chapters("https://x.example/manga") == {"Chapter 1", "Chapter 2"}
 
+    # OPDS / backups read the real contents: they must see the full library
+    # even while the session-clear view is empty.
+    assert len(library.load_library(include_session=False)) == 1
+
     # Restoring the session brings everything back.
     library.set_session_clear(False)
     assert len(library.load_library()) == 1

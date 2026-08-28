@@ -88,6 +88,8 @@ except ImportError as _exc:
 datas = [
     ("mangasurf/reader/app", "mangasurf/reader/app"),
     ("mangasurf/reader/foliate", "mangasurf/reader/foliate"),
+    # The dedicated phone-first PWA under /pwa/ (see mangasurf/server.py).
+    ("mangasurf/reader/mobile", "mangasurf/reader/mobile"),
     ("ui", "ui"),
 ]
 

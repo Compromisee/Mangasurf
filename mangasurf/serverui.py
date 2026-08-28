@@ -17,6 +17,14 @@ import socket
 import threading
 import time
 
+
+def _mobile_url(ip, port, no_auth, token):
+    """The dedicated phone-first PWA link (under /pwa/), token embedded."""
+    if not ip:
+        return ""
+    base = f"http://{ip}:{port}/pwa"
+    return base if no_auth or not token else base + f"/?token={token}"
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,6 +78,10 @@ class ServerController:
             "host_ip": self._server.local_ip(),
             "tailscale_ip": ts,
             "tailscale_url": f"http://{ts}:{port}" if ts else "",
+            "pwa_url": _mobile_url(self._server.local_ip(), port, self.no_auth,
+                                   self._override_token or stored["token"]),
+            "tailscale_pwa_url": _mobile_url(ts, port, self.no_auth,
+                                             self._override_token or stored["token"]) if ts else "",
         }
 
     # -------------------------------------------------------- settings
@@ -219,6 +231,23 @@ class ServerController:
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
 
+    def copy_pwa_link(self):
+        state = self.get_state()
+        url = state.get("pwa_url") or (state.get("tailscale_pwa_url") or "")
+        return {"ok": True, "url": url}
+
+    def open_pwa_in_browser(self):
+        import webbrowser
+        state = self.get_state()
+        url = state.get("pwa_url") or (state.get("tailscale_pwa_url") or "")
+        if not url:
+            return {"ok": False, "error": "No phone app URL yet"}
+        try:
+            webbrowser.open(url)
+            return {"ok": True}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
     @staticmethod
     def _port_free(port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -361,6 +390,16 @@ button:disabled{opacity:.45;cursor:default}
 </div>
 
 <div class="card">
+  <label>Install the phone web app (mobile UI)</label>
+  <div class="row">
+    <div class="url" id="pwaUrl">…</div>
+    <button id="pwaCopyBtn">Copy</button>
+    <button id="pwaOpenBtn">Open</button>
+  </div>
+  <div class="msg" id="pwaMsg">A dedicated mobile PWA — add it to your home screen for a native feel. Works over Wi-Fi and Tailscale.</div>
+</div>
+
+<div class="card">
   <label for="token">Access token</label>
   <div class="row">
     <input type="text" id="token" spellcheck="false" autocomplete="off">
@@ -422,6 +461,7 @@ function paintState(s){
   if (document.activeElement !== el('port')) el('port').value = s.port;
   el('verbose').checked = !!s.verbose;
   el('noauth').style.display = s.no_auth ? '' : 'none';
+  el('pwaUrl').textContent = s.pwa_url || s.tailscale_pwa_url || '';
 }
 
 function pumpLog(){
@@ -507,6 +547,29 @@ ready(function(){
 
   el('openBtn').addEventListener('click', function(){
     api.open_in_browser();
+  });
+
+  el('pwaCopyBtn').addEventListener('click', function(){
+    api.copy_pwa_link().then(function(r){
+      if (!r.ok) return;
+      var done = function(){ setMsg('pwaMsg', 'Phone app link copied.', 'good'); };
+      var fail = function(){
+        var range = document.createRange();
+        range.selectNodeContents(el('pwaUrl'));
+        var sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(range);
+        setMsg('pwaMsg', 'Selected - press Ctrl+C.', 'good');
+      };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(r.url).then(done, fail);
+        } else { fail(); }
+      } catch (e) { fail(); }
+    });
+  });
+
+  el('pwaOpenBtn').addEventListener('click', function(){
+    api.open_pwa_in_browser();
   });
 
   el('clearBtn').addEventListener('click', function(){

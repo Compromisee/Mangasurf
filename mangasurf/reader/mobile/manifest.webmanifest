@@ -1,0 +1,25 @@
+{
+  "name": "Mangasurf Mobile",
+  "short_name": "Mangasurf",
+  "description": "Your manga, manhwa and manhua library — a mobile-first companion to the Mangasurf desktop app, served over your LAN or Tailscale.",
+  "start_url": "/pwa/",
+  "scope": "/pwa/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101018",
+  "theme_color": "#101018",
+  "icons": [
+    {
+      "src": "/pwa/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

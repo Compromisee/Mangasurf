@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="midnight" data-accent="blue">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#101018">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mangasurf">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Mangasurf</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="boot">
+  <div class="boot-brand"><span class="logo">🔖</span></div>
+  <p class="boot-msg">Connecting to your library…</p>
+</div>
+
+<div id="app" hidden>
+  <header class="topbar" id="topbar">
+    <div class="tb-left">
+      <div class="logo sm" id="title-logo">🔖</div>
+      <div class="tb-title">
+        <div class="tb-greet" id="greet">Your library</div>
+        <div class="tb-sub" id="library-count">—</div>
+      </div>
+    </div>
+    <button class="icon-btn" id="btn-theme" title="Theme">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.4 5.4 0 0 1-4.5-4.5C16.04 5.68 15.58 5.64 15.12 5.64A7.2 7.2 0 0 1 12 3z"/></svg>
+    </button>
+  </header>
+
+  <main id="main">
+    <!-- HOME -->
+    <section class="view on" id="view-home">
+      <div class="continue-wrap" id="continue-wrap" hidden>
+        <div class="section-title">Continue reading</div>
+        <div class="continue-strip" id="continue-strip"></div>
+      </div>
+
+      <div class="section-title-row">
+        <div class="section-title">Library</div>
+        <select id="carousel-sort" class="sort-select">
+          <option value="downloaded">Recent</option>
+          <option value="title">Title</option>
+          <option value="progress">Progress</option>
+          <option value="source">Source</option>
+        </select>
+      </div>
+
+      <div class="carousel-wrap" id="carousel-wrap">
+        <button class="carousel-arrow left" id="carousel-prev" aria-label="Previous">‹</button>
+        <div class="carousel" id="carousel">
+          <div class="carousel-track" id="carousel-track"></div>
+        </div>
+        <button class="carousel-arrow right" id="carousel-next" aria-label="Next">›</button>
+      </div>
+
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- SEARCH -->
+    <section class="view" id="view-search">
+      <div class="search-box">
+        <svg class="search-ico" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>
+        <input type="text" id="search-input" placeholder="Search series, paste a link…" autocomplete="off">
+        <button class="icon-btn" id="search-clear" aria-label="Clear" hidden>×</button>
+      </div>
+      <div class="search-hint" id="search-hint">Search across all your sources, or paste any chapter / series link.</div>
+      <div class="grid" id="search-grid"></div>
+    </section>
+
+    <!-- DOWNLOADS -->
+    <section class="view" id="view-downloads">
+      <div class="section-title">Downloads &amp; queue</div>
+      <div class="queue-list" id="queue-list"></div>
+      <div class="empty" id="queue-empty" hidden>Nothing in the queue.</div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="section-title">Theme</div>
+      <div class="theme-tiles" id="theme-tiles"></div>
+      <div class="section-title">Accent</div>
+      <div class="swatches" id="accent-swatches"></div>
+
+      <div class="section-title">Animation &amp; effects</div>
+      <div class="card-panel">
+        <div class="slider">
+          <label>Motion speed <em class="val" id="motion-speed-out"></em></label>
+          <input type="range" id="set-motion-speed" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div class="slider">
+          <label>Carousel card speed <em class="val" id="carousel-speed-out"></em></label>
+          <input type="range" id="set-carousel-speed" min="0.3" max="1.8" step="0.1" value="1">
+        </div>
+        <div class="slider">
+          <label>Carousel fan tilt <em class="val" id="carousel-tilt-out"></em></label>
+          <input type="range" id="set-carousel-tilt" min="0" max="40" step="1" value="16">
+        </div>
+        <div class="slider">
+          <label>Carousel depth <em class="val" id="carousel-depth-out"></em></label>
+          <input type="range" id="set-carousel-depth" min="40" max="260" step="10" value="140">
+        </div>
+        <div class="row">
+          <div class="slider">
+            <label>Cover shine speed <em class="val" id="cover-shine-speed-out"></em></label>
+            <input type="range" id="set-cover-shine-speed" min="0.6" max="3.5" step="0.1" value="1.8">
+          </div>
+          <div class="slider">
+            <label>Cover shine glow <em class="val" id="cover-shine-intensity-out"></em></label>
+            <input type="range" id="set-cover-shine-intensity" min="2" max="30" step="1" value="10">
+          </div>
+        </div>
+        <label class="switch-row">
+          <span>Book cover shine</span>
+          <input type="checkbox" id="set-cover-shine" checked>
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+      </div>
+
+      <div class="section-title">Library</div>
+      <div class="card-panel">
+        <label class="switch-row">
+          <span>Clear library for this session<small>Hides books on this phone &amp; desktop for this run. Nothing is deleted and downloads still save.</small></span>
+          <input type="checkbox" id="set-session-clear">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+      </div>
+
+      <p class="footer-note">Mangasurf mobile · served from your computer over Tailscale / LAN.</p>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab on" data-view="home"><svg viewBox="0 0 24 24"><path d="M12 3 4 9v12h6v-7h4v7h6V9z"/></svg><span>Library</span></button>
+    <button class="tab" data-view="search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg><span>Search</span></button>
+    <button class="tab" data-view="downloads"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg><span>Downloads</span></button>
+    <button class="tab" data-view="settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.5 7.5 0 0 0 .06-.94 7.5 7.5 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.65 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.24.4.33.61.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.23.11.49.02.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg><span>Settings</span></button>
+  </nav>
+</div>
+
+<!-- READER -->
+<div id="reader" hidden>
+  <header class="reader-top">
+    <button class="icon-btn light" id="reader-back" aria-label="Back">‹</button>
+    <div class="reader-title" id="reader-title">—</div>
+    <div class="reader-count" id="reader-count"></div>
+  </header>
+  <div class="reader-body" id="reader-body">
+    <img id="reader-img" crossorigin="anonymous" alt="">
+  </div>
+  <div class="reader-bottom">
+    <input type="range" id="reader-slider" min="0" max="0" step="1" value="0">
+  </div>
+</div>
+
+<script>/* injected by server.py */</script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -61,6 +61,41 @@ export const applyAnimations = (on, el = root()) => {
     return !!on
 }
 
+/* Motion & effects, driven entirely through custom properties so one call
+ * re-tunes every transition that opts in. `-dur` is the base duration used
+ * across the app; the remaining properties tune the library carousel (it is
+ * re-rendered with these when they change) and the cover sheen. */
+export const applyMotion = (s = {}, el = root()) => {
+    const ms = Number(s.motion_speed)
+    const speed = Number.isFinite(ms) && ms > 0 ? ms : 1.0
+    const carouselSpeed = Number(s.carousel_speed)
+    const cSpeed = Number.isFinite(carouselSpeed) && carouselSpeed > 0 ? carouselSpeed : 1.0
+    const tilt = Number(s.carousel_tilt)
+    const cTilt = Number.isFinite(tilt) ? tilt : 16
+    const depth = Number(s.carousel_depth)
+    const cDepth = Number.isFinite(depth) ? depth : 140
+    const shineSpeed = Number(s.cover_shine_speed)
+    const cShine = Number.isFinite(shineSpeed) && shineSpeed > 0 ? shineSpeed : 1.8
+    const shineIntensity = Number(s.cover_shine_intensity)
+    const cShineI = Number.isFinite(shineIntensity) ? shineIntensity : 0.10
+
+    // Base duration so a single --motion scale changes every opt-in rule.
+    el.style.setProperty('--dur', `${(0.18 / speed).toFixed(3)}s`)
+    el.style.setProperty('--motion', String(speed))
+    el.style.setProperty('--carousel-t', `${(0.5 / cSpeed).toFixed(3)}s`)
+    el.style.setProperty('--carousel-tilt', String(cTilt))
+    el.style.setProperty('--carousel-depth', `${cDepth}px`)
+    el.style.setProperty('--shine-t', `${cShine}s`)
+    el.style.setProperty('--shine-i', String(cShineI))
+    // Cover sheen on/off.
+    el.dataset.shine = s.cover_shine === false ? 'off' : 'on'
+    return {
+        motion: speed, carousel_speed: cSpeed, carousel_tilt: cTilt,
+        carousel_depth: cDepth, cover_shine: s.cover_shine !== false,
+        cover_shine_speed: cShine, cover_shine_intensity: cShineI,
+    }
+}
+
 export const applyColumns = (count, el = root()) => {
     const n = Math.max(0, Math.min(8, parseInt(count, 10) || 0))
     if (n === 0) delete el.dataset.columns

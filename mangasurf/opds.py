@@ -305,7 +305,10 @@ def library_rows():
         logger.debug("Failed auto-scanning library folders for OPDS: %s", e)
 
     rows = []
-    for entry in library.load_library().values():
+    # The OPDS catalog always lists the real library: "Clear library for this
+    # session" hides books in the GUI and phone server only and must never
+    # empty the catalog a reader app is pointed at.
+    for entry in library.load_library(include_session=False).values():
         formats = _entry_formats(entry)
         if not formats:
             continue

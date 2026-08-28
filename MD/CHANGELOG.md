@@ -11,15 +11,53 @@ All notable changes to **Mangasurf**, newest first.
   library`, which permanently erased `library.json`. A session-only reset did
   not exist, so there was no way to hide everything without deleting it.
 - New **"Clear library for this session"** switch in *Settings → Library &
-  Folders*. Turning it on empties the library **for this run only**: the grid,
-  continue strip, stats, OPDS catalog and phone server all show nothing, but it
-  **never touches the files or `library.json` on disk** — new downloads keep
-  being recorded as normal, and the full library returns on the next launch.
+  Folders* (and the phone PWA). Turning it on empties the library **for this
+  run only**: the desktop grid, continue strip, stats and phone web app all
+  show nothing, but it **never touches the files or `library.json` on disk** —
+  new downloads keep being recorded as normal, and the full library returns on
+  the next launch. The **OPDS catalog is deliberately excluded** so a reader
+  app you've pointed at Mangasurf keeps seeing every book.
 - Backed by a process-memory flag in `library.py`
   (`set_session_clear()` / `session_cleared()`): `load_library()` returns `{}`
-  while active, while `record_chapter`/`downloaded_chapters`/`get_entry` keep
-  reading and writing `library.json` unchanged. Nothing is persisted, so the
-  state self-resets on restart.
+  while active (unless called with `include_session=False`, which OPDS and
+  the data export/backup paths use), while
+  `record_chapter`/`downloaded_chapters`/`get_entry` keep reading and writing
+  `library.json` unchanged. Nothing is persisted, so the state self-resets on
+  restart.
+
+### Added: dedicated phone web app (PWA) with a mobile-first UI
+- **New `/pwa/` scope on the LAN/Tailscale server** — a purpose-built,
+  thumb-first PWA that is separate from the desktop UI the phone server used
+  to serve. Installable ("Add to Home Screen"), with a manifest and service
+  worker so the shell survives networks (Tailscale drop, Wi-Fi hop, the host
+  sleeping).
+- Mobile UI: a 3D cover carousel + grid library, a "Continue reading" strip
+  with progress bars, search, a live download queue, theme/accent pickers and
+  the full set of animation sliders — plus an installable mobile page reader
+  (tap zones, swipe, and a seek slider).
+- Works over Wi-Fi **and Tailscale** (relative URLs + same-origin `/stream`
+  proxy, so pages and covers load with no CORS on a phone). The server startup
+  and the Server Control window print the `/pwa/` link (LAN + Tailscale) with
+  the access token embedded.
+- Bundled into the PyInstaller onefile too (`Mangasurf.spec`). The Server
+  Control window gained a dedicated "Install the phone web app" card with
+  copy / open buttons.
+
+### Added: tunable animation & effects controls (desktop + mobile)
+- **Six new sliders** under *Settings → Appearance → Animation & Effects*,
+  all applied live and persisted once on release:
+  - **Motion speed** — scales every UI transition (0.5× snappy → 2× dreamy).
+  - **Carousel card speed** — how fast covers glide between cards.
+  - **Carousel fan tilt** — side-card angle (0° flats the carousel).
+  - **Carousel depth** — how far the active cover pops out (translateZ).
+  - **Cover shine speed** and **Cover shine glow** — the sweep-time and
+    peak brightness of the cover sheen.
+- **"Book cover shine" toggle** — turn off removes *all* cover sweep/shine
+  animation (grid thumbs, carousel covers, continue cards) for a calm,
+  animation-free look.
+- Carousel cards animate through CSS custom properties (`--carousel-t`,
+  `--carousel-tilt`, `--carousel-depth`) so a slider change re-tunes them
+  instantly and the same keys drive the mobile PWA.
 
 ### Fixed: onefile EXE crashing with "No module named 'curl_cffi'"
 - `curl_cffi` is Mangasurf's only HTTP layer (requests was removed), but the

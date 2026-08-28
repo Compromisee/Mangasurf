@@ -174,6 +174,19 @@ python server.py
 python opdsserve.py
 ```
 
+### A dedicated phone web app (PWA)
+
+The LAN server also serves a **purpose-built mobile PWA** at `http://HOST:PORT/pwa/`
+(printed on startup), separate from the full desktop UI. It is thumb-first,
+installable ("Add to Home Screen"), works over Wi-Fi **and Tailscale**, and
+shares your animation settings with the desktop app. Open the SERVER CONTROL
+window (or the printed `/pwa/` link) on your phone to get it.
+
+```bash
+# PWA (mobile UI) on your LAN / Tailscale
+python server.py            # then open http://<this-pc>:8577/pwa/ on your phone
+```
+
 ---
 
 ## Interface Gallery

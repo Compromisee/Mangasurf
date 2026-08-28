@@ -98,7 +98,14 @@ def _web_dir():
     return os.path.join(ASSET_ROOT, "app")
 
 
+def _mobile_dir():
+    """The dedicated phone-first PWA shell, served under /pwa/."""
+    from .reader.assets import ASSET_ROOT
+    return os.path.join(ASSET_ROOT, "mobile")
+
+
 WEB_DIR = _web_dir()
+MOBILE_DIR = _mobile_dir()
 
 DEFAULT_PORT = 8577
 
@@ -433,6 +440,55 @@ def create_app(token=None, api=None, buffer=None, log=None, no_auth=False):
         return Response(_BRIDGE_JS.replace("__TOKEN__", token or ""),
                         mimetype="application/javascript")
 
+    # ------------------------------------------------- mobile PWA
+    # A separate, phone-first companion served under /pwa/. It shadows the
+    # generic asset route (registered after it, so Flask prefers it) and
+    # nothing from the desktop UI lives under this scope.
+
+    @app.get("/pwa")
+    def pwa_index():
+        if not authorised():
+            return Response(_TOKEN_PAGE, mimetype="text/html", status=401)
+        resp = Response(_mobile_html(token), mimetype="text/html")
+        if token:
+            resp.set_cookie("mangasurf_token", token, samesite="Lax", max_age=86400 * 30)
+        return resp
+
+    @app.route("/pwa/", methods=["GET", "POST"])
+    def pwa_root():
+        if not authorised():
+            return Response(_TOKEN_PAGE, mimetype="text/html", status=401)
+        resp = Response(_mobile_html(token), mimetype="text/html")
+        if token:
+            resp.set_cookie("mangasurf_token", token, samesite="Lax", max_age=86400 * 30)
+        return resp
+
+    @app.get("/pwa/<path:filename>")
+    def pwa_asset(filename):
+        """Serve the mobile shell's own files, confined to MOBILE_DIR."""
+        if not authorised():
+            return Response(_TOKEN_PAGE, mimetype="text/html", status=401)
+        full = os.path.normpath(os.path.join(MOBILE_DIR, filename))
+        real = os.path.realpath(MOBILE_DIR)
+        if not full.startswith(real + os.sep) and not full.startswith(MOBILE_DIR + os.sep):
+            abort(404)
+        if not os.path.isfile(full):
+            abort(404)
+        ctype = "application/manifest+json" if filename.endswith(".webmanifest") else None
+        if filename.endswith(".webmanifest"):
+            return send_from_directory(MOBILE_DIR, filename, mimetype="application/manifest+json")
+        if filename.endswith("sw.js"):
+            resp = send_from_directory(MOBILE_DIR, filename, mimetype="application/javascript")
+            resp.headers["Cache-Control"] = "no-cache"
+            resp.headers["Service-Worker-Allowed"] = "/pwa/"
+            return resp
+        if filename.startswith("icons/"):
+            # Icons are immutable; let the browser/OS cache them hard.
+            resp = send_from_directory(MOBILE_DIR, filename)
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return resp
+        return send_from_directory(MOBILE_DIR, filename)
+
     # ------------------------------------------------------------ api
 
     @app.post("/api/<method>")
@@ -715,6 +771,25 @@ def _page_html():
     return html
 
 
+def _mobile_html(token):
+    """The dedicated phone-first PWA page, with the access token injected.
+
+    Served under /pwa/ instead of reusing the desktop UI, so the phone gets a
+    purpose-built, thumb-first layout. The token is set on `window` so the
+    bridge and every /stream request carry it (the shell is service-worker
+    cached, so it must not depend on a query string it may not have).
+    """
+    with open(os.path.join(MOBILE_DIR, "index.html"), encoding="utf-8") as fh:
+        html = fh.read()
+    inject = f'<script>window.__MANGASURF_TOKEN__ = {json.dumps(token or "")};</script>'
+    anchor = "<script>/* injected by server.py */</script>"
+    if anchor in html:
+        html = html.replace(anchor, inject, 1)
+    else:
+        html = html.replace("</head>", inject + "</head>", 1)
+    return html
+
+
 def _safe(value):
     """Make sure whatever the Api returned survives JSON encoding."""
     try:
@@ -941,6 +1016,7 @@ def main(argv=None):
     ts_ip = tailscale_ip()
     ts_url = f"http://{ts_ip}:{port}" + (f"/?token={token}" if token else "/") if ts_ip else None
 
+    mobile_host = local_ip() if args.host in ("0.0.0.0", "") else args.host
     line = "\u2500" * 62
     print(f"\n{line}")
     print("  Mangasurf server")
@@ -950,6 +1026,11 @@ def main(argv=None):
     print(f"  On your phone  {url}")
     if ts_url:
         print(f"  Tailscale VPN  {ts_url}")
+    print(f"\n  Phone web app (mobile UI)  http://{mobile_host}:{port}/pwa"
+          + (f"/?token={token}" if token else "/"))
+    if ts_ip:
+        print(f"  \u2192 over Tailscale         http://{ts_ip}:{port}/pwa"
+              + (f"/?token={token}" if token else "/"))
     if token:
         print(f"\n  Access token   {token}")
         print("  Change it in the app: Settings -> Phone server")

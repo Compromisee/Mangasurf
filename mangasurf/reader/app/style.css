@@ -2730,11 +2730,30 @@ body.has-titlebar .shelf-tree { max-height: calc(100vh - 132px - var(--titlebar-
     background-size: cover;
     background-position: center;
     cursor: pointer;
-    transition: transform 0.5s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.4s ease, filter 0.4s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+    transition: transform var(--carousel-t, 0.5s) cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.4s ease, filter 0.4s ease, border-color 0.35s ease, box-shadow 0.35s ease;
     user-select: none;
     will-change: transform, opacity, filter;
     display: flex;
     align-items: flex-end;
+}
+
+/* The cover sheen (a soft diagonal sweep). Applied to the carousel covers so
+   "Book cover shine" controls it too, and removed when data-shine is off. */
+.carousel-card::after {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: linear-gradient(105deg,
+        transparent 30%, rgba(255, 255, 255, calc(var(--shine-i, 0.10) * 0.6)) 45%,
+        rgba(255, 255, 255, var(--shine-i, 0.10)) 50%,
+        rgba(255, 255, 255, calc(var(--shine-i, 0.10) * 0.6)) 55%,
+        transparent 70%);
+    background-size: 220% 220%;
+    animation: shimmer var(--shine-t, 1.8s) ease-in-out infinite;
+    mix-blend-mode: screen;
+}
+html[data-shine="off"] .carousel-card::after,
+html[data-shine="off"] .card .thumb::after {
+    animation: none;
+    display: none;
 }
 
 html[data-animations="false"] .carousel-card,
@@ -2749,7 +2768,7 @@ html[data-animations="false"] .carousel-card,
 }
 
 .carousel-card.active {
-    transform: translateX(0) translateZ(140px) scale(1.14);
+    transform: translateX(0) translateZ(var(--carousel-depth, 140px)) scale(1.14);
     opacity: 1;
     z-index: 20;
     filter: brightness(1.05) contrast(1.02);
@@ -2758,47 +2777,47 @@ html[data-animations="false"] .carousel-card,
 }
 
 .carousel-card.active:hover {
-    transform: translateX(0) translateZ(140px) scale(1.18) translateY(-6px);
+    transform: translateX(0) translateZ(var(--carousel-depth, 140px)) scale(1.18) translateY(-6px);
     box-shadow: 0 0 45px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 22px var(--accent), 0 24px 54px rgba(0, 0, 0, 0.5);
 }
 
 .carousel-card.prev-1 {
-    transform: translateX(-155px) translateZ(40px) scale(0.92) rotateY(16deg);
+    transform: translateX(-155px) translateZ(40px) scale(0.92) rotateY(calc(var(--carousel-tilt, 16) * 1deg));
     opacity: 0.88;
     z-index: 15;
     filter: brightness(0.8);
 }
 
 .carousel-card.next-1 {
-    transform: translateX(155px) translateZ(40px) scale(0.92) rotateY(-16deg);
+    transform: translateX(155px) translateZ(40px) scale(0.92) rotateY(calc(var(--carousel-tilt, 16) * -1deg));
     opacity: 0.88;
     z-index: 15;
     filter: brightness(0.8);
 }
 
 .carousel-card.prev-2 {
-    transform: translateX(-285px) translateZ(-30px) scale(0.8) rotateY(26deg);
+    transform: translateX(-285px) translateZ(-30px) scale(0.8) rotateY(calc(var(--carousel-tilt, 16) * 1.6 * 1deg));
     opacity: 0.55;
     z-index: 10;
     filter: brightness(0.6);
 }
 
 .carousel-card.next-2 {
-    transform: translateX(285px) translateZ(-30px) scale(0.8) rotateY(-26deg);
+    transform: translateX(285px) translateZ(-30px) scale(0.8) rotateY(calc(var(--carousel-tilt, 16) * -1.6 * 1deg));
     opacity: 0.55;
     z-index: 10;
     filter: brightness(0.6);
 }
 
 .carousel-card.prev-3 {
-    transform: translateX(-395px) translateZ(-90px) scale(0.7) rotateY(32deg);
+    transform: translateX(-395px) translateZ(-90px) scale(0.7) rotateY(calc(var(--carousel-tilt, 16) * 2 * 1deg));
     opacity: 0.3;
     z-index: 5;
     filter: brightness(0.45);
 }
 
 .carousel-card.next-3 {
-    transform: translateX(395px) translateZ(-90px) scale(0.7) rotateY(-32deg);
+    transform: translateX(395px) translateZ(-90px) scale(0.7) rotateY(calc(var(--carousel-tilt, 16) * -2 * 1deg));
     opacity: 0.3;
     z-index: 5;
     filter: brightness(0.45);
@@ -3746,11 +3765,12 @@ html[data-animations="false"] .carousel-card,
 .card .thumb::after {
     content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
     background: linear-gradient(105deg,
-        transparent 30%, rgba(255, 255, 255, 0.06) 45%,
-        rgba(255, 255, 255, 0.10) 50%, rgba(255, 255, 255, 0.06) 55%,
+        transparent 30%, rgba(255, 255, 255, calc(var(--shine-i, 0.10) * 0.6)) 45%,
+        rgba(255, 255, 255, var(--shine-i, 0.10)) 50%,
+        rgba(255, 255, 255, calc(var(--shine-i, 0.10) * 0.6)) 55%,
         transparent 70%);
     background-size: 220% 220%;
-    animation: shimmer 1.8s ease-in-out infinite;
+    animation: shimmer var(--shine-t, 1.8s) ease-in-out infinite;
     mix-blend-mode: screen;
 }
 @keyframes shimmer {

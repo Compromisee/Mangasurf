@@ -767,6 +767,57 @@
               </div>
               <label class="switch"><input type="checkbox" id="set-search-wave" checked><span></span></label>
             </div>
+
+            <!-- Animation & effects controls -->
+            <div class="field" style="margin-top:16px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md)">
+              <div style="font-weight:var(--fw-semi);display:flex;align-items:center;gap:6px;margin-bottom:10px">
+                <span class="mi" style="color:var(--accent)">animation</span>Animation &amp; Effects
+                <span style="font-weight:var(--fw-reg);color:var(--text-dim);font-size:12px">— live, applied instantly</span>
+              </div>
+              <div class="slider">
+                <label for="set-motion-speed">Motion speed</label>
+                <em class="val" id="set-motion-speed-out"></em>
+                <input type="range" id="set-motion-speed" min="0.5" max="2" step="0.1" value="1">
+                <p class="hint">Scales every UI transition. 1× is default; crank to 2× for a slow, dreamy feel, or drop to 0.5× for snappy.</p>
+              </div>
+              <div class="slider">
+                <label for="set-carousel-speed">Carousel card speed</label>
+                <em class="val" id="set-carousel-speed-out"></em>
+                <input type="range" id="set-carousel-speed" min="0.3" max="1.8" step="0.1" value="1">
+                <p class="hint">How quickly covers glide between cards in the library 3D carousel.</p>
+              </div>
+              <div class="slider">
+                <label for="set-carousel-tilt">Carousel fan tilt</label>
+                <em class="val" id="set-carousel-tilt-out"></em>
+                <input type="range" id="set-carousel-tilt" min="0" max="40" step="1" value="16">
+                <p class="hint">The angle the side cards fan out. 0° flattens the carousel into a simple row.</p>
+              </div>
+              <div class="slider">
+                <label for="set-carousel-depth">Carousel depth</label>
+                <em class="val" id="set-carousel-depth-out"></em>
+                <input type="range" id="set-carousel-depth" min="40" max="260" step="10" value="140">
+                <p class="hint">How far the active cover pops toward you (translateZ). Higher = stronger 3D.</p>
+              </div>
+              <div class="row-2">
+                <div class="slider">
+                  <label for="set-cover-shine-speed">Cover shine speed</label>
+                  <em class="val" id="set-cover-shine-speed-out"></em>
+                  <input type="range" id="set-cover-shine-speed" min="0.6" max="3.5" step="0.1" value="1.8">
+                </div>
+                <div class="slider">
+                  <label for="set-cover-shine-intensity">Cover shine glow</label>
+                  <em class="val" id="set-cover-shine-intensity-out"></em>
+                  <input type="range" id="set-cover-shine-intensity" min="2" max="30" step="1" value="10">
+                </div>
+              </div>
+              <div class="field inline">
+                <div>
+                  <label for="set-cover-shine">Book cover shine</label>
+                  <p class="hint">A soft diagonal sheen sweeping across covers. Turn off for zero cover animation.</p>
+                </div>
+                <label class="switch"><input type="checkbox" id="set-cover-shine" checked><span></span></label>
+              </div>
+            </div>
           </div>
         </details>
 

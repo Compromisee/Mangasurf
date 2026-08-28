@@ -51,6 +51,20 @@ DEFAULT_SETTINGS = {
     "keep_images": False,
     "theme": "midnight",
     "corners": "rounded",       # "rounded" | "square"
+    # ---- motion & effects (reader/www shared) -------------------------
+    # Global animation speed multiplier. 1 = default; <1 zips things along,
+    # >1 slows them. Applied via the --motion custom property so every
+    # transition can opt in without editing each rule.
+    "motion_speed": 1.0,
+    # 3D library carousel tuning, exposed as sliders in Appearance.
+    "carousel_speed": 1.0,      # card slide/transition speed multiplier
+    "carousel_tilt": 16,        # fan angle in degrees (0 = flat)
+    "carousel_depth": 140,      # translateZ emphasis of the active card
+    # Book-cover sheen: a soft diagonal sweep across covers. When off, no
+    # cover carries any shine animation at all.
+    "cover_shine": True,
+    "cover_shine_speed": 1.8,   # seconds per sweep
+    "cover_shine_intensity": 0.10,  # peak highlight opacity (0.02–0.30)
     # A frameless window with the app's own titlebar, so the window controls
     # match the theme instead of sitting in an OS-coloured strip above it.
     # Off falls back to the native frame -- some Linux WMs handle frameless

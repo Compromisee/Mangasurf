@@ -11,8 +11,8 @@ import { ACTIONS, PRESETS, PRESET_ORDER, createKeymap, pretty } from './keys.js'
 import { createShelves } from './shelves.js'
 import {
     ACCENTS, ACCENT_ORDER, THEMES, THEME_ORDER,
-    applyAccent, applyAnimations, applyColumns, applyCorners, applyTheme,
-    createMatrix, createSearchGridWave,
+    applyAccent, applyAnimations, applyColumns, applyCorners, applyMotion,
+    applyTheme, createMatrix, createSearchGridWave,
 } from './themes.js'
 
 const $ = sel => document.querySelector(sel)
@@ -154,6 +154,32 @@ function setAnimations(on, { persist = true } = {}) {
     state.settings.animations = !!on
     if (persist) pushSettings({ animations: !!on })
     return !!on
+}
+
+/* Tunable motion/effects: one applyMotion() reads every related setting and
+ * rewrites the CSS custom properties that drive them, so the carousel, the
+ * cover sheen and the base transition durations all follow a single slider
+ * change. Used by the Appearance controls and re-run on boot. */
+function setMotion(changes = {}, { persist = true } = {}) {
+    Object.assign(state.settings, changes)
+    applyMotion(state.settings)
+    for (const key in changes) {
+        const input = $('#set-' + key.replace(/_/g, '-'))
+        if (input && 'value' in input && input.type === 'range') {
+            const out = $(`#set-${key.replace(/_/g, '-')}-out`)
+            if (out) out.textContent = fmtSliderValue(key, Number(changes[key]))
+        }
+    }
+    if (persist) pushSettings(changes)
+    return state.settings
+}
+function fmtSliderValue(key, v) {
+    if (key === 'motion_speed' || key === 'carousel_speed') return `${v.toFixed(1)}×`
+    if (key === 'carousel_tilt') return `${Math.round(v)}°`
+    if (key === 'carousel_depth') return `${Math.round(v)}px`
+    if (key === 'cover_shine_speed') return `${v.toFixed(1)}s`
+    if (key === 'cover_shine_intensity') return `${Math.round(v * 100)}%`
+    return String(v)
 }
 
 function setColumns(count, { persist = true } = {}) {
@@ -3103,7 +3129,7 @@ function paintSlider(el) {
  * `value` maps the raw string to what Python stores; `label` maps it to what
  * the chip shows; `apply` runs an extra side effect.
  */
-function bindSlider(selector, key, { value, label, apply } = {}) {
+function bindSlider(selector, key, { value, label, apply, change } = {}) {
     const el = $(selector)
     if (!el) return
     const out = $(`${selector}-out`)
@@ -3114,7 +3140,13 @@ function bindSlider(selector, key, { value, label, apply } = {}) {
     el.addEventListener('input', () => {
         render()
         if (apply) apply(el.value)
+    })
+    // Persist once on release ("change") rather than on every input tick,
+    // so a fast drag saves one value. `change` runs after persisting, for
+    // things that need a re-render (e.g. the carousel) once the value sticks.
+    el.addEventListener('change', () => {
         if (key) pushSettings({ [key]: value ? value(el.value) : Number(el.value) })
+        if (change) change(el.value)
     })
     render()
     sliderRegistry.push(el)
@@ -4277,6 +4309,39 @@ function wire() {
         }
     })
 
+    // ---- settings: animation & effects sliders
+    // All of them apply live while dragging and persist once on release.
+    bindSlider('#set-motion-speed', 'motion_speed', {
+        label: raw => `${Number(raw).toFixed(1)}×`,
+        apply: raw => setMotion({ motion_speed: Number(raw) }, { persist: false }),
+    })
+    bindSlider('#set-carousel-speed', 'carousel_speed', {
+        label: raw => `${Number(raw).toFixed(1)}×`,
+        apply: raw => setMotion({ carousel_speed: Number(raw) }, { persist: false }),
+        change: () => renderCarousel(libraryCache),
+    })
+    bindSlider('#set-carousel-tilt', 'carousel_tilt', {
+        label: raw => `${Number(raw)}°`,
+        apply: raw => setMotion({ carousel_tilt: Number(raw) }, { persist: false }),
+        change: () => renderCarousel(libraryCache),
+    })
+    bindSlider('#set-carousel-depth', 'carousel_depth', {
+        label: raw => `${Number(raw)}px`,
+        apply: raw => setMotion({ carousel_depth: Number(raw) }, { persist: false }),
+        change: () => renderCarousel(libraryCache),
+    })
+    bindSlider('#set-cover-shine-speed', 'cover_shine_speed', {
+        label: raw => `${Number(raw).toFixed(1)}s`,
+        apply: raw => setMotion({ cover_shine_speed: Number(raw) }, { persist: false }),
+    })
+    bindSlider('#set-cover-shine-intensity', 'cover_shine_intensity', {
+        label: raw => `${Number(raw)}%`,
+        value: raw => Number(raw) / 100,
+        apply: raw => setMotion({ cover_shine_intensity: Number(raw) / 100 }, { persist: false }),
+    })
+    $('#set-cover-shine')?.addEventListener('change', e =>
+        setMotion({ cover_shine: e.target.checked }))
+
     $('#r-theme').addEventListener('change', e => setTheme(e.target.value))
     $('#r-accent').addEventListener('change', e => setAccent(e.target.value))
     $('#r-corners').addEventListener('change', e => setCorners(e.target.checked))
@@ -5186,6 +5251,7 @@ async function boot() {
     applyAccent(s.accent || 'blue')
     applyCorners(s.corners === 'square')
     applyAnimations(s.animations !== false)
+    applyMotion(s || {})
     applyColumns(s.columns || 0)
     buildAppearancePickers()
     syncAppearanceControls()
@@ -5193,6 +5259,14 @@ async function boot() {
     matrix.set(s.matrix !== false)
     $('#set-matrix').checked = s.matrix !== false
     $('#set-animations').checked = s.animations !== false
+    // Animation & effects controls.
+    const msEl = $('#set-motion-speed'); if (msEl) msEl.value = s.motion_speed ?? 1
+    const csEl = $('#set-carousel-speed'); if (csEl) csEl.value = s.carousel_speed ?? 1
+    const ctEl = $('#set-carousel-tilt'); if (ctEl) ctEl.value = s.carousel_tilt ?? 16
+    const cdEl = $('#set-carousel-depth'); if (cdEl) cdEl.value = s.carousel_depth ?? 140
+    const cshEl = $('#set-cover-shine-speed'); if (cshEl) cshEl.value = s.cover_shine_speed ?? 1.8
+    const csiEl = $('#set-cover-shine-intensity'); if (csiEl) csiEl.value = Math.round((s.cover_shine_intensity ?? 0.1) * 100)
+    const scEl2 = $('#set-cover-shine'); if (scEl2) scEl2.checked = s.cover_shine !== false
     const titlebarToggle = $('#set-titlebar')
     if (titlebarToggle) titlebarToggle.checked = s.custom_titlebar !== false
     document.documentElement.setAttribute('data-padding', s.layout_padding || 'normal')
