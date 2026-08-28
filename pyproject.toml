@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mangasurf"
-version = "1.7.3"
+version = "1.7.5"
 description = "Download manga, manhwa and manhua from 30+ sites as CBZ, PDF or EPUB - CLI, menu, TUI, PyQt and GUI reader. HTTP is 100% curl_cffi (TLS/JA3 browser impersonation + async engine)."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -21,12 +21,12 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = ["PyQt6>=6.5.0", "pywebview>=5.0"]
-tui = ["textual>=0.60"]
+tui = ["textual>=0.60", "textual-image>=0.13"]
 tray = ["pystray>=0.19", "Pillow>=10.0"]
 server = ["flask>=3.0"]
 opds = ["flask>=3.0"]
 dev = ["pytest>=7.0"]
-all = ["PyQt6>=6.5.0", "pywebview>=5.0", "textual>=0.60", "pystray>=0.19", "flask>=3.0"]
+all = ["PyQt6>=6.5.0", "pywebview>=5.0", "textual>=0.60", "textual-image>=0.13", "pystray>=0.19", "flask>=3.0"]
 
 [project.scripts]
 mangasurf = "mangasurf.cli:main"
@@ -39,6 +39,8 @@ include = ["mangasurf*"]
 "mangasurf.reader" = [
     "app/*",
     "app/**/*",
+    "mobile/*",
+    "mobile/**/*",
     "foliate/*",
     "foliate/vendor/*",
     "foliate/vendor/pdfjs/*",

@@ -731,7 +731,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         from .. import library, features
         try:
             payload = {
-                "version": "1.7.3",
+                "version": "1.7.5",
                 "exported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "settings": load_settings(),
                 "library": library.load_library(),

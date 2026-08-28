@@ -377,7 +377,7 @@ def generate_comic_info_xml(metadata: dict) -> str:
     set_tag("LanguageISO", "en")
     set_tag("Format", "Digital")
     set_tag("Manga", "YesAndRightToLeft" if metadata.get("series_type") == "Manga" else "Yes")
-    set_tag("Notes", f"Managed by Mangasurf v1.7.3 - Source: {metadata.get('source_name', metadata.get('source', 'Unknown'))}")
+    set_tag("Notes", f"Managed by Mangasurf v1.7.5 - Source: {metadata.get('source_name', metadata.get('source', 'Unknown'))}")
     
     if metadata.get("rating"):
         set_tag("CommunityRating", str(metadata.get("rating")))

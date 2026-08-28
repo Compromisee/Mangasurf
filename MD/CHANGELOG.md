@@ -4,7 +4,35 @@ All notable changes to **Mangasurf**, newest first.
 
 ---
 
-## [Unreleased] — Efficiency & Motion
+## [1.7.5] — Mangasurf v1.7.5: Dark-Grey TUI with Real Terminal Images, Remastered Phone PWA & Dark Minimalist Logo
+
+### TUI is now dark grey (not blue) with real terminal image support
+- The TUI canvas, panels, inputs and borders were restyled from the old navy
+  palette to a **charcoal / dark-grey identity**: screen `#1b1b1f`, panels
+  `#202025`, inputs `#242429`, borders `#34343c`, with the cyan accents and
+  status colours kept. No navy `#0a0e1a` remains.
+- **Real cover images in image-capable terminals.** Kitty, WezTerm, Ghostty,
+  Sixel and iTerm2 terminals now get an actual `Image` widget with full-colour
+  cover pixels at the terminal's native resolution, via the new
+  `mangasurf/terminal_image.py` protocol detector (`detect_image_protocol()` /
+  `supports_true_image()` / `render_image_bytes()`). Everywhere else the
+  portable TrueColor ANSI half-block fallback is kept, so the preview never
+  disappears on terminals without an image protocol. The optional
+  `textual-image` extra is now listed under `mangasurf[tui]`/`mangasurf[all]`
+  (guarded, so a missing extra degrades to ANSI rather than erroring).
+
+### Remastered phone PWA mirrors the server web UI
+- The dedicated `/pwa/` phone app has been rebuilt as a **remastered version of
+  the phone-server web UI** (same layout, cards and components) rather than a
+  separate look. Installable, works over Wi-Fi and Tailscale, with the
+  thumb-first carousel, continue-reading strip, live queue and animation
+  sliders intact.
+
+### Dark minimalist logo
+- Replaced the glossy cosmic-wave mark with a **dark minimalist logo**: a
+  single restrained cyan line-wave on a near-black rounded squircle with a tiny
+  rising reader-progress dot. Updated `docs/icon.svg` (and the derived
+  `icon.png`, `icon-1024.png`, `icon.ico`, `icon-beta*.svg`).
 
 ### Added: "Clear library for this session" toggle (Library & Folders → settings)
 - **Gotcha fixed:** previously the only way to empty the library was `Clear

@@ -16,23 +16,26 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
 }
+/* Palette lifted from the phone-server web UI (mangasurf/reader/app/theme.css)
+   so the PWA is a remastered, matched version of that UI. */
 html[data-theme="midnight"] {
-  --bg:#16161e; --bg2:#1d1d27; --surface:#232331; --surface2:#2a2a3b; --surface3:#33334a;
-  --text:#f2f0ff; --dim:#a8a7c0; --border:#2e2e40; --border2:#3d3d54; --accent:#00f5ff; --onaccent:#001a1a;
+  --bg:#14141b; --bg2:#191921; --surface:#1e1e28; --surface2:#262632; --surface3:#2f2f3d;
+  --text:#eaeaf2; --dim:#a2a2b6; --border:#2c2c39; --border2:#3a3a4a; --accent:#7aa2f7; --onaccent:#101018;
 }
 html[data-theme="oled"] {
-  --bg:#000; --bg2:#0a0a0c; --surface:#101014; --surface2:#18181f; --surface3:#20202b;
-  --text:#eeeef5; --dim:#9a9ab0; --border:#1e1e26; --border2:#2c2c3a; --accent:#22d3ee; --onaccent:#000;
+  --bg:#000; --bg2:#060608; --surface:#0c0c10; --surface2:#14141a; --surface3:#1d1d25;
+  --text:#f0f0f5; --dim:#96969f; --border:#1f1f27; --border2:#2e2e38; --accent:#22d3ee; --onaccent:#000;
 }
 html[data-theme="light"] {
-  --bg:#f4f4f7; --bg2:#ffffff; --surface:#ffffff; --surface2:#f0f0f4; --surface3:#e6e6ee;
-  --text:#16161e; --dim:#5c5c70; --border:#dcdce4; --border2:#c8c8d4; --accent:#2563eb; --onaccent:#fff;
+  --bg:#f7f8fa; --bg2:#f1f3f6; --surface:#ffffff; --surface2:#f2f4f7; --surface3:#e7eaef;
+  --text:#14161a; --dim:#55606e; --border:#e2e5ea; --border2:#cbd0d9; --accent:#2962ff; --onaccent:#fff;
 }
-html[data-accent="violet"]{--accent:#a78bfa;--onaccent:#150621}
-html[data-accent="teal"]{--accent:#2dd4bf;--onaccent:#02201c}
-html[data-accent="rose"]{--accent:#fb7185;--onaccent:#2a0710}
-html[data-accent="amber"]{--accent:#fbbf24;--onaccent:#241a00}
-html[data-accent="mint"]{--accent:#34d399;--onaccent:#032018}
+html[data-accent="blue"]  {--accent:#7aa2f7;--onaccent:#101018}
+html[data-accent="violet"]{--accent:#bb9af7;--onaccent:#150621}
+html[data-accent="teal"]  {--accent:#73daca;--onaccent:#012320}
+html[data-accent="rose"]  {--accent:#f7768e;--onaccent:#2a0710}
+html[data-accent="amber"] {--accent:#e0af68;--onaccent:#241a00}
+html[data-accent="mint"]  {--accent:#9ece6a;--onaccent:#032018}
 
 * { box-sizing: border-box; margin: 0; }
 html, body { height: 100%; }
@@ -86,8 +89,11 @@ main { flex: 1; overflow-y: auto; padding: 6px 14px 90px; -webkit-overflow-scrol
 }
 .icon-btn:active { transform: scale(0.9); }
 .icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
-.logo { font-size: 22px; }
+.logo { font-size: 22px; display: inline-flex; }
 .logo.sm { font-size: 19px; }
+.logo-mark { width: 30px; height: 30px; display: block; border-radius: 8px; }
+.logo.sm .logo-mark { width: 26px; height: 26px; }
+.boot-brand .logo-mark { width: 48px; height: 48px; border-radius: 13px; }
 
 /* ── section titles & chips ──────────────────────────────────────────── */
 .section-title { font-weight: 700; font-size: 15px; margin: 20px 2px 10px; color: var(--text); }

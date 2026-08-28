@@ -12,7 +12,7 @@
  * a Tailscale 100.x address.
  */
 
-const CACHE = 'mangasurf-mobile-v1';
+const CACHE = 'mangasurf-mobile-v2';
 const SHELL = ['./', './index.html', './style.css', './app.js'];
 
 self.addEventListener('install', (e) => {

@@ -192,23 +192,24 @@ write_page(
     "Where Mangasurf is going — the current release, next milestones, and what's on the backlog.",
     [
         ("line", "Release line", "timeline"),
-        ("173", "In v1.7.3", "check_circle"),
+        ("175", "In v1.7.5", "check_circle"),
         ("180", "Next: v1.8.0", "flag"),
         ("200", "Later: v2.0+", "rocket_launch"),
     ],
     """
 <h2 id="line"><span class="mi">timeline</span>Release line</h2>
-<pre><code>v1.7.3 (now) ──→ v1.8.0 (Q3 2026) ──→ v2.0.0 (Q4 2026) ──→ v3.0.0 (2027)
+<pre><code>v1.7.5 (now) ──→ v1.8.0 (Q3 2026) ──→ v2.0.0 (Q4 2026) ──→ v3.0.0 (2027)
 - 38 Sources         - AniList / MAL sync   - WebAssembly reader  - Peer-to-peer mesh
 - curl_cffi engine   - AI OCR translation   - Native macOS .dmg   - Distributed network
-- Per-chapter counts - E-ink mode           - PWA installable    - Auto-dubbing TTS</code></pre>
+- Dark-grey TUI      - E-ink mode           - PWA installable    - Auto-dubbing TTS
+- True-color images  - Phone PWA            - Dark minimalist logo</code></pre>
 
-<h2 id="173"><span class="mi">check_circle</span>Shipped in v1.7.3</h2>
+<h2 id="175"><span class="mi">check_circle</span>Shipped in v1.7.5</h2>
 <ul>
-  <li><b>38 sources</b>, including the new verified <span class="ver">Manhwa68</span>, <span class="ver">ManhwaBuddy</span>, <span class="ver">Hentai18</span> and <span class="ver">ComicLand</span>, plus a best-effort <span class="ver">Yurivan</span>.</li>
-  <li>The HTTP layer is <b>100% curl_cffi</b> with a fast async batch engine.</li>
-  <li>Fixed search badges that said “1 chapter downloaded” for bundled CBZs.</li>
-  <li>Removed the fake <span class="ver">Kings Manga</span> and <span class="ver">Kamiya Scans</span> sources.</li>
+  <li><b>Dark-grey TUI</b> restyled away from the navy canvas, with the window chrome, borders and status colours retuned to a charcoal palette.</li>
+  <li><b>Real terminal images</b> — kitty / wezterm / ghostty / sixel / iTerm terminals now get an actual cover image widget instead of ANSI half-block art, with the ANSI fallback kept for everything else.</li>
+  <li><b>Remastered phone PWA</b> mirroring the server web UI, and a <b>dark minimalist logo</b>.</li>
+  <li>Per-“Clear library for this session” toggle, tunable animation sliders and a 3D cover carousel.</li>
 </ul>
 
 <h2 id="180"><span class="mi">flag</span>Next: v1.8.0</h2>

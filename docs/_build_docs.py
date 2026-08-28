@@ -216,7 +216,7 @@ DOC_TREE = {
     ]),
     "roadmap.html": ("map", "Roadmap", [
         ("line", "Release line", "timeline"),
-        ("173", "In v1.7.3", "check_circle"),
+        ("175", "In v1.7.5", "check_circle"),
         ("180", "Next: v1.8.0", "flag"),
         ("200", "Later: v2.0+", "rocket_launch"),
     ]),
@@ -295,7 +295,7 @@ def _sidebar_html(current: str, version: str) -> str:
 <nav class="dtree">{"".join(groups)}</nav>"""
 
 
-def page(title, tagline, toc, content, version="1.7.3", sources=38,
+def page(title, tagline, toc, content, version="1.7.5", sources=38,
          current=None):
     current = current or _current_page()
     nav_links = "".join(

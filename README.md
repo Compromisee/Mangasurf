@@ -60,6 +60,16 @@
 - Full specification documented in [`mangasurf/sources/customsources/syntax.source`](mangasurf/sources/customsources/syntax.source).
 - Define custom scraper endpoints, CSS/JSON selectors, page extractors, headers, and rate limits without touching core code.
 
+### Full-Screen TUI
+- A dark-grey terminal UI (no navy), with a traffic-light window chrome, letter-spaced panel headings and a live cover preview.
+- **Real terminal images** — Kitty, WezTerm, Ghostty, Sixel and iTerm2 terminals get an actual colour cover image via `mangasurf/terminal_image.py`; every other terminal gets the portable TrueColor ANSI half-block fallback, so a preview always appears.
+- Search, per-series metadata & chapter selection, download telemetry cards with ASCII progress, a session log, and a two-column settings/scraper matrix.
+
+### Phone PWA & LAN Server
+- Installable **phone web app** at `/pwa/` — a remastered, matched version of the server web UI with a 3D cover carousel, continue-reading strip, live download queue, theme/accent pickers and animation sliders.
+- Works over **Wi-Fi and Tailscale** (manifest + service worker so the shell survives network drops).
+- OPDS 1.2 catalog and a LAN phone-server web UI served straight from your computer.
+
 ---
 
 ## Supported Sources
@@ -114,7 +124,7 @@
 
 ### 2. Install the curl_cffi HTTP engine (required)
 
-**Mangasurf 1.7.2 is 100% curl_cffi.** The `requests` package has been completely
+**Mangasurf 1.7.5 is 100% curl_cffi.** The `requests` package has been completely
 removed — every page fetch, image download and batch request now goes through
 [`curl_cffi`](https://github.com/lexiforest/curl_cffi), a thin, native C
 binding over libcurl. Why this matters:
@@ -195,6 +205,7 @@ python server.py            # then open http://<this-pc>:8577/pwa/ on your phone
 | :--- | :--- |
 | **Library Grid** | ![Library](docs/gui-library.png) |
 | **Search & Discovery** | ![Search](docs/gui-search.png) |
+| **Manga Detail** | ![Manga](docs/gui-manga.png) |
 | **Reader View** | ![Reader](docs/gui-reader-chapters.png) |
 | **Light Theme** | ![Light](docs/gui-light.png) |
 | **Download Queue** | ![Queue](docs/gui-queue.png) |

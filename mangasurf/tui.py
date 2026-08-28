@@ -85,186 +85,196 @@ class MangasurfTUI(App):
 
     CSS = """
     /* ─── Mangasurf TUI · terminal-edition theme ───────────────────────────
-       Matches the docs/ screenshots: deep navy canvas, cyan accents, letter-
-       spaced uppercase panel titles, bordered panels, and a traffic-light
-       window chrome with a centred title. Everything below is pure CSS so the
-       handlers keep working untouched. Only transform-independent properties
-       are used where possible. */
+       A neutral dark-grey canvas (not navy), muted slate text, cyan accents,
+       letter-spaced uppercase panel titles, bordered panels, and a traffic-
+       light window chrome with a centred title. Everything below is pure CSS
+       so the handlers keep working untouched. Only transform-independent
+       properties are used where possible. */
 
     Screen {
-        background: #0a0e1a;
-        color: #c7d3f0;
+        background: #1b1b1f;
+        color: #d6d6dc;
     }
     TabbedContent { height: 1fr; }
-    TabbedContent > .tab-bar--tabs { background: #0a0e1a; }
+    TabbedContent > .tab-bar--tabs { background: #1b1b1f; }
     TabbedContent > .tab-bar--tab {
-        color: #64748b; padding: 0 2; margin-right: 1;
+        color: #7a7a85; padding: 0 2; margin-right: 1;
     }
-    TabbedContent > .tab-bar--tab:hover { color: #a5f3fc; background: #111a30; }
+    TabbedContent > .tab-bar--tab:hover { color: #a0e7f2; background: #26262c; }
     TabbedContent > .tab-bar--tab.-active {
-        color: #67e8f9; background: #12203a;
-        border-bottom: tall #38bdf8;
+        color: #6fd7e8; background: #2a2a31;
+        border-bottom: tall #3ba9c0;
         text-style: bold;
     }
     TabPane { padding: 1 2; }
 
     .hidden { display: none; }
 
+    /* A cover slot holds either ANSI art (Static) or a textual_image widget.
+       Keep it centred and let the box surround whatever the child paints. */
+    .cover-slot { height: auto; width: 100%; content-align: center middle; }
+
     /* ── window chrome / title bar ─────────────────────────────────────── */
     #tui-titlebar {
-        height: 3; dock: top; background: #0a0e1a;
+        height: 3; dock: top; background: #1b1b1f;
         padding: 0 4; 
     }
     #tui-titlebar .tl-dots { width: 16; }
     .tl-dot { width: 2; text-style: bold; content-align: center middle; color: #1f6feb; }
     #tui-title #tl-center {
         width: 1fr; content-align: center middle;
-        text-style: bold; color: #a5f3fc;
+        text-style: bold; color: #d9d9de;
     }
-    #tui-subwire { color: #334155; text-style: bold; }
+    #tui-subwire { color: #5b5b66; text-style: bold; }
 
     /* ── panel title band (uppercase, letter-spaced, cyan) ────────────── */
     .panel-title {
-        height: 1; color: #38bdf8; text-style: bold;
-        background: #0e1626; padding: 0 1; margin-bottom: 1;
+        height: 1; color: #5bbccf; text-style: bold;
+        background: #242429; padding: 0 1; margin-bottom: 1;
     }
-    .panel-title.rules { color: #334155; }
+    .panel-title.rules { color: #5b5b66; }
 
-    #foot { background: #0a0e1a; color: #67e8f9; }
-    Footer { background: #0a0e1a; color: #67e8f9; }
-    Footer > .footer--key { background: #0a0e1a; color: #38bdf8; }
-    Footer > .footer--description { color: #7dd3fc; }
+    #foot { background: #1b1b1f; color: #6fd7e8; }
+    Footer { background: #1b1b1f; color: #6fd7e8; }
+    Footer > .footer--key { background: #1b1b1f; color: #5bbccf; }
+    Footer > .footer--description { color: #9adbe6; }
 
     /* ────────────────────────────── search tab ──────────────────────── */
     #search-bar { height: 3; margin-bottom: 1; }
-    #source-select { width: 20; margin-right: 1; background: #0e1626; }
-    #genre-select { width: 18; margin-left: 1; background: #0e1626; }
-    #search-input { width: 1fr; background: #0e1626; border: tall #1e2a44; }
-    #search-input:focus { border: tall #38bdf8; }
-    #search-btn { margin-left: 1; min-width: 12; background: #0e2a44; border: tall #1e3a5c; }
-    #search-status { color: #64748b; height: 1; margin-bottom: 1; }
+    #source-select { width: 20; margin-right: 1; background: #242429; }
+    #genre-select { width: 18; margin-left: 1; background: #242429; }
+    #search-input { width: 1fr; background: #242429; border: tall #34343c; }
+    #search-input:focus { border: tall #3ba9c0; }
+    #search-btn { margin-left: 1; min-width: 12; background: #2b2b33; border: tall #3d3d46; }
+    #search-status { color: #7a7a85; height: 1; margin-bottom: 1; }
 
     #search-main { height: 1fr; }
     #search-left { width: 1fr; }
     #search-results {
-        height: 1fr; border: round #1e2a44; background: #0b101e;
+        height: 1fr; border: round #34343c; background: #202025;
     }
-    #search-results:focus-within { border: round #38bdf8 70%; }
+    #search-results:focus-within { border: round #3ba9c0 70%; }
     #search-results > ListItem { padding: 1 1; height: auto; }
-    #search-results > ListItem:hover { background: #13203a; }
+    #search-results > ListItem:hover { background: #2a2a31; }
     #search-results > ListItem.-highlight {
-        background: #16233f; border: tall #1e3a5c;
+        background: #2f2f37; border: tall #3d3d46;
     }
-    .sr-rank { color: #7ca7ff; text-style: bold; width: 5; }
-    .sr-title { text-style: bold; color: #d7e3ff; }
-    .sr-meta { color: #64748b; }
-    .sr-dim { color: #475569; }
+    .sr-rank { color: #9ba3b4; text-style: bold; width: 5; }
+    .sr-title { text-style: bold; color: #ececf1; }
+    .sr-meta { color: #8a8a95; }
+    .sr-dim { color: #63636d; }
 
     #search-right { width: 46; margin-left: 2; }
+    /* The cover slot can hold either the ANSI half-block art (a Static) or a
+       real textual_image widget, so it is a Vertical that styles the box and
+       lets either child fill it. */
     #search-cover {
         height: auto; min-height: 10; content-align: center middle;
-        border: round #1e2a44; background: #0b101e; padding: 1; margin-bottom: 1;
+        border: round #34343c; background: #202025; padding: 1; margin-bottom: 1;
     }
-    #search-preview-title { text-style: bold; color: #d7e3ff; }
-    #search-preview-meta { color: #64748b; }
+    #search-cover > .cover-slot { height: auto; }
+    #search-cover-art { content-align: center middle; }
+    #search-preview-title { text-style: bold; color: #ececf1; }
+    #search-preview-meta { color: #8a8a95; }
     #search-preview-empty {
-        height: 1fr; content-align: center middle; color: #475569;
+        height: 1fr; content-align: center middle; color: #63636d;
     }
 
     /* ────────────────────────────── manga tab ────────────────────────── */
-    #manga-empty { height: 1fr; content-align: center middle; color: #64748b; }
+    #manga-empty { height: 1fr; content-align: center middle; color: #8a8a95; }
     #manga-body { height: 1fr; }
     #manga-info {
         width: 44; min-width: 32; margin-right: 2;
-        border: round #1e2a44; padding: 1 1; background: #0b101e;
+        border: round #34343c; padding: 1 1; background: #202025;
     }
     #manga-cover {
         height: auto; min-height: 8; content-align: center middle;
-        margin-bottom: 1; border: round #1e2a44; padding: 0;
+        margin-bottom: 1; border: round #34343c; padding: 0;
     }
-    #manga-title { text-style: bold; color: #67e8f9; }
-    #manga-source { color: #64748b; text-style: italic; }
-    #manga-meta { color: #64748b; margin-top: 1; }
-    #manga-tags { color: #8ab4ff; margin-top: 1; }
-    #manga-desc { margin-top: 1; color: #b7c3e0; }
+    #manga-cover-art { content-align: center middle; }
+    #manga-title { text-style: bold; color: #6fd7e8; }
+    #manga-source { color: #8a8a95; text-style: italic; }
+    #manga-meta { color: #8a8a95; margin-top: 1; }
+    #manga-tags { color: #aab0c4; margin-top: 1; }
+    #manga-desc { margin-top: 1; color: #c2c2c9; }
 
     #manga-right { width: 1fr; }
     .opt-row { height: 3; margin-bottom: 1; }
-    .opt-row Label { width: 12; content-align: left middle; color: #94a3b8; }
-    .opt-row Select { width: 26; background: #0e1626; }
-    .opt-row Input { width: 1fr; background: #0e1626; border: tall #1e2a44; }
+    .opt-row Label { width: 12; content-align: left middle; color: #9a9aa5; }
+    .opt-row Select { width: 26; background: #242429; }
+    .opt-row Input { width: 1fr; background: #242429; border: tall #34343c; }
     #bundle-n { width: 10; margin-left: 1; }
 
     #chapter-tools { height: 3; margin-bottom: 1; }
-    #range-input { width: 1fr; background: #0e1626; border: tall #1e2a44; }
-    #chapter-tools Button { margin-left: 1; min-width: 8; background: #0e2a44; }
+    #range-input { width: 1fr; background: #242429; border: tall #34343c; }
+    #chapter-tools Button { margin-left: 1; min-width: 8; background: #2b2b33; }
     #chapter-list {
-        height: 1fr; border: round #1e2a44; background: #0b101e;
+        height: 1fr; border: round #34343c; background: #202025;
     }
-    #chapter-list:focus { border: round #38bdf8 70%; }
+    #chapter-list:focus { border: round #3ba9c0 70%; }
     #chapter-list > SelectionList.Option {
-        height: 2; padding: 0 1; color: #c7d3f0;
+        height: 2; padding: 0 1; color: #d6d6dc;
     }
-    .ch-name { color: #d7e3ff; text-style: bold; }
-    .ch-dim { color: #64748b; }
-    .st-ok  { color: #34d399; text-style: bold; }
-    .st-warn{ color: #fbbf24; text-style: bold; }
-    .st-bad { color: #f87171; text-style: bold; }
+    .ch-name { color: #ececf1; text-style: bold; }
+    .ch-dim { color: #8a8a95; }
+    .st-ok  { color: #4bd29a; text-style: bold; }
+    .st-warn{ color: #f0bd4f; text-style: bold; }
+    .st-bad { color: #f0847c; text-style: bold; }
     #download-row { height: 3; margin-top: 1; }
-    #download-btn { width: 1fr; background: #0d3a2a; border: tall #1f6f4f; }
-    #sel-count { width: 24; content-align: right middle; color: #94a3b8; }
+    #download-btn { width: 1fr; background: #284b3d; border: tall #3a6b57; }
+    #sel-count { width: 24; content-align: right middle; color: #9a9aa5; }
 
     /* ────────────────────────────── downloads tab ────────────────────── */
-    #dl-empty { height: 1fr; content-align: center middle; color: #64748b; }
+    #dl-empty { height: 1fr; content-align: center middle; color: #8a8a95; }
     #dl-body { height: 1fr; }
-    #dl-title { text-style: bold; color: #67e8f9; height: 1; }
-    #dl-netline { color: #64748b; height: 1; margin-bottom: 1; }
-    #dl-status { color: #64748b; height: 1; margin-bottom: 1; }
+    #dl-title { text-style: bold; color: #6fd7e8; height: 1; }
+    #dl-netline { color: #8a8a95; height: 1; margin-bottom: 1; }
+    #dl-status { color: #8a8a95; height: 1; margin-bottom: 1; }
     #overall-row { height: 1; margin-bottom: 1; }
     #overall-bar { width: 1fr; }
-    #overall-bar Bar { width: 1fr; color: #34d399; }
-    #overall-text { width: 14; content-align: right middle; color: #67e8f9; }
+    #overall-bar Bar { width: 1fr; color: #4bd29a; }
+    #overall-text { width: 14; content-align: right middle; color: #6fd7e8; }
     #active-box { height: auto; max-height: 14; padding: 0 1; margin-bottom: 1; }
     .ac-row { height: 3; margin-bottom: 1; }
-    .ac-head { color: #38bdf8; text-style: bold; }
-    .ac-name { color: #d7e3ff; text-style: bold; }
-    .ac-src { color: #a5b4fc; }
-    .ac-lines { color: #64748b; }
-    .ac-bar { width: 1fr; color: #38bdf8; }
-    .ac-bar Bar { width: 1fr; color: #38bdf8; }
-    .ac-count { width: 10; content-align: right middle; color: #67e8f9; }
-    #dl-log { height: 1fr; border: round #1e2a44; background: #0b101e; }
+    .ac-head { color: #5bbccf; text-style: bold; }
+    .ac-name { color: #ececf1; text-style: bold; }
+    .ac-src { color: #a6adc0; }
+    .ac-lines { color: #8a8a95; }
+    .ac-bar { width: 1fr; color: #5bbccf; }
+    .ac-bar Bar { width: 1fr; color: #5bbccf; }
+    .ac-count { width: 10; content-align: right middle; color: #6fd7e8; }
+    #dl-log { height: 1fr; border: round #34343c; background: #202025; }
     #dl-actions { height: 3; margin-top: 1; }
-    #stop-btn { min-width: 14; background: #3a0d1a; border: tall #5c1f34; }
+    #stop-btn { min-width: 14; background: #4d2730; border: tall #6f3947; }
 
     /* ────────────────────────────── settings tab ─────────────────────── */
     #settings-main { height: 1fr; }
     #settings-left { width: 1fr; }
     #settings-box { width: 1fr; }
     .set-row { height: 3; margin-bottom: 1; }
-    .set-row Label { width: 34; content-align: left middle; color: #94a3b8; }
-    .set-row Input { width: 12; background: #0e1626; border: tall #1e2a44; }
-    .set-row Select { width: 22; background: #0e1626; }
-    .set-hint { color: #64748b; margin-bottom: 1; }
+    .set-row Label { width: 34; content-align: left middle; color: #9a9aa5; }
+    .set-row Input { width: 12; background: #242429; border: tall #34343c; }
+    .set-row Select { width: 22; background: #242429; }
+    .set-hint { color: #8a8a95; margin-bottom: 1; }
     #set-output { width: 34; }
-    #save-flash { color: #34d399; margin-left: 2; content-align: left middle; height: 3; }
+    #save-flash { color: #4bd29a; margin-left: 2; content-align: left middle; height: 3; }
 
     #settings-right { width: 1fr; margin-left: 2; }
-    #scraper-list { height: 1fr; border: round #1e2a44; background: #0b101e; }
+    #scraper-list { height: 1fr; border: round #34343c; background: #202025; }
     #scraper-list > ListItem { padding: 0 1; height: 2; }
-    #scraper-list > ListItem.-highlight { background: #16233f; }
-    .sc-num { color: #64748b; width: 5; }
-    .sc-name { color: #d7e3ff; text-style: bold; }
-    .sc-host { color: #64748b; }
-    .sc-proto { color: #a5b4fc; }
+    #scraper-list > ListItem.-highlight { background: #2f2f37; }
+    .sc-num { color: #8a8a95; width: 5; }
+    .sc-name { color: #ececf1; text-style: bold; }
+    .sc-host { color: #8a8a95; }
+    .sc-proto { color: #a6adc0; }
 
-    /* ────────────────────────────── sources tab ──────────────────────── */
-    #src-help { color: #64748b; margin-bottom: 1; height: auto; }
-    #src-rank-list { height: 1fr; border: round #1e2a44; background: #0b101e; }
-    #src-rank-list:focus { border: round #38bdf8 70%; }
+    /* ────────��───────────────────── sources tab ──────────────────────── */
+    #src-help { color: #8a8a95; margin-bottom: 1; height: auto; }
+    #src-rank-list { height: 1fr; border: round #34343c; background: #202025; }
+    #src-rank-list:focus { border: round #3ba9c0 70%; }
     #src-rank-list > ListItem { padding: 0 1; }
     #src-actions { height: 3; margin-top: 1; }
-    #src-actions Button { margin-right: 1; min-width: 12; background: #0e2a44; }
+    #src-actions Button { margin-right: 1; min-width: 12; background: #2b2b33; }
     """
 
     BINDINGS = [
@@ -326,7 +336,8 @@ class MangasurfTUI(App):
                         yield ListView(id="search-results")
                     with Vertical(id="search-right"):
                         yield Static("LIVE COVER PREVIEW", classes="panel-title")
-                        yield Static("", id="search-cover")
+                        with Vertical(id="search-cover", classes="cover-slot"):
+                            yield Static("", id="search-cover-art")
                         yield Static("", id="search-preview-title")
                         yield Static("", id="search-preview-meta")
                         yield Static(
@@ -339,7 +350,8 @@ class MangasurfTUI(App):
                 with Horizontal(id="manga-body", classes="hidden"):
                     with VerticalScroll(id="manga-info"):
                         yield Static("SERIES  ·  METADATA & COVER", classes="panel-title")
-                        yield Static("", id="manga-cover")
+                        with Vertical(id="manga-cover", classes="cover-slot"):
+                            yield Static("", id="manga-cover-art")
                         yield Static("", id="manga-title")
                         yield Static("", id="manga-source")
                         yield Static("", id="manga-meta")
@@ -692,21 +704,82 @@ class MangasurfTUI(App):
 
     # ------------------------------------------------------ live preview
     @work(thread=True, group="preview")
+    # ------------------------------------------------- cover rendering
+    #
+    # Two paths, chosen per terminal:
+    #   * true-image terminal (kitty / wezterm / ghostty / sixel / iterm) and
+    #     textual_image installed -> a real Image widget is mounted, so the
+    #     cover is actual pixels at the terminal's native resolution.
+    #   * otherwise -> ANSI half-block art inside a Static (portable fallback).
+    #
+    # Both run the fetch on a thread and marshal back to the UI thread.
+
+    def _cover_supports_image(self) -> bool:
+        try:
+            from .terminal_image import supports_true_image
+            from textual_image.widget import Image as _Img
+            return supports_true_image()
+        except Exception:
+            return False
+
+    def _set_true_image(self, slot_id: str, pil):
+        """Mount (or reuse) a textual_image Image widget inside a cover slot.
+
+        Once mounted the widget is reused; only its ``.image`` is reassigned so
+        the next cover replaces the previous one instead of stacking.
+        """
+        try:
+            from textual_image.widget import Image as TerminalImage
+            slot = self.query_one(slot_id, Vertical)
+            holder = getattr(self, "_true_image_widget", None)
+            if holder is None or holder.parent is None:
+                holder = TerminalImage()
+                self._true_image_widget = holder
+                slot.mount(holder)
+            holder.image = pil
+            return True
+        except Exception:
+            return False
+
     def _preview_cover_worker(self, info):
+        cover = info.get("cover")
+        if not cover:
+            self.call_from_thread(self._set_search_cover, "")
+            return
+        # Prefer true pixels for image-capable terminals.
+        if self._cover_supports_image():
+            try:
+                from .terminal_image import render_image_bytes
+                pil, _w, _h = render_image_bytes(
+                    cover, source_id=info.get("source"),
+                    referer=info.get("url"))
+                if pil is not None:
+                    self.call_from_thread(
+                        self._true_image_cb, "#search-cover", pil, None)
+                    return
+            except Exception:
+                pass
         try:
             from .covers import render_terminal_cover
             ansi = render_terminal_cover(
-                info.get("cover"), width=22, max_height=11,
+                cover, width=22, max_height=11,
                 source_id=info.get("source"), referer=info.get("url"))
         except Exception:
             ansi = ""
         self.call_from_thread(self._set_search_cover, ansi)
 
+    def _true_image_cb(self, slot_id, pil, _unused):
+        """Put a PIL image into a cover slot (runs on the UI thread)."""
+        if pil is None:
+            self._set_search_cover("")
+            return
+        self._set_true_image(slot_id, pil)
+
     def _set_search_cover(self, ansi_art):
         try:
-            cover = self.query_one("#search-cover", Static)
+            cover = self.query_one("#search-cover-art", Static)
             if not ansi_art:
-                cover.update("[#475569]no cover art[/]")
+                cover.update("[#63636d]no cover art[/]")
                 return
             try:
                 from rich.text import Text
@@ -850,6 +923,17 @@ class MangasurfTUI(App):
         if not cover_url:
             self.call_from_thread(self._cover_ready, "")
             return
+        if self._cover_supports_image():
+            try:
+                from .terminal_image import render_image_bytes
+                pil, _w, _h = render_image_bytes(
+                    cover_url, source_id=info.get("source"),
+                    referer=info.get("url"))
+                if pil is not None:
+                    self.call_from_thread(self._manga_true_image_cb, pil)
+                    return
+            except Exception:
+                pass
         try:
             from .covers import render_terminal_cover
             ansi_art = render_terminal_cover(cover_url, width=28, max_height=14,
@@ -859,9 +943,12 @@ class MangasurfTUI(App):
             ansi_art = ""
         self.call_from_thread(self._cover_ready, ansi_art)
 
+    def _manga_true_image_cb(self, pil):
+        self._set_true_image("#manga-cover", pil)
+
     def _cover_ready(self, ansi_art):
         try:
-            cover_widget = self.query_one("#manga-cover", Static)
+            cover_widget = self.query_one("#manga-cover-art", Static)
             if not ansi_art:
                 cover_widget.update("[dim]No cover art[/]")
                 return

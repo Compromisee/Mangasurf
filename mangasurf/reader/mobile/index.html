@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#101018">
+<meta name="theme-color" content="#14141b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mangasurf">
@@ -15,15 +15,32 @@
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ms-wave-line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5bbccf"/><stop offset="55%" stop-color="#6fd7e8"/><stop offset="100%" stop-color="#3ba9c0"/>
+    </linearGradient>
+  </defs>
+  <symbol id="ms-logo" viewBox="0 0 512 512">
+    <rect x="24" y="24" width="464" height="464" rx="120" fill="#0b0b0f"/>
+    <rect x="25" y="25" width="462" height="462" rx="119" fill="none" stroke="#2a2a31" stroke-width="2"/>
+    <path d="M96 306 C 140 236, 196 236, 244 268 C 300 306, 356 306, 416 236"
+          fill="none" stroke="url(#ms-wave-line)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M96 366 C 140 306, 196 306, 244 332 C 300 362, 356 362, 416 306"
+          fill="none" stroke="#6fd7e8" stroke-width="10" opacity="0.28" stroke-linecap="round"/>
+    <circle cx="416" cy="196" r="13" fill="#e8f8fb" opacity="0.9"/>
+  </symbol>
+</svg>
+
 <div id="boot">
-  <div class="boot-brand"><span class="logo">🔖</span></div>
+  <div class="boot-brand"><span class="logo"><svg class="logo-mark"><use href="#ms-logo"/></svg></span></div>
   <p class="boot-msg">Connecting to your library…</p>
 </div>
 
 <div id="app" hidden>
   <header class="topbar" id="topbar">
     <div class="tb-left">
-      <div class="logo sm" id="title-logo">🔖</div>
+      <div class="logo sm" id="title-logo"><svg class="logo-mark"><use href="#ms-logo"/></svg></div>
       <div class="tb-title">
         <div class="tb-greet" id="greet">Your library</div>
         <div class="tb-sub" id="library-count">—</div>
