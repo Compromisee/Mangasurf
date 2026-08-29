@@ -11,6 +11,15 @@ All notable changes to **Mangasurf**, newest first.
   palette to a **charcoal / dark-grey identity**: screen `#1b1b1f`, panels
   `#202025`, inputs `#242429`, borders `#34343c`, with the cyan accents and
   status colours kept. No navy `#0a0e1a` remains.
+- **Fixed a crash when hovering the first search result.** The preview cover
+  fetch is a `@work(thread=True)` method, but the decorator had been placed
+  above `_cover_supports_image` instead of directly above the worker, so the
+  fetch ran on the UI thread and `call_from_thread` raised
+  `RuntimeError: must run in a different thread` on every highlight at index 0.
+  The decorator now sits directly on `_preview_cover_worker` (and
+  `_fetch_cover_art`), and both workers marshal back through a new
+  `_post()` helper that guards the thread id so a cover fetch can never take
+  the whole UI down.
 - **Real cover images in image-capable terminals.** Kitty, WezTerm, Ghostty,
   Sixel and iTerm2 terminals now get an actual `Image` widget with full-colour
   cover pixels at the terminal's native resolution, via the new

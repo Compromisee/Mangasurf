@@ -703,7 +703,6 @@ class MangasurfTUI(App):
             self._show_search_preview(index)
 
     # ------------------------------------------------------ live preview
-    @work(thread=True, group="preview")
     # ------------------------------------------------- cover rendering
     #
     # Two paths, chosen per terminal:
@@ -741,10 +740,27 @@ class MangasurfTUI(App):
         except Exception:
             return False
 
+    def _post(self, callback, *args):
+        """Run ``callback`` on the app thread from a worker thread.
+
+        ``call_from_thread`` raises if the current thread *is* the app thread
+        (which can happen if a ``@work`` body ever runs inline). Guard for it
+        so a cover fetch can never crash the whole UI: if we are already on the
+        app thread just call straight through.
+        """
+        try:
+            if getattr(self, "_thread_id", None) == threading.get_ident():
+                callback(*args)
+            else:
+                self.call_from_thread(callback, *args)
+        except RuntimeError:            # pragma: no cover - belt & braces
+            callback(*args)
+
+    @work(thread=True, group="preview")
     def _preview_cover_worker(self, info):
         cover = info.get("cover")
         if not cover:
-            self.call_from_thread(self._set_search_cover, "")
+            self._post(self._set_search_cover, "")
             return
         # Prefer true pixels for image-capable terminals.
         if self._cover_supports_image():
@@ -754,8 +770,7 @@ class MangasurfTUI(App):
                     cover, source_id=info.get("source"),
                     referer=info.get("url"))
                 if pil is not None:
-                    self.call_from_thread(
-                        self._true_image_cb, "#search-cover", pil, None)
+                    self._post(self._true_image_cb, "#search-cover", pil, None)
                     return
             except Exception:
                 pass
@@ -766,7 +781,7 @@ class MangasurfTUI(App):
                 source_id=info.get("source"), referer=info.get("url"))
         except Exception:
             ansi = ""
-        self.call_from_thread(self._set_search_cover, ansi)
+        self._post(self._set_search_cover, ansi)
 
     def _true_image_cb(self, slot_id, pil, _unused):
         """Put a PIL image into a cover slot (runs on the UI thread)."""
@@ -921,7 +936,7 @@ class MangasurfTUI(App):
     def _fetch_cover_art(self, info):
         cover_url = info.get("cover")
         if not cover_url:
-            self.call_from_thread(self._cover_ready, "")
+            self._post(self._cover_ready, "")
             return
         if self._cover_supports_image():
             try:
@@ -930,7 +945,7 @@ class MangasurfTUI(App):
                     cover_url, source_id=info.get("source"),
                     referer=info.get("url"))
                 if pil is not None:
-                    self.call_from_thread(self._manga_true_image_cb, pil)
+                    self._post(self._manga_true_image_cb, pil)
                     return
             except Exception:
                 pass
@@ -941,7 +956,7 @@ class MangasurfTUI(App):
                                              referer=info.get("url"))
         except Exception:
             ansi_art = ""
-        self.call_from_thread(self._cover_ready, ansi_art)
+        self._post(self._cover_ready, ansi_art)
 
     def _manga_true_image_cb(self, pil):
         self._set_true_image("#manga-cover", pil)
