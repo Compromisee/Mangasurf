@@ -14,9 +14,6 @@
 [![License](https://img.shields.io/badge/License-MIT-00875A?style=for-the-badge)](LICENSE)
 
 <br>
-
-![Mangasurf Hero Showcase](docs/hero-bento.png)
-
 </div>
 
 ---
