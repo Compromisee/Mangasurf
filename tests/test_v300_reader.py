@@ -358,10 +358,18 @@ def test_every_mode_reports_a_sane_page_count(view):
 # --------------------------------------------------------------- full shell
 
 
-@pytest.fixture()
-def shell(browser, origin):
-    """The whole reader UI with a stubbed Python bridge."""
-    stub = {
+def make_shell(browser, origin, opened=None, stub=None):
+    """Build the full reader UI with a stubbed Python bridge.
+
+    `opened` is the object returned by `reader_open` (defaults to a plain
+    six-page chapter with no saved position); `stub` fills in the rest of the
+    bridge. Tests that want to see a resume or a broken open override these.
+    """
+    opened = opened or {"ok": True, "kind": "pages",
+                        "title": "Test Series — Chapter 1",
+                        "path": "/d/Chapter 1", "pages": PAGE_URLS,
+                        "count": len(PAGE_URLS), "position": {}}
+    stub = stub or {
         "get_settings": {"ok": True, "settings": {
             "reader_mode": "webtoon", "reader_theme": "midnight",
             "reader_fit": "contain", "reader_gap": 0,
@@ -379,9 +387,6 @@ def shell(browser, origin):
         "reader_annotations": {"ok": True, "annotations": {"bookmarks": [], "notes": []}},
         "get_queue": {"ok": True, "queue": []},
     }
-    opened = {"ok": True, "kind": "pages", "title": "Test Series — Chapter 1",
-              "path": "/d/Chapter 1", "pages": PAGE_URLS, "count": len(PAGE_URLS),
-              "position": {}}
     init = """
     window.__calls = [];
     window.pywebview = { api: new Proxy({}, { get: (_, name) => {
@@ -402,6 +407,13 @@ def shell(browser, origin):
     page.add_init_script(init)
     page.goto(origin + "/app/index.html", wait_until="load")
     page.wait_for_function("window.__readerReady === true", timeout=20000)
+    return page
+
+
+@pytest.fixture()
+def shell(browser, origin):
+    """The whole reader UI with a stubbed Python bridge."""
+    page = make_shell(browser, origin)
     yield page
     page.close()
 
@@ -630,3 +642,232 @@ def test_the_library_shows_a_stats_strip(shell):
     text = shell.text_content("#stats-strip")
     assert "Series" in text
     assert "Chapters" in text
+
+
+# ------------------------------------------------- chapter list: fresh open
+
+
+def test_opening_a_new_chapter_starts_on_the_first_page(browser, origin):
+    """Regression: picking a chapter from the list opened it on the LAST page.
+
+    A fresh chapter has no saved position, so the reader must land on page 1.
+    The bug was that the manga-view kept the previous chapter's scrollTop, and
+    `#emitRelocate` derived the page from it -- a long strip's bottom clamped a
+    short new chapter to its own bottom, so `open()` reported the last page.
+    """
+    page = make_shell(browser, origin)
+    try:
+        page.evaluate("p => window.__reader.openPath(p, { resume: false })",
+                      "/d/Chapter 1")
+        page.wait_for_timeout(900)
+        count = page.text_content("#r-count").strip()
+        assert count == f"1 / {len(PAGE_URLS)}", \
+            f"fresh chapter opened at '{count}' instead of page 1"
+        assert page.evaluate("document.getElementById('mv').index") == 0
+    finally:
+        page.close()
+
+
+def test_reopening_the_same_chapter_still_resumes(browser, origin):
+    """A position is only restored for the same path when resume is wanted."""
+    opened = {"ok": True, "kind": "pages", "title": "Chapter", "path": "/d/Ch",
+              "pages": PAGE_URLS, "count": len(PAGE_URLS),
+              "position": {"fraction": 0.5}}
+    page = make_shell(browser, origin, opened=opened)
+    try:
+        page.evaluate("p => window.__reader.openPath(p)", "/d/Ch")
+        page.wait_for_timeout(1200)
+        # A resume to 50% should not land on the last page.
+        page.evaluate("document.getElementById('mv').setFraction(0.5)")
+        page.wait_for_timeout(500)
+        assert page.evaluate("document.getElementById('mv').fraction") >= 0.4
+        assert page.evaluate("document.getElementById('mv').index") \
+            < len(PAGE_URLS) - 1
+    finally:
+        page.close()
+
+
+# --------------------------------------------------- chapter list: read pill
+
+
+def _seed_detail(shell, chapters, chapter_state):
+    """Feed the detail page directly and render the chapter list."""
+    shell.evaluate("""([chapters, cs]) => {
+        const d = window.__reader.detail;
+        d.url = 'https://x.test/series';
+        d.source = 'mangadex';
+        d.info = { title: 'Series', source_name: 'mangadex' };
+        d.chapters = chapters;
+        d.chapterState = cs;
+        d.readSet = new Set();
+        d.downloadedSet = new Set();
+        d.selected = new Set();
+        window.__reader.renderChapters();
+    }""", [chapters, chapter_state])
+
+
+def test_a_partially_read_chapter_gets_no_read_pill(shell):
+    """A chapter partway through must show progress, never a Read tag."""
+    shell.evaluate("document.getElementById('detail').hidden = false")
+    _seed_detail(shell,
+                 [{"name": "Ch 1", "url": "https://x/1"},
+                  {"name": "Ch 2", "url": "https://x/2"}],
+                 {"i:0": {"read": False, "fraction": 0.45,
+                          "name": "Ch 1", "url": "https://x/1"},
+                  "i:1": {"read": False, "fraction": 0.0,
+                          "name": "Ch 2", "url": "https://x/2"}})
+    rows = shell.locator("#d-chapters .ch")
+    assert rows.count() == 2
+    # Only the fully-read row wears a Read pill.
+    assert shell.locator("#d-chapters .ch-state-label").count() == 0
+    # The partial row is styled, and its fill is ~45%, not 100%.
+    assert shell.locator("#d-chapters .ch.is-partial").count() == 1
+    fill = shell.evaluate("""() => {
+        const el = document.querySelector('#d-chapters .ch.is-partial .ch-progress-fill');
+        return el ? el.style.width : null;
+    }""")
+    assert fill == "45%"
+
+
+def test_a_fully_read_chapter_gets_the_read_pill(shell):
+    shell.evaluate("document.getElementById('detail').hidden = false")
+    _seed_detail(shell,
+                 [{"name": "Ch 1", "url": "https://x/1"},
+                  {"name": "Ch 2", "url": "https://x/2"}],
+                 {"i:0": {"read": False, "fraction": 1.0,
+                          "name": "Ch 1", "url": "https://x/1"},
+                  "i:1": {"read": False, "fraction": 0.0,
+                          "name": "Ch 2", "url": "https://x/2"}})
+    assert shell.locator("#d-chapters .ch-state-label").count() == 1
+    assert "Read" in shell.locator("#d-chapters .ch-state-label").first.text_content()
+
+
+def test_a_partially_read_chapter_in_the_reader_list_shows_percent_not_read(shell):
+    """The in-reader chapter list must also refuse the Read tag for partials."""
+    open_reader(shell)
+    # Make the reader believe it is streaming the series online.
+    shell.evaluate("""() => {
+        const s = window.__reader.state;
+        s.readingSeries = {
+            chapters: [{ name: 'Ch 1', url: 'https://x/1' },
+                       { name: 'Ch 2', url: 'https://x/2' }],
+            chapterState: {
+                'i:0': { read: false, fraction: 0.5, name: 'Ch 1', url: 'https://x/1' },
+                'i:1': { read: false, fraction: 0.0, name: 'Ch 2', url: 'https://x/2' },
+            },
+            readSet: new Set(),
+            currentUrl: 'https://x/1',
+        };
+        s.book.is_online = true;
+    }""")
+    shell.evaluate("document.getElementById('r-chaplist').hidden = false")
+    shell.evaluate("window.__reader.loadChapters()")
+    shell.wait_for_timeout(300)
+    # No 'Read' tag anywhere; the partial chapter shows a percentage.
+    assert shell.locator("#chap-items .chap-read").count() == 0
+    assert "50%" in shell.text_content("#chap-items")
+
+
+# ------------------------------------------------------------ crash safety
+
+
+def test_a_rejected_promise_is_caught_and_reported(shell):
+    """A stray unhandled rejection must be caught and reported.
+
+    The handler deliberately logs to the console, so `page.errors` will
+    legitimately contain our own report — what matters is that the crash was
+    recorded and the reader is still alive, not that the console is silent.
+    """
+    shell.evaluate("""() => {
+        window.__readerCrash = null;
+        Promise.reject(new Error('boom'));
+    }""")
+    shell.wait_for_timeout(300)
+    crash = shell.evaluate("window.__readerCrash")
+    assert crash and "boom" in crash["message"], crash
+    # The UI survived: the boot screen is gone and the crash was recorded.
+    assert shell.evaluate("window.__readerReady") is True
+
+
+def test_a_backend_failure_shows_a_toast_not_a_crash(browser, origin):
+    """A reader_open that blows up must degrade to a toast, never to a crash.
+
+    `call()` folds a thrown backend error into `{ok: false, error}`, so the
+    reader shows the message in its toast; no window-level crash record is
+    needed, and none should be created.
+    """
+    init = """
+    window.__calls = [];
+    window.apis = {};
+    window.pywebview = { api: new Proxy({}, { get: (_, name) => {
+      if (name === 'then') return undefined;
+      return async (...args) => {
+        window.__calls.push(String(name));
+        if (String(name) === 'reader_open') throw new Error('backend exploded');
+        return window.apis[String(name)] ?? { ok: true };
+      };
+    }})};
+    """
+    page = browser.new_page(viewport={"width": 1280, "height": 820})
+    page.errors = []
+    page.on("pageerror", lambda exc: page.errors.append(str(exc)))
+    page.on("console", lambda msg: page.errors.append(msg.text)
+            if msg.type == "error" else None)
+    page.add_init_script(init)
+    page.goto(origin + "/app/index.html", wait_until="load")
+    page.wait_for_function("window.__readerReady === true", timeout=20000)
+    try:
+        page.evaluate("p => window.__reader.openPath(p)", "/d/Chapter 1")
+        page.wait_for_timeout(600)
+        toast = page.text_content("#r-toast")
+        assert "backend exploded" in toast
+        # No window-level crash record: the failure was handled as a normal
+        # error return, not an uncaught exception.
+        assert page.evaluate("window.__readerCrash") is None
+        # No unhandled pageerror escaped to the browser.
+        assert page.errors == []
+    finally:
+        page.close()
+
+
+def test_an_uncaught_error_inside_openpath_is_reported(browser, origin):
+    """Exceptions *after* a successful call (bad shape, bad DOM) are caught.
+
+    This is the case the guard exists for: `call()` returns a well-formed
+    value, but the work *around* it throws. The renderer is made to throw
+    during `mv.open`, which propagates up through `openPath` into the guarded
+    wrapper — the reader must record it and carry on, not tear itself down.
+    """
+    page = make_shell(browser, origin)
+    try:
+        # Force the renderer's open() to throw after reader_open succeeds.
+        page.evaluate("""() => {
+            const mv = document.getElementById('mv');
+            mv.open = async () => { throw new Error('renderer blew up'); };
+        }""")
+        page.evaluate("p => window.__reader.openPath(p)", "/d/Chapter 1")
+        page.wait_for_timeout(600)
+        crash = page.evaluate("window.__readerCrash")
+        assert crash, "a post-call throw should be reported"
+        assert "Could not open" in crash["where"], crash
+        assert "renderer blew up" in crash["message"], crash
+        # The interface is still alive.
+        assert page.evaluate("window.__readerReady") is True
+    finally:
+        page.close()
+
+
+def test_a_broken_page_array_is_survived(browser, origin):
+    """reader_open returning an empty/missing page list must not crash."""
+    opened = {"ok": True, "kind": "pages", "title": "Chapter",
+              "path": "/d/Ch", "pages": None, "count": 0, "position": {}}
+    page = make_shell(browser, origin, opened=opened)
+    try:
+        page.evaluate("p => window.__reader.openPath(p)", "/d/Ch")
+        page.wait_for_timeout(600)
+        # No crash record: an empty chapter is a normal no-op open.
+        assert page.evaluate("window.__readerReady") is True
+        assert not page.evaluate(
+            "() => document.getElementById('reader').hidden")
+    finally:
+        page.close()

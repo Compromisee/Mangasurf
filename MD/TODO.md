@@ -31,6 +31,38 @@ Prioritized roadmap, task breakdown, and technical backlog for **Mangasurf**.
 
 ---
 
+## 🔧 v1.8.0 — Chapter-List & Reader Safety Round (current)
+
+- [x] **Per-row progress wash**: each chapter row is its own progress bar — solid
+  translucent fill (no gradient) up to the read fraction, painted *under* the
+  row's text/buttons. Unread 0%, partial = fraction (dashed border), fully read
+  100% amber wash, read+downloaded 100% blue wash.
+- [x] **Chapter-row centering & sizing**: centered content/pills, `--ch-row`
+  drives row padding and the Read Online button height, chapter-row size slider
+  in Settings (clamped 6–30px).
+- [x] **Fresh online chapter opens on page 1**: picking a chapter from the
+  chapter list no longer inherits the previous chapter's scroll offset and
+  lands on the LAST page. `manga-view.open()` resets scroll to 0 (suppressing
+  scroll events) and `openPath(..., { resume: false })` skips position restore
+  for chapter-list navigation, while reopening the same book/chapter from
+  the library or Continue-Reading still resumes.
+- [x] **"Read" pill only when FULLY read**: a chapter is marked read only when
+  the tracker's read set includes it (mark_read fires at the end) or its
+  position has reached the finish line — never from partial progress. Both the
+  manga-page chapter list and the in-reader chapter list follow the same rule.
+- [x] **Global crash handlers & safety guards**: `window.onerror` and
+  `unhandledrejection` handlers surface and de-duplicate any uncaught fault;
+  `openPath` is wrapped so a throw in the open pipeline is reported and
+  contained instead of freezing the reader; malformed/empty chapters no-op
+  safely.
+- [x] **Error-handling tests** (Playwright reader shell): fresh-open-on-page-1,
+  resume-on-reopen, partial chapter gets no Read pill (manga page + reader
+  list), fully-read gets the pill, rejected promise caught & reported, backend
+  failure degrades to a toast, post-call throw caught, malformed chapter
+  survived.
+
+---
+
 ## 🚀 Medium Priority (Next Release v1.8.0)
 
 - [ ] **AI-Assisted OCR Translation Overlay**:

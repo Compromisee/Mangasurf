@@ -104,6 +104,7 @@ DEFAULT_SETTINGS = {
     #   "hide"   drop them from the results entirely
     "downloaded_results": "darken",
     "columns": 0,                   # result grid columns, 0 = fit the window
+    "chapter_size": 14,             # vertical size (padding) of manga-page chapter rows
     "advanced_info": False,         # extra metadata on the manga page
     "confirm_delete": True,
     "auto_snapshot": False,

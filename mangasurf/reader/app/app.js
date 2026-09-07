@@ -82,6 +82,7 @@ const DEFAULTS = {
     // front-end, nothing read them, so changing them did nothing at all.
     theme: 'midnight', accent: 'blue', corners: 'rounded',
     matrix: true, animations: true, columns: 0,
+    chapter_size: 14,   // vertical padding of manga-page chapter rows
     // Reading.
     reader_mode: 'webtoon', reader_fit: 'contain',
     reader_gap: 0, reader_max_width: '100%', reader_spread: false,
@@ -188,6 +189,21 @@ function setColumns(count, { persist = true } = {}) {
     const out = $('#set-columns-out')
     if (out) out.textContent = n === 0 ? 'Auto' : String(n)
     if (persist) pushSettings({ columns: n })
+    return n
+}
+
+/** Size of the chapter rows on the manga page (padding & controls).
+ *
+ * Drives a custom property `--ch-row` that the chapter-list CSS uses for
+ * vertical padding and the Read Online button, so the list scales as one.
+ */
+function applyChapterSize(value, { persist = true } = {}) {
+    const n = Math.max(6, Math.min(30, Number(value) || 0))
+    state.settings.chapter_size = n
+    document.documentElement.style.setProperty('--ch-row', `${n}px`)
+    const out = $('#set-chapter-size-out')
+    if (out) out.textContent = `${n}px`
+    if (persist) pushSettings({ chapter_size: n })
     return n
 }
 
@@ -1528,20 +1544,27 @@ function renderChapters() {
         const downloaded = isChapterDownloaded(chapter, index)
         const chosen = detail.selected.has(index)
         const state = detail.chapterState?.[`i:${index}`] || {}
-        const isRead = !!state.read || detail.readSet?.has(name)
+        const inReadSet = !!state.read || detail.readSet?.has(name)
         const isDl = downloaded || detail.downloadedSet?.has(name)
         const frac = Math.max(0, Math.min(1, Number(state.fraction) || 0))
-        const partial = !isRead && frac > 0.005 && frac < 0.995
-        const icon = chosen ? 'check_circle' : (isRead && isDl ? 'check_circle' : (downloaded ? 'check_circle' : 'radio_button_unchecked'))
+        const partial = frac > 0.005 && frac < 0.995
+        // "Read" is a claim we must not over-state. A chapter is only FULLY
+        // read when the tracker's read set says so (mark_read fires only when
+        // the reader reaches the end, or the position itself is at the finish
+        // line). A chapter partway through -- even one that carries a nonzero
+        // progress fill -- is NOT fully read, so it shows the progress bar and
+        // no Read pill. Matches maybeMarkChapterRead's ≥0.98 threshold.
+        const fullyRead = inReadSet || frac >= 0.995
+        const icon = chosen ? 'check_circle' : (fullyRead && isDl ? 'check_circle' : (downloaded ? 'check_circle' : 'radio_button_unchecked'))
         const extra = chapter.date || chapter.scanlator || ''
         let mod = ''
-        if (isRead && isDl) mod = 'is-readdl'            // fully read + downloaded -> blue
-        else if (isRead) mod = 'is-read'                 // fully read -> amber-yellow
-        else if (partial) mod = 'is-partial'             // partial -> highlighted
+        if (fullyRead && isDl) mod = 'is-readdl'            // fully read + downloaded -> blue
+        else if (fullyRead) mod = 'is-read'                 // fully read -> amber-yellow
+        else if (partial) mod = 'is-partial'                // partial -> highlighted
         // Every chapter row is its own progress bar: filled to the read
         // fraction (0% for unread, 100% when fully read).
         const bar = `<span class="ch-progress"><span class="ch-progress-fill" style="width:${Math.round(frac * 100)}%"></span></span>`
-        const statusTag = isRead ? `<span class="ch-state-label ${isDl ? 'readdl' : 'read'}"><span class="mi">done_all</span>${isDl ? 'Read · Down' : 'Read'}</span>` : ''
+        const statusTag = fullyRead ? `<span class="ch-state-label ${isDl ? 'readdl' : 'read'}"><span class="mi">done_all</span>${isDl ? 'Read · Down' : 'Read'}</span>` : ''
         return `<div class="ch ${chosen ? 'sel' : ''} ${isDl ? 'have downloaded is-downloaded' : ''} ${mod}" data-index="${index}" data-chapter-url="${esc(chapter.url || '')}">
           <span class="mi ${isDl ? 'ch-dl-icon' : ''}">${icon}</span>
           <span class="cname">${esc(name)}</span>${statusTag}
@@ -1659,7 +1682,7 @@ function wireDetail() {
                 if (chUrl) {
                     closeDetail()
                     toast(`Streaming "${chapter.name || 'Chapter'}" online…`)
-                    openPath(chUrl)
+                    openPath(chUrl, { resume: false })
                 }
             }
             return
@@ -1760,7 +1783,7 @@ function wireDetail() {
             if (chUrl) {
                 closeDetail()
                 toast(`Streaming "${targetChapter.name || 'Chapter 1'}" online…`)
-                openPath(chUrl)
+                openPath(chUrl, { resume: false })
                 return
             }
         }
@@ -3591,8 +3614,16 @@ function streamUrl(url) {
     return `${location.origin}/stream/${route}?path=${encodeURIComponent(path)}`
 }
 
-async function openPath(path) {
+async function openPath(path, opts = {}) {
     if (!path) return
+    // Opening a *different* chapter from the chapter list must start at page 1,
+    // not resume wherever the previous chapter was. Each path keeps its own
+    // saved position, so resuming a genuinely re-opened book/chapter is safe;
+    // the bug was that a new chapter could inherit a stale scroll offset and
+    // land on its last page. `opts.resume === false` forces a fresh read and is
+    // used by the chapter-list navigation; everywhere else it defaults to true,
+    // so reopening a book from the library or Continue-Reading still resumes.
+    const resumeWanted = opts.resume !== false && state.settings.reader_keep_position !== false
     const res = await call('reader_open', path)
     if (!res?.ok) return toast(res?.error || 'Could not open that')
 
@@ -3651,7 +3682,7 @@ async function openPath(path) {
     if (!$('#r-pagelist').hidden) renderPages()
 
     const pos = res.position
-    if (pos && state.settings.reader_keep_position !== false) {
+    if (pos && resumeWanted) {
         if (pos.fraction) mv.setFraction(pos.fraction)
         else if (pos.index) mv.goTo(pos.index)
         if (pos.index || pos.fraction) toast(`Resumed at ${Math.round((pos.fraction || 0) * 100)}%`)
@@ -3858,11 +3889,17 @@ async function loadChapters() {
             const name = String(ch.name || ch.title || ch.chapter || `Chapter ${i + 1}`)
             const url = ch.url || ch.link || ''
             const st = chapterState?.[`i:${i}`] || {}
-            const isRead = !!st.read || readSet?.has(name)
+            const inReadSet = !!st.read || readSet?.has(name)
             const frac = Math.max(0, Math.min(1, Number(st.fraction) || 0))
+            const partial = frac > 0.005 && frac < 0.995
+            // Same "fully read only" rule as the manga page: a chapter is read
+            // only when the tracker finished it (read set) or the position is
+            // at the finish line. A chapter partway through stays unread and
+            // shows a percentage instead of a Read tag.
+            const isRead = inReadSet || frac >= 0.995
             const on = url === currentUrl
             const cs = isRead ? '<span class="cs chap-read">Read</span>'
-                : (frac > 0.005 && frac < 0.995 ? `<span class="cs">${Math.round(frac * 100)}%</span>` : '')
+                : (partial ? `<span class="cs">${Math.round(frac * 100)}%</span>` : '')
             return `<div class="chap ${on ? 'on' : ''} ${isRead ? 'chap-is-read' : ''}" data-stream-url="${esc(url)}">
               ${esc(name)}${cs}
             </div>`
@@ -4348,6 +4385,11 @@ function wire() {
     bindSlider('#set-columns', null, {
         label: raw => (Number(raw) === 0 ? 'Auto' : String(raw)),
         apply: raw => setColumns(raw),
+    })
+    bindSlider('#set-chapter-size', null, {
+        label: raw => `${raw}px`,
+        apply: raw => applyChapterSize(raw, { persist: false }),
+        change: () => renderChapters(),
     })
 
     $('#set-layout-padding')?.addEventListener('change', e => {
@@ -4919,7 +4961,10 @@ function wire() {
             const url = streamEl.dataset.streamUrl
             if (url) {
                 savePosition(true)
-                openPath(url)
+                // Opening a different chapter is a fresh read: start at page 1
+                // rather than resuming whatever position the *previous* chapter
+                // happened to leave behind.
+                openPath(url, { resume: false })
                 $('#r-chaplist').hidden = true
             }
             return
@@ -5312,6 +5357,9 @@ async function boot() {
     const cshEl = $('#set-cover-shine-speed'); if (cshEl) cshEl.value = s.cover_shine_speed ?? 1.8
     const csiEl = $('#set-cover-shine-intensity'); if (csiEl) csiEl.value = Math.round((s.cover_shine_intensity ?? 0.1) * 100)
     const scEl2 = $('#set-cover-shine'); if (scEl2) scEl2.checked = s.cover_shine !== false
+    const chSize = $('#set-chapter-size')
+    if (chSize) chSize.value = s.chapter_size ?? 14
+    applyChapterSize(s.chapter_size ?? 14)
     const titlebarToggle = $('#set-titlebar')
     if (titlebarToggle) titlebarToggle.checked = s.custom_titlebar !== false
     document.documentElement.setAttribute('data-padding', s.layout_padding || 'normal')
@@ -5480,6 +5528,66 @@ boot().catch(e => {
     window.__readerError = String(e?.stack || e)
 })
 
+/* ── global crash handlers & safety nets ─────────────────────────────────
+ *
+ * The reader is a long-lived window; a single unhandled rejection or an
+ * exception in one of the many async event handlers leaves the UI frozen and
+ * the user staring at nothing, with no clue why. These catch *anything* that
+ * would otherwise be lost to the void, surface it, and flag it for tests.
+ *
+ * They are deliberately incremental: they log, they toast once, and they keep
+ * going. They never claim to fix the underlying fault, but they make it
+ * visible and — just as importantly — they prove the failure is contained.
+ */
+let _crashReported = 0
+function reportCrash(where, err) {
+    const message = String(err?.message || err || '').slice(0, 240)
+    console.error(`[mangasurf] ${where}:`, err)
+    // De-duplicate: a burst of identical failures (e.g. one broken stream
+    // URL) is one problem, not twenty toasts.
+    if (++_crashReported <= 3) toast(`⚠ ${where}: ${message}`)
+    window.__readerCrash = { where, message, at: Date.now() }
+}
+
+// Uncaught synchronous errors: the window.onerror path. `event.error` carries
+// the real Error in every modern engine; some old callers only pass a string.
+window.addEventListener('error', event => {
+    // Resource load errors on <img>/<script> bubble as events with no error
+    // object; the manga-view already emits `page-error` for images, so this
+    // would double-report a broken cover. Skip those.
+    if (event?.target && event.target !== window && !event.error) return
+    reportCrash('Uncaught error', event.error || event?.message || 'unknown')
+})
+
+// Unhandled promise rejections: the async handoff path. fetch/call() already
+// fold network errors into `{ok:false}`, but a handler that throws while
+// processing a response (a bad shape, a missing DOM node) will not be caught
+// there. Also catches stray `await` inside non-awaited async handlers.
+window.addEventListener('unhandledrejection', event => {
+    event.preventDefault()          // do not spam the console
+    reportCrash('Unhandled promise', event.reason)
+})
+
+// Guard the busiest async entry points: opening a chapter and streaming.
+// `call()` never throws (it returns {ok:false}), but the work *around* it —
+// processing `res`, rendering, awaiting the far-off `mv.open()` and the
+// dynamic imports — certainly can. A crash here is exactly the "black screen"
+// a user cannot diagnose.
+const guardedOpenPath = openPath
+async function safeOpenPath(path, opts) {
+    if (!path) return
+    try {
+        return await guardedOpenPath(path, opts)
+    } catch (e) {
+        reportCrash('Could not open', e)
+        toast(`Could not open that chapter: ${String(e?.message || e).slice(0, 120)}`)
+    }
+}
+// Rebind every internal `openPath(...)` call to the guarded version, so a
+// throw anywhere in the open pipeline is contained and reported rather than
+// surfacing as an unhandled rejection.
+openPath = safeOpenPath
+
 // exposed for tests
 window.__reader = {
     state, call, openPath, showView, applyFilter,
@@ -5489,10 +5597,11 @@ window.__reader = {
     refreshFilters, describeFilters, splitList,
     openDetail, closeDetail, refreshMarks, refreshGenres,
     renderChapters, visibleChapters, resetChapterFilters,
+    applyChapterSize,
     needsProxy, resolveCover, coverAttrs, hydrateCovers,
     mountHeroIslands, heroSelect, heroSlider,
     renderPages, renderPagesHeader, togglePageMark, setZen, pages,
-    startAutosave, stopAutosave, flushPosition,
+    startAutosave, stopAutosave, flushPosition, loadChapters,
     parseRanges, chapterNumber, detail,
     shelves, renderLibrary, refreshLibraryFolders,
     keymap, renderKeysTable, renderShortcutSheet, renderKeyPresets,

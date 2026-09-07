@@ -251,6 +251,16 @@ export class MangaView extends HTMLElement {
         this.#pages = []
         this.#index = 0
         this.#track.replaceChildren()
+        // A fresh chapter must start at the top. `replaceChildren()` empties the
+        // track but leaves the scroll container where it was -- measured: open a
+        // chapter, scroll to the end, then open the next one and the new strip
+        // reported index = last page the moment it rendered, because #emitRelocate
+        // derives the page from the leftover scrollTop. The bottom of a long strip
+        // also exceeds a short new chapter's scrollHeight, so the browser clamps
+        // scrollTop to the new bottom on its own. Reset it explicitly and silently.
+        this.#suppressScrollEvents = true
+        this.#scroller.scrollTop = 0
+        requestAnimationFrame(() => { this.#suppressScrollEvents = false })
 
         let totalPages = 0
         const isLivePages = Array.isArray(book?.pages)

@@ -59,6 +59,23 @@ v1.8.0 (Current "Arctica") ─> v2.0.0 (Q4 2026) ─> v3.0.0 (2027)
 - **Arctica branding + site redesign.** Release is branded "Mangasurf - Arctica",
   version bumped to 1.8.0, and the website rebuilt in a retro-cool, rustic,
   beautiful theme.
+- **Per-row chapter progress wash.** Every chapter row is its own progress bar
+  — a solid, flat translucent fill (no gradient) up to the read fraction,
+  painted beneath the row's text so everything stays readable. Chapter rows
+  were also centered, given more padding, and a new chapter-row size slider in
+  Settings drives row height and the Read Online button.
+- **Fresh chapters open on page 1.** Picking a chapter from the chapter list no
+  longer inherits the previous chapter's scroll offset and lands on the LAST
+  page. Chapter-list navigation opens fresh (`resume: false`), while reopening
+  the same book/chapter from the library or Continue-Reading still resumes
+  where you left off.
+- **"Read" only when fully read.** The Read pill now appears only for chapters
+  actually finished (tracker read set or the reader reaching the end), never
+  for one merely partway through its progress.
+- **Crash-safety & error tests.** Global `error`/`unhandledrejection` handlers
+  surface and de-duplicate uncaught faults, `openPath` is guarded so a throw in
+  the open pipeline is contained and reported, and a suite of Playwright tests
+  covers fresh-open, resume, the read-pill rule, and every error path.
 
 #### In progress / next
 - **AniList & MyAnimeList Two-Way Sync**: Automatically update "Watching / Reading" chapters on user's anime/manga tracking accounts upon reaching 100% on a chapter.

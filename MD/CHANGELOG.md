@@ -38,6 +38,50 @@ All notable changes to **Mangasurf**, newest first.
 
 ---
 
+## [1.8.0] — Chapter-list polish, fresh-open fix & reader crash safety
+
+### Chapter-list polish
+- Every chapter row is now its own progress bar: a **solid** translucent fill
+  (**no gradient**) up to the read fraction, painted **underneath** the row's
+  text and buttons so everything stays readable. Unread = 0%, partial = read
+  fraction (dashed border), fully-read = 100% amber wash, read+downloaded =
+  100% blue wash.
+- Chapter rows are **centered** with more padding, and a new **chapter-row size
+  slider** in Settings (`--ch-row`) drives row height and the Read Online
+  button, so the list scales as one.
+
+### Fresh chapter opens on page 1 (was the last page)
+- Picking a chapter from the chapter list no longer inherits the previous
+  chapter's scroll offset and lands on the **last** page. `manga-view.open()`
+  now resets scroll to 0 (suppressing the scroll events that used to derive the
+  page from leftover scrollTop), and `openPath(..., { resume: false })` skips
+  position restore for chapter-list navigation.
+- Reopening the same book/chapter from the library or Continue-Reading still
+  **resumes** where you left off.
+
+### "Read" only when fully read
+- The **Read** pill (manga page and in-reader chapter list) now appears only
+  for chapters that are genuinely finished — in the tracker's read set
+  (`mark_read` fires at the end) or whose position has reached the finish line.
+  A chapter merely partway through its progress shows the progress fill, never
+  a false Read tag.
+
+### Crash handlers & safety guards
+- Global `error` and `unhandledrejection` handlers now surface and de-duplicate
+  any uncaught fault (toast + `window.__readerCrash` record) instead of leaving
+  a frozen, silent UI.
+- `openPath` is wrapped so a throw in the open pipeline is reported and
+  contained; malformed or empty chapter payloads no-op safely.
+
+### Tests
+- Playwright reader-shell tests added: fresh-open-on-page-1, resume-on-reopen,
+  partial chapter gets no Read pill (manga page + reader list), fully-read gets
+  the pill, rejected promise caught & reported, backend failure degrades to a
+  toast, post-call throw caught and reported, and a malformed chapter is
+  survived.
+
+---
+
 ## [1.7.6] — Mangasurf v1.7.6: Password & Shelf-Lock Removal, Clean Server Auth
 
 ### App-lock and per-shelf passcodes removed

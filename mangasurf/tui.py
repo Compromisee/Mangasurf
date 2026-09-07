@@ -307,7 +307,7 @@ class MangasurfTUI(App):
         # ── window chrome: traffic-light dots + centred title ──────────────
         with Horizontal(id="tui-titlebar"):
             yield Static("[#ff5f56]●[/]  [#ffbd2e]●[/]  [#27c93f]●[/]", classes="tl-dots")
-            yield Static("Mangasurf TUI  │  Omnibar Discovery & TrueColor ANSI Previews", id="tl-center")
+            yield Static("Mangasurf TUI", id="tl-center")
             yield Static("", classes="tl-dots")
 
         with TabbedContent(initial="tab-search"):
@@ -883,8 +883,12 @@ class MangasurfTUI(App):
         self.query_one("#manga-empty").add_class("hidden")
         self.query_one("#manga-body").remove_class("hidden")
 
-        # Start background cover render
-        self.query_one("#manga-cover", Static).update("[dim]Loading cover...[/]")
+        # Start background cover render. The cover placeholder lives on the
+        # inner #manga-cover-art Static, not the #manga-cover slot -- that
+        # slot is a Vertical container that must stay mountable so it can hold
+        # either ANSI art (Static) or a real textual_image widget. Updating the
+        # slot as a Static raised WrongType.
+        self.query_one("#manga-cover-art", Static).update("[dim]Loading cover...[/]")
         self._fetch_cover_art(info)
 
         self.query_one("#manga-title", Static).update(info["title"])
