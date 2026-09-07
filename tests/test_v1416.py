@@ -289,7 +289,7 @@ def test_every_documented_command_is_dispatched():
     dispatch = cli[cli.index("def main("):]
     for command in ("search", "info", "trending", "genres", "sources",
                     "config", "library", "watch", "disk", "stats", "history",
-                    "lock", "export", "health", "resume", "menu", "tui",
+                    "export", "health", "resume", "menu", "tui",
                     "gui"):
         assert f'"{command}"' in dispatch, command
 

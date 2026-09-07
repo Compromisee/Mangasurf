@@ -25,6 +25,7 @@ from ..sources import (AGGREGATE_PREFIXES, DEFAULT_SOURCE, SOURCES, browse_all, 
 from .. import config as appconfig
 from .. import features
 from .. import library
+from .. import __version__
 from .. import logs as wclogs
 from .. import tracking
 from ..reader.api import READER_DEFAULTS, ReaderApi
@@ -691,7 +692,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         from .. import library, features
         try:
             payload = {
-                "version": "1.7.5",
+                "version": __version__,
                 "exported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "settings": load_settings(),
                 "library": library.load_library(),

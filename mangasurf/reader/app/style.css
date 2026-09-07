@@ -1193,21 +1193,6 @@ kbd {
 .sheet dt { font-weight: var(--fw-bold); color: var(--accent); white-space: nowrap; }
 .sheet dd { margin: 0; color: var(--text-2); }
 
-#lock {
-    position: fixed; inset: 0; z-index: 90; display: grid; place-items: center;
-    background: var(--bg);
-}
-#lock[hidden] { display: none; }
-#lock .lock-box { text-align: center; max-width: 340px; width: 100%; padding: var(--sp-6); }
-#lock .mi { font-size: 48px; color: var(--accent); }
-#lock h2 { margin: var(--sp-4) 0 var(--sp-2); font-size: var(--fs-xl); }
-#lock p { color: var(--text-2); font-size: var(--fs-sm); margin: 0 0 var(--sp-5); }
-#lock input { width: 100%; text-align: center; letter-spacing: .2em; }
-#lock .err {
-    color: var(--danger); font-size: var(--fs-sm); min-height: 20px;
-    margin-top: var(--sp-2);
-}
-
 /* ── phones ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {
@@ -1964,9 +1949,7 @@ option {
 .tree-row .tcount {
     font-size: var(--fs-xs); color: var(--text-3); font-variant-numeric: tabular-nums;
 }
-.tree-row .tlock { font-size: 15px; color: var(--warn, var(--text-3)); }
 .tree-row .tpin { font-size: 14px; color: var(--text-3); }
-.tree-row.locked .tname { color: var(--text-2); }
 .tree-book .fico { color: var(--text-3); }
 .tree-tags { display: flex; gap: 3px; flex: 0 0 auto; }
 .tree-tags i {
@@ -1982,7 +1965,7 @@ option {
 .shelf-colours button.on { border-color: var(--text); }
 .shelf-colours button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.sheet .field + .field, .sheet .check, .sheet .lockrow { margin-top: var(--sp-4); }
+.sheet .field + .field, .sheet .check { margin-top: var(--sp-4); }
 .sheet .field small { color: var(--text-3); font-size: var(--fs-sm); }
 .sheet.narrow { max-width: 380px; }
 .sheet .note { color: var(--text-3); font-size: var(--fs-sm); margin: var(--sp-2) 0 0; }
@@ -1995,12 +1978,7 @@ option {
     margin-top: var(--sp-5);
 }
 .sheet-acts .btn.danger { margin-right: auto; }
-.lockrow {
-    border: 1px solid var(--border); border-radius: var(--r-md);
-    padding: var(--sp-3);
-}
-#shelf-lock-fields[hidden] { display: none; }
-#shelf-unlock input[type=password], .sheet input[type=password] {
+.sheet input[type=password] {
     width: 100%;
 }
 

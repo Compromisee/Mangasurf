@@ -4,6 +4,30 @@ All notable changes to **Mangasurf**, newest first.
 
 ---
 
+## [1.7.6] — Mangasurf v1.7.6: Password & Shelf-Lock Removal, Clean Server Auth
+
+### App-lock and per-shelf passcodes removed
+- **Deleted the app passcode lock** (previously `mangasurf/passlock.py`), the
+  `mangasurf lock` CLI sub-command, and every related Settings field and API
+  method. There is no lock screen any more.
+- **Removed per-shelf passcodes.** Shelves remain as folders with tags and
+  pins, but the "Lock this shelf" / "Ask for it every time" controls, the
+  unlock dialog, the "Lock all" button and the padlock rendering are gone.
+- Shelf locks no longer filter the library grid, continue-reading row, tree,
+  open/stream gate or the `/local` API. Every downloaded book is now visible
+  through every surface.
+- The Settings "Privacy & lock" group is now a "Content" group holding the
+  safe-mode toggle, which is wired to the real `set_filters` API instead of
+  the removed `lock_options`.
+
+### Clean, same-token server authentication (kept)
+- The LAN Web Server and OPDS Catalog still share **one saved access token**
+  (validated on entry, generated with an unambiguous alphabet, URL-safe so the
+  printed link never needs escaping). The token is stored in `config.json`,
+  so a paired phone stays paired across restarts.
+
+---
+
 ## [1.7.5] — Mangasurf v1.7.5: Dark-Grey TUI with Real Terminal Images, Remastered Phone PWA & Dark Minimalist Logo
 
 ### TUI is now dark grey (not blue) with real terminal image support

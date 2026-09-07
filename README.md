@@ -53,7 +53,7 @@
 - **Smooth Page Scrolling & Webtoon View**: Full vertical strip, single-page, double-page spread, and continuous reading modes.
 - **Reading Progress Tracking**: Automatic bookmarking, reading history, streaks, and reading time statistics.
 - **Customizable Themes**: Midnight, Dark, Light, Mocha, OLED Black, and Slate with accent color pickers.
-- **Passcode-Protected Shelves**: Organize titles into folders and optionally lock private shelves with passcodes.
+- **Shelf Folders**: Organize titles into folders with tags and pinned shelves.
 
 ### Custom Scrapers & `.source` Plugin Engine
 - Declarative `.source` plugin architecture in `mangasurf/sources/customsources/`.

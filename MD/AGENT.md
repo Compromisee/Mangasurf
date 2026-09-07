@@ -246,13 +246,11 @@ straight off disk yourself — these are local files and you have a path.
 
 1. **Read only.** Nothing under `/local` mutates anything.
 2. **Absolute paths, always.** You run in a different working directory.
-3. **Locked shelves are respected everywhere.** A book on a locked shelf is
-   absent from `books`, `covers`, `reading`, `shelves` and `stats`, and
-   `/stream` will not serve it. A privacy screen that any local script can
-   step around is not one.
-4. **No secrets.** No lock salts, no password hashes, no tokens in any
-   payload. `paths()` names `lock.json`; reading it is between you and the
-   filesystem.
+3. **All books are visible.** Shelf locks were removed, so every downloaded
+   book appears in `books`, `covers`, `reading`, `shelves` and `stats`, and
+   `/stream` serves it.
+4. **No secrets.** No tokens in any payload. The LAN server's access token
+   is never exposed through `/local`.
 5. **Additive changes.** Fields get added, not silently repurposed.
 
 ---

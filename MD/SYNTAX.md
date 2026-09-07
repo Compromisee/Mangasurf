@@ -79,7 +79,6 @@ its output, it just uses a simpler progress bar.
 | `disk …` | usage, duplicates, orphaned files |
 | `stats` | download statistics |
 | `history` | recent searches |
-| `lock …` | app passcode |
 | `export <file>` | export the library |
 | `health` | circuit-breaker state and cache hit rates |
 | `resume` | resume an interrupted download |
@@ -396,10 +395,6 @@ Everything lives in `~/.mangasurf/`:
 | `logs/` | rotating logs |
 
 ```bash
-mangasurf lock status
-mangasurf lock set        # set a passcode
-mangasurf lock change
-mangasurf lock off
 mangasurf history         # recent searches
 ```
 

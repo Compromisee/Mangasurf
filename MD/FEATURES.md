@@ -441,23 +441,8 @@ would end up half empty either way.
   visible when a descendant matches, so filtering never hides the path to
   the thing you asked for.
 - **Pin to top**, for the two or three shelves you actually use.
-- **Optional passcode locks**, independent of pinning — "lock" and "ask every
-  time" are separate choices.
 - Books are filed by library key rather than by path, so relocating a
   download does not knock it off its shelf.
-
-**What a lock does, precisely.** A locked shelf's titles are never sent to
-the page. Python withholds them from the grid, from the continue-reading row
-and from `reader_open`, so a path you kept from earlier will not open the
-book either. The tree still shows the padlock and an honest count — "12
-hidden" — because pretending the shelf is empty is its own kind of lie.
-Locks reuse the app passcode's PBKDF2-HMAC-SHA256 verifier at 240,000 rounds
-with a per-shelf salt; the passcode is never stored and the salt never
-reaches the interface. Unlocking lasts for the session only.
-
-**It is a privacy screen, not encryption.** The files stay readable on disk
-and anyone with the machine can open them directly. It stops someone
-glancing at your library; it is not a vault.
 
 ---
 
@@ -526,10 +511,10 @@ Requires the `tray` extra (`pip install -e ".[tray]"`).
 
 ## Privacy and safety
 
-- Optional **passcode lock**: PBKDF2-HMAC-SHA256, 240,000 rounds, per-install
-  random salt, constant-time comparison. The passcode is never stored.
-- A one-time recovery key is issued at setup, and the recovery flow is built
-  into the lock screen.
+- **Safe mode** hides adult sources and results where the source reports them.
+- The **LAN server and OPDS catalog** are gated by a single access token
+  (see the Server settings). It is saved, so a phone stays paired across
+  restarts, and it is validated on entry.
 - Attempt throttling after five failures with an escalating cooldown capped
   at 15 minutes.
 - Auto-lock after N idle minutes, optional lock on start, optional cover
@@ -559,7 +544,6 @@ mangasurf covers <folder>          rebuild CBZ covers
 mangasurf updates                  new chapters for watched series
 mangasurf config --list|--set k=v
 mangasurf sources [--enable|--disable|--rank]
-mangasurf lock status|set|change|off
 ```
 
 - Colour output with progress bars, percentages and ETA, degrading to plain

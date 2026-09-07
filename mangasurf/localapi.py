@@ -74,7 +74,6 @@ def paths() -> dict:
         "annotations": os.path.join(DIR, "annotations.json"),
         "tracking": os.path.join(DIR, "tracking.json"),
         "settings": os.path.join(DIR, "config.json"),
-        "lock": os.path.join(DIR, "lock.json"),
     }
     return {
         "data_dir": DIR,

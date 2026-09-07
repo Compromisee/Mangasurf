@@ -137,7 +137,6 @@ Everything is under `~/.mangasurf/` (`%USERPROFILE%\.mangasurf` on Windows):
 | `annotations.json` | page bookmarks and notes |
 | `tracking.json` | watched series, read/unread |
 | `config.json` | settings |
-| `lock.json` | the app passcode verifier — never the passcode |
 
 `mangasurf api paths` prints all of them as JSON, with a stat for each.
 
