@@ -1537,10 +1537,10 @@ function renderChapters() {
         let mod = ''
         if (isRead && isDl) mod = 'is-readdl'            // fully read + downloaded -> blue
         else if (isRead) mod = 'is-read'                 // fully read -> amber-yellow
-        else if (partial) mod = 'is-partial'             // partial -> progress bar
-        const bar = partial
-            ? `<span class="ch-progress"><span class="ch-progress-fill" style="width:${Math.round(frac * 100)}%"></span></span>`
-            : ''
+        else if (partial) mod = 'is-partial'             // partial -> highlighted
+        // Every chapter row is its own progress bar: filled to the read
+        // fraction (0% for unread, 100% when fully read).
+        const bar = `<span class="ch-progress"><span class="ch-progress-fill" style="width:${Math.round(frac * 100)}%"></span></span>`
         const statusTag = isRead ? `<span class="ch-state-label ${isDl ? 'readdl' : 'read'}"><span class="mi">done_all</span>${isDl ? 'Read · Down' : 'Read'}</span>` : ''
         return `<div class="ch ${chosen ? 'sel' : ''} ${isDl ? 'have downloaded is-downloaded' : ''} ${mod}" data-index="${index}" data-chapter-url="${esc(chapter.url || '')}">
           <span class="mi ${isDl ? 'ch-dl-icon' : ''}">${icon}</span>

@@ -1530,7 +1530,7 @@ kbd {
     max-height: 52vh; overflow: auto;
 }
 .ch {
-    display: flex; align-items: center; gap: 11px; padding: 9px 12px;
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px 16px;
     background: var(--surface-2); border: 1px solid transparent;
     border-radius: var(--r-sm); cursor: pointer; font-size: var(--fs-sm);
     transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
@@ -1606,17 +1606,28 @@ kbd {
 .ch-state-label.read { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
 .ch-state-label.readdl { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.42); }
 
-/* Partial-read progress bar, filling the bottom edge of the row. */
+/* Every chapter row carries its own read-progress fill along the whole row,
+ * like the solid translucent fill on the upload button — a flat wash over the
+ * chapter div to the read fraction (0% unread, 100% fully read). No gradient.
+ * Layered UNDER the row's content so text and buttons stay crisp on top. */
 .ch.is-partial { border: 1px dashed var(--border-2) !important; }
 .ch-progress {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
-    background: var(--surface-3); pointer-events: none;
+    position: absolute; top: 0; left: 0; bottom: 0; width: 100%;
+    background: transparent; pointer-events: none; z-index: 0;
 }
 .ch-progress-fill {
     display: block; height: 100%;
-    background: linear-gradient(90deg, var(--accent), #f59e0b);
+    background: rgba(59, 130, 246, 0.18);   /* translucent blue wash */
     transition: width 0.4s var(--ease);
 }
+[data-theme="midnight"] .ch-progress-fill,
+[data-theme="oled"] .ch-progress-fill,
+[data-theme="glass"] .ch-progress-fill { background: rgba(59, 130, 246, 0.22); }
+/* Fully-read rows: the fill reaches 100% in the matching solid wash. */
+.ch.is-read .ch-progress-fill { background: rgba(245, 158, 11, 0.18); }
+.ch.is-readdl .ch-progress-fill { background: rgba(59, 130, 246, 0.28); }
+/* Keep the row's own content above the wash. */
+.ch .mi, .ch .cname, .ch .cmeta, .ch-dl-badge, .ch-read-online-btn, .ch-state-label { position: relative; z-index: 1; }
 
 /* ── Read Online Button on Chapter Row ────────────────────────────────── */
 .ch-read-online-btn {

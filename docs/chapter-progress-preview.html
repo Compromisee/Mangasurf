@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="midnight">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter list — progress wash preview</title>
+<style>
+html, body { margin:0; padding:24px; background:#14141b; }
+body { font-family: system-ui, sans-serif; color:#eaeaf2; display:flex; gap:40px; flex-wrap:wrap; }
+
+/* Midnight palette (matches reader app) */
+:root, [data-theme="midnight"] {
+  --bg:#14141b; --bg-2:#191921; --surface:#1e1e28; --surface-2:#262632;
+  --surface-3:#2f2f3d; --border:#2c2c39; --border-2:#3a3a4a;
+  --text:#eaeaf2; --text-2:#a2a2b6; --text-3:#71718a;
+  --r-sm:8px; --r-pill:999px; --fs-sm:12.5px; --fs-xs:11px;
+  --fw-semi:600; --fw-bold:700; --fw-medium:500;
+  --accent:#3b82f6; --accent-soft:rgba(59,130,246,.14);
+  --dur:.18s; --ease:cubic-bezier(.4,0,.2,1);
+}
+
+.col { width: 420px; }
+h3 { font-size:13px; color:#71718a; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin:0 0 12px; }
+.ch-list { display:flex; flex-direction:column; gap:3px; }
+
+.ch {
+  display:flex; align-items:center; gap:12px; padding:14px 16px 16px;
+  background:var(--surface-2); border:1px solid transparent;
+  border-radius:var(--r-sm); cursor:pointer; font-size:var(--fs-sm);
+  position:relative; overflow:hidden;
+  transition:border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.ch .mi { font-size:19px; color:var(--text-3); }
+.ch .cname { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500; }
+
+/* progress wash — solid translucent fill across the whole row */
+.ch-progress { position:absolute; top:0; left:0; bottom:0; width:100%; background:transparent; pointer-events:none; z-index:0; }
+.ch-progress-fill { display:block; height:100%; background:rgba(59,130,246,.22); transition:width .4s var(--ease); }
+.ch .mi, .ch .cname, .ch .cmeta, .ch-dl-badge, .ch-read-online-btn, .ch-state-label { position:relative; z-index:1; }
+
+/* states */
+.ch.is-read { background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.42); }
+.ch.is-read .mi { color:#f59e0b; }
+.ch.is-read .cname { color:#fef3c7; font-weight:600; }
+.ch.is-read .ch-progress-fill { background:rgba(245,158,11,.20); }
+
+.ch.is-readdl { background:rgba(59,130,246,.14); border:1px solid rgba(59,130,246,.48); }
+.ch.is-readdl .mi { color:#60a5fa; }
+.ch.is-readdl .cname { color:#dbeafe; font-weight:600; }
+.ch.is-readdl .ch-progress-fill { background:rgba(59,130,246,.30); }
+
+.ch.is-partial { border:1px dashed #3a3a4a; }
+
+.ch-dl-badge {
+  display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:var(--r-pill);
+  background:rgba(16,185,129,.22); border:1px solid rgba(16,185,129,.45);
+  color:#10b981; font-size:11px; font-weight:700; letter-spacing:.02em;
+}
+.ch-dl-badge .mi { font-size:13px; color:#10b981; opacity:1; margin:0; }
+.ch-read-online-btn {
+  display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:var(--r-pill);
+  background:var(--surface-3); border:1px solid var(--border); color:var(--text-2);
+  font-size:11.5px; font-weight:600; cursor:pointer; margin-left:6px; opacity:.85;
+}
+.ch-read-online-btn .mi { font-size:13px; color:inherit; }
+.ch-state-label {
+  display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:var(--r-pill);
+  font-size:10.5px; font-weight:700; letter-spacing:.02em; white-space:nowrap;
+}
+.ch-state-label .mi { font-size:12px; color:inherit; }
+.ch-state-label.read { background:rgba(245,158,11,.2); color:#fbbf24; border:1px solid rgba(245,158,11,.4); }
+.ch-state-label.readdl { background:rgba(59,130,246,.2); color:#93c5fd; border:1px solid rgba(59,130,246,.42); }
+</style>
+</head>
+<body>
+
+<div class="col">
+  <h3>Midnight · all states</h3>
+  <div class="ch-list">
+    <div class="ch">
+      <span class="mi">radio_button_unchecked</span>
+      <span class="cname">Chapter 13 - Episode 13</span>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:0%"></span></span>
+    </div>
+    <div class="ch is-partial">
+      <span class="mi">radio_button_unchecked</span>
+      <span class="cname">Chapter 12 - Episode 12</span>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:47%"></span></span>
+    </div>
+    <div class="ch is-partial">
+      <span class="mi">radio_button_unchecked</span>
+      <span class="cname">Chapter 11 - Episode 11</span>
+      <button class="ch-read-online-btn"><span class="mi">auto_stories</span>Read Online</button>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:72%"></span></span>
+    </div>
+    <div class="ch is-read">
+      <span class="mi">check_circle</span>
+      <span class="cname">Chapter 10 - Episode 10</span>
+      <span class="ch-state-label read"><span class="mi">done_all</span>Read</span>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:100%"></span></span>
+    </div>
+    <div class="ch is-readdl">
+      <span class="mi">check_circle</span>
+      <span class="cname">Chapter 9 - Episode 09</span>
+      <span class="ch-state-label readdl"><span class="mi">done_all</span>Read · Down</span>
+      <span class="ch-dl-badge"><span class="mi">download_done</span>Downloaded</span>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:100%"></span></span>
+    </div>
+    <div class="ch">
+      <span class="mi">radio_button_unchecked</span>
+      <span class="cname">Chapter 8 - Episode 08</span>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:0%"></span></span>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <h3>Hover row (no gradient, flat wash)</h3>
+  <div class="ch-list">
+    <div class="ch is-partial">
+      <span class="mi">radio_button_unchecked</span>
+      <span class="cname">Chapter 7 - Episode 07</span>
+      <button class="ch-read-online-btn"><span class="mi">auto_stories</span>Read Online</button>
+      <span class="ch-progress"><span class="ch-progress-fill" style="width:63%"></span></span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
