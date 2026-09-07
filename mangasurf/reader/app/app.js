@@ -3520,52 +3520,6 @@ async function refreshLibraryFolders() {
     }
 }
 
-/* ── password lock ────────────────────────────────────────────────────── */
-
-async function refreshLock() {
-    const res = await call('lock_status')
-    const on = !!(res?.enabled ?? res?.locked_enabled)
-    const toggle = $('#set-lock-enabled')
-    if (toggle) toggle.checked = on
-    const label = $('#lock-state')
-    if (label) label.textContent = on
-        ? 'On — the app asks for a password when it starts'
-        : 'Off'
-    const fields = $('#lock-fields')
-    const actions = $('#lock-actions')
-    if (fields) fields.hidden = !on
-    if (actions) actions.hidden = !on
-    state.lock = res || {}
-    if (res?.should_lock) showLock(res)
-}
-
-function showLock(status) {
-    const box = $('#lock')
-    if (!box) return
-    box.hidden = false
-    const hint = $('#lock-hint-text')
-    if (hint) hint.textContent = status?.hint
-        ? `Hint: ${status.hint}`
-        : 'Enter your password to continue.'
-    matrix?.pause()
-    setTimeout(() => $('#lock-input')?.focus(), 60)
-}
-
-async function tryUnlock() {
-    const input = $('#lock-input')
-    const error = $('#lock-error')
-    const res = await call('lock_verify', input.value)
-    if (res?.ok) {
-        $('#lock').hidden = true
-        input.value = ''
-        if (error) error.textContent = ''
-        if (state.settings.matrix !== false) matrix?.resume()
-    } else if (error) {
-        error.textContent = res?.error || 'Wrong password'
-        input.select()
-    }
-}
-
 /* ── reading ──────────────────────────────────────────────────────────── */
 
 /**
@@ -4427,39 +4381,9 @@ function wire() {
         label: raw => `${(Number(raw) / 10).toFixed(1)}s`,
     })
 
-    // ---- settings: lock
-    $('#set-lock-enabled').addEventListener('change', async e => {
-        const isChecked = e.target.checked
-        if (!isChecked) {
-            await call('lock_disable')
-            toast('Password lock turned off')
-            $('#lock-fields').hidden = true
-            $('#lock-actions').hidden = true
-            await refreshLock()
-        } else {
-            $('#lock-fields').hidden = false
-            $('#lock-actions').hidden = false
-            const stateEl = $('#lock-state')
-            if (stateEl) stateEl.textContent = 'Enter password below and click Set password'
-            $('#set-lock-pass')?.focus()
-        }
-    })
-    $('#lock-save').addEventListener('click', async () => {
-        const password = $('#set-lock-pass').value
-        if (!password || password.length < 4) return toast('Use at least 4 characters')
-        const res = await call('lock_set', password, $('#set-lock-hint').value)
-        toast(res?.ok ? 'Password set' : (res?.error || 'Could not set the password'))
-        $('#set-lock-pass').value = ''
-        await refreshLock()
-    })
-    $('#set-lock-start').addEventListener('change', e =>
-        call('lock_options', { lock_on_start: e.target.checked }))
-    $('#set-blur-covers').addEventListener('change', e =>
-        call('lock_options', { blur_covers: e.target.checked }))
+    // ---- settings: content filters
     $('#set-safe-mode').addEventListener('change', e =>
-        call('lock_options', { safe_mode: e.target.checked }))
-    $('#lock-unlock').addEventListener('click', tryUnlock)
-    $('#lock-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock() })
+        call('set_filters', { safe_mode: e.target.checked }))
 
     // ---- settings: servers & opds hub
     wireServersHub()
@@ -5409,7 +5333,6 @@ async function boot() {
     await fillSources()
     refreshSources()
     refreshFilters()
-    refreshLock()
     refreshLibraryFolders()
     refreshServersStatus()
     pollServerLogs()
@@ -5440,7 +5363,7 @@ boot().catch(e => {
 window.__reader = {
     state, call, openPath, showView, applyFilter,
     setTheme, setAccent, setCorners, setAnimations, setColumns, setMatrix,
-    renderSourceRanks, refreshLock, showLock,
+    renderSourceRanks,
     refreshStats, showTab, paintSlider, repaintSliders, streaks,
     refreshFilters, describeFilters, splitList,
     openDetail, closeDetail, refreshMarks, refreshGenres,

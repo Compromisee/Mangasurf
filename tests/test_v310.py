@@ -178,7 +178,6 @@ STUB = {
         "retries": 5, "server_port": 8577, "opds_port": 8578}},
     "get_sources": {"ok": True, "sources": [{"id": s["id"], "name": s["name"]} for s in SOURCES]},
     "get_source_config": {"ok": True, "sources": SOURCES},
-    "lock_status": {"ok": True, "enabled": False, "should_lock": False},
     "reader_library": {"ok": True, "count": 0, "books": []},
     "reader_recent": {"ok": True, "items": []},
     "get_queue": {"ok": True, "queue": []},
@@ -518,41 +517,6 @@ def test_toggling_a_source_calls_the_backend(page):
     page.wait_for_timeout(200)
     calls = [name for name, _ in page.evaluate("window.__calls")]
     assert "toggle_source" in calls
-
-
-# ──────────────────────────────────────────────────────────────── lock
-
-
-def test_the_lock_screen_can_be_shown_and_hides_the_app(page):
-    page.evaluate("window.__reader.showLock({ hint: 'the usual' })")
-    page.wait_for_timeout(200)
-    assert not page.is_hidden("#lock")
-    assert "the usual" in page.text_content("#lock-hint-text")
-
-
-def test_the_matrix_pauses_while_locked(page):
-    page.evaluate("window.__reader.showLock({})")
-    page.wait_for_timeout(200)
-    assert page.evaluate("window.__reader.matrix.running") is False
-
-
-def test_a_wrong_password_shows_an_error_and_keeps_the_lock(page):
-    """The default stub answers {ok: true} to everything, which would unlock.
-    Replace the whole bridge so lock_verify genuinely refuses."""
-    page.evaluate("""() => {
-        window.pywebview = { api: new Proxy({}, { get: (_, name) => {
-            if (name === 'then') return undefined;
-            return async () => String(name) === 'lock_verify'
-                ? { ok: false, error: 'Wrong password' }
-                : { ok: true };
-        }})};
-        window.__reader.showLock({});
-    }""")
-    page.fill("#lock-input", "nope")
-    page.click("#lock-unlock")
-    page.wait_for_timeout(300)
-    assert not page.is_hidden("#lock"), "a refused password still unlocked the app"
-    assert "Wrong password" in page.text_content("#lock-error")
 
 
 # ─────────────────────────────────────────────────────────────── theme tiles

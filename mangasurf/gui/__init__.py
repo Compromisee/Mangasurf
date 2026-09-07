@@ -26,7 +26,6 @@ from .. import config as appconfig
 from .. import features
 from .. import library
 from .. import logs as wclogs
-from .. import passlock
 from .. import tracking
 from ..reader.api import READER_DEFAULTS, ReaderApi
 
@@ -364,8 +363,6 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             )
         return self._sources[key]
 
-    # ------------------------------------------------------------ passlock
-
     # ------------------------------------------------------ window controls
     #
     # A frameless window has no OS titlebar, so minimise/maximise/close have
@@ -445,43 +442,6 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         except Exception as exc:
             logger.exception("window %s failed", action)
             return {"ok": False, "error": str(exc)}
-
-    def lock_status(self):
-        return {"ok": True, **passlock.status()}
-
-    def lock_verify(self, passcode: str):
-        result = passlock.verify(passcode)
-        if result.get("ok"):
-            self._unlocked_at = time.time()
-        return result
-
-    def lock_set(self, passcode: str, hint: str = "", auto_lock_minutes: int = 0,
-                 lock_on_start: bool = True, blur_covers: bool = True):
-        return passlock.set_passcode(passcode, hint, auto_lock_minutes,
-                                     lock_on_start, blur_covers)
-
-    def lock_change(self, current: str, new: str):
-        return passlock.change_passcode(current, new)
-
-    def lock_disable(self, passcode: str):
-        return passlock.disable(passcode)
-
-    def lock_recover(self, recovery_key: str, new_passcode: str):
-        return passlock.recover(recovery_key, new_passcode)
-
-    def lock_options(self, options: dict):
-        return {"ok": True, **passlock.update_options(**(options or {}))}
-
-    def lock_should_lock(self):
-        """Whether the UI should show the lock screen right now."""
-        status = passlock.status()
-        if not status["enabled"]:
-            return {"ok": True, "locked": False}
-        idle_minutes = status["auto_lock_minutes"]
-        if getattr(self, "_unlocked_at", 0) and idle_minutes:
-            idle = (time.time() - self._unlocked_at) / 60.0
-            return {"ok": True, "locked": idle >= idle_minutes}
-        return {"ok": True, "locked": not getattr(self, "_unlocked_at", 0)}
 
     # -------------------------------------------------- source config
 

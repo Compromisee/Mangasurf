@@ -235,7 +235,6 @@
             </div>
             <div style="display:flex;align-items:center;gap:6px">
               <button class="btn sm" id="shelf-new" title="New Shelf"><span class="mi">create_new_folder</span>New Shelf</button>
-              <button class="btn sm icon" id="shelf-lock-all" title="Lock all private shelves"><span class="mi">lock</span></button>
             </div>
           </div>
           <div class="h-shelves-scroll" id="h-shelves-scroll">
@@ -1168,32 +1167,10 @@
           </div>
         </details>
 
-        <!-- privacy -->
+        <!-- content filters -->
         <details class="set-group">
-          <summary><span class="mi">lock</span>Privacy &amp; lock<span class="mi chev">expand_more</span></summary>
+          <summary><span class="mi">filter_alt</span>Content<span class="mi chev">expand_more</span></summary>
           <div class="set-body">
-            <div class="field inline">
-              <div>
-                <label for="set-lock-enabled">Password lock</label>
-                <p class="hint" id="lock-state">Off</p>
-              </div>
-              <label class="switch"><input type="checkbox" id="set-lock-enabled"><span></span></label>
-            </div>
-            <div class="row-2" id="lock-fields" hidden>
-              <div class="field">
-                <label for="set-lock-pass">Password</label>
-                <input type="password" id="set-lock-pass" placeholder="At least 4 characters">
-              </div>
-              <div class="field">
-                <label for="set-lock-hint">Hint (optional)</label>
-                <input type="text" id="set-lock-hint" placeholder="Shown on the lock screen">
-              </div>
-            </div>
-            <div class="with-btn" id="lock-actions" hidden>
-              <button class="btn primary" id="lock-save"><span class="mi">key</span>Set password</button>
-            </div>
-            <label class="check"><input type="checkbox" id="set-lock-start"> Lock when the app starts</label>
-            <label class="check"><input type="checkbox" id="set-blur-covers"> Blur covers in locked folders</label>
             <label class="check"><input type="checkbox" id="set-safe-mode"> Safe mode — hide adult sources entirely</label>
           </div>
         </details>
@@ -1700,41 +1677,11 @@
     <label class="check"><input type="checkbox" id="shelf-pinned">
       <span class="cl">Pin to the top<small>Pinned shelves sort before the rest</small></span></label>
 
-    <div class="lockrow">
-      <label class="check"><input type="checkbox" id="shelf-locked">
-        <span class="cl">Lock this shelf<small>Hides its contents until unlocked</small></span></label>
-      <div id="shelf-lock-fields" hidden>
-        <div class="field">
-          <label for="shelf-pass">Passcode</label>
-          <input type="password" id="shelf-pass" placeholder="At least 4 characters"
-                 autocomplete="new-password">
-        </div>
-        <label class="check"><input type="checkbox" id="shelf-pin-open" checked>
-          <span class="cl">Ask for it every time<small>Off: the shelf stays collapsed and marked, but opens without asking</small></span></label>
-        <p class="note">A privacy screen, not encryption — the files stay readable on disk.</p>
-      </div>
-    </div>
-
     <div class="err" id="shelf-err" hidden></div>
     <div class="sheet-acts">
       <button class="btn" id="shelf-cancel">Cancel</button>
       <button class="btn danger" id="shelf-delete" hidden>Delete</button>
       <button class="btn primary" id="shelf-save">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── unlock a shelf ────────────────────────────────────────────────── -->
-<div id="shelf-unlock" class="sheet-wrap" hidden>
-  <div class="sheet narrow">
-    <h3><span class="mi">lock</span> <span id="shelf-unlock-name">Locked shelf</span></h3>
-    <p class="note">Enter the passcode to show what is on this shelf.</p>
-    <input type="password" id="shelf-unlock-pass" placeholder="Passcode"
-           autocomplete="current-password">
-    <div class="err" id="shelf-unlock-err" hidden></div>
-    <div class="sheet-acts">
-      <button class="btn" id="shelf-unlock-cancel">Cancel</button>
-      <button class="btn primary" id="shelf-unlock-go">Unlock</button>
     </div>
   </div>
 </div>
@@ -1751,18 +1698,6 @@
       <button class="btn" id="r-shortcuts-edit"><span class="mi">tune</span>Change these</button>
       <button class="btn primary" id="r-shortcuts-close">Close</button>
     </div>
-  </div>
-</div>
-
-<!-- ── lock screen ───────────────────────────────────────────────────── -->
-<div id="lock" hidden>
-  <div class="lock-box">
-    <span class="mi">lock</span>
-    <h2>Mangasurf is locked</h2>
-    <p id="lock-hint-text">Enter your password to continue.</p>
-    <input type="password" id="lock-input" placeholder="Password" autocomplete="current-password">
-    <div class="err" id="lock-error"></div>
-    <button class="btn primary" id="lock-unlock" style="width:100%;justify-content:center">Unlock</button>
   </div>
 </div>
 

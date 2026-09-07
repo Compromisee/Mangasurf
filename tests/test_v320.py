@@ -117,7 +117,7 @@ def test_every_module_shares_one_data_folder():
     first imported.
     """
     users = ("config.py", "features.py", "library.py", "logs.py",
-             "passlock.py", "singleton.py", "tracking.py")
+             "singleton.py", "tracking.py")
     for name in users:
         source = read(os.path.join(ROOT, "mangasurf", name))
         assert "_ensure_data_dir()" in source, name

@@ -1,4 +1,4 @@
-"""Library shelves: folders for books, with tags, pins and per-folder locks.
+"""Library shelves: folders for books, with tags and pins.
 
 Stored at ``~/.mangasurf/shelves.json``. This is deliberately a *separate* file
 from ``bookmark_folders.json``: those group bookmarked **series URLs** you have
@@ -18,17 +18,6 @@ other way:
 *   **Nesting is by parent id, not by containment.** ``parent`` on the child
     means renaming or moving a shelf is one write, and a cycle can only ever be
     introduced by ``set_parent``, which checks for it in one place.
-
-*   **Locks reuse ``passlock``'s PBKDF2 verifier.** A shelf lock stores a salt
-    and a hash, never the passcode. It is the same privacy screen the app lock
-    is -- it hides a shelf in the interface; it is not disk encryption, and the
-    files remain readable on disk. Saying so plainly matters more than the
-    feature looking stronger than it is.
-
-*   **"Pin to open" is optional and independent of the lock.** A pinned shelf
-    asks for its PIN before revealing contents; an unpinned locked shelf simply
-    stays collapsed and marked. The user asked for "lock and pin to open
-    optional", so neither implies the other.
 """
 
 if __package__ in (None, ""):        # pragma: no cover - direct execution
@@ -38,16 +27,13 @@ if __package__ in (None, ""):        # pragma: no cover - direct execution
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     __package__ = "mangasurf"
 
-import base64
 import json
 import os
 import re
-import secrets
 import threading
 import time
 
 from .paths import ensure as _ensure_data_dir
-from .passlock import _derive, _verify, ITERATIONS, SALT_BYTES
 
 DIR = _ensure_data_dir()
 SHELVES_PATH = os.path.join(DIR, "shelves.json")
@@ -93,17 +79,9 @@ def _save(shelves: list) -> list:
 
 
 def _public(shelf: dict) -> dict:
-    """A shelf as the UI may see it: never the salt, never the hash.
-
-    The interface needs to know *that* a shelf is locked so it can draw the
-    padlock; it must never receive the material needed to attack the lock
-    offline.
-    """
-    out = {key: value for key, value in shelf.items()
-           if key not in ("salt", "hash", "iterations")}
-    out["locked"] = bool(shelf.get("hash"))
-    out["pin_to_open"] = bool(shelf.get("pin_to_open"))
-    return out
+    """A shelf as the UI may see it, minus any private bookkeeping keys."""
+    return {key: value for key, value in shelf.items()
+            if key not in ("salt", "hash", "iterations", "pin_to_open")}
 
 
 def _find(shelves, shelf_id):
@@ -226,9 +204,8 @@ def rename(shelf_id, name) -> dict:
 
 
 def update(shelf_id, **changes) -> dict:
-    """Change presentation. Lock state has its own functions on purpose, so a
-    stray ``update(locked=False)`` can never strip a lock."""
-    allowed = {"colour", "tags", "pinned", "pin_to_open", "expanded"}
+    """Change presentation (colour, tags, pinned, expanded)."""
+    allowed = {"colour", "tags", "pinned", "expanded"}
     with _lock:
         shelves = _load()
         shelf = _find(shelves, shelf_id)
@@ -239,7 +216,7 @@ def update(shelf_id, **changes) -> dict:
                 continue
             if key == "tags":
                 shelf["tags"] = _clean_tags(value)
-            elif key in ("pinned", "pin_to_open", "expanded"):
+            elif key in ("pinned", "expanded"):
                 shelf[key] = bool(value)
             else:
                 shelf[key] = value
@@ -367,92 +344,6 @@ def set_tags(shelf_id, tags) -> dict:
     return update(shelf_id, tags=tags)
 
 
-# -------------------------------------------------------------------- locks
-
-
-def set_lock(shelf_id, passcode, pin_to_open=True) -> dict:
-    """Lock a shelf with a passcode.
-
-    Stores a PBKDF2-HMAC-SHA256 verifier and a per-shelf random salt, the same
-    scheme ``passlock`` uses for the app lock -- never the passcode itself.
-
-    This hides a shelf in the interface. It is **not** encryption: the files
-    stay on disk and anyone with the machine can read them directly.
-    """
-    passcode = str(passcode or "")
-    if len(passcode) < 4:
-        return {"ok": False, "error": "Use at least 4 characters"}
-    with _lock:
-        shelves = _load()
-        shelf = _find(shelves, shelf_id)
-        if not shelf:
-            return {"ok": False, "error": "No such shelf"}
-        salt = secrets.token_bytes(SALT_BYTES)
-        shelf["salt"] = base64.b64encode(salt).decode("ascii")
-        shelf["hash"] = _derive(passcode, salt)
-        shelf["iterations"] = ITERATIONS
-        shelf["pin_to_open"] = bool(pin_to_open)
-        _save(shelves)
-        return {"ok": True, "shelf": _public(shelf)}
-
-
-def unlock(shelf_id, passcode) -> dict:
-    """Check a passcode. Returns ok=True when it matches."""
-    with _lock:
-        shelf = _find(_load(), shelf_id)
-        if not shelf:
-            return {"ok": False, "error": "No such shelf"}
-        if not shelf.get("hash"):
-            return {"ok": True, "shelf": _public(shelf)}
-        good = _verify(passcode or "", shelf.get("salt", ""), shelf.get("hash", ""),
-                       int(shelf.get("iterations") or ITERATIONS))
-        if not good:
-            return {"ok": False, "error": "Wrong passcode"}
-        return {"ok": True, "shelf": _public(shelf)}
-
-
-def clear_lock(shelf_id, passcode) -> dict:
-    """Remove a lock, but only for someone who can already open it."""
-    with _lock:
-        shelves = _load()
-        shelf = _find(shelves, shelf_id)
-        if not shelf:
-            return {"ok": False, "error": "No such shelf"}
-        if shelf.get("hash"):
-            if not _verify(passcode or "", shelf.get("salt", ""),
-                           shelf.get("hash", ""),
-                           int(shelf.get("iterations") or ITERATIONS)):
-                return {"ok": False, "error": "Wrong passcode"}
-        for key in ("salt", "hash", "iterations"):
-            shelf.pop(key, None)
-        shelf["pin_to_open"] = False
-        _save(shelves)
-        return {"ok": True, "shelf": _public(shelf)}
-
-
-def is_locked(shelf_id) -> bool:
-    with _lock:
-        shelf = _find(_load(), shelf_id)
-        return bool(shelf and shelf.get("hash"))
-
-
-def locked_ids() -> set:
-    """Every locked shelf, including ones locked only by an ancestor.
-
-    A child of a locked shelf is unreachable in the tree without opening the
-    parent, so it must count as locked or its books would leak into a flat
-    listing.
-    """
-    with _lock:
-        shelves = _load()
-    out = set()
-    for shelf in shelves:
-        if shelf.get("hash"):
-            out.add(shelf["id"])
-            out |= _descendants(shelves, shelf["id"])
-    return out
-
-
 # --------------------------------------------------------------------- tree
 
 
@@ -460,12 +351,7 @@ def tree(books=None, unlocked=()) -> dict:
     """The shelf tree for the sidebar.
 
     *books* is the reader's book list; each is placed on its shelf by key.
-    *unlocked* is the set of shelf ids the user has opened this session.
-
-    Locked shelves are returned with ``children``/``books`` emptied and
-    ``hidden`` set, so the tree still shows the padlock but the contents never
-    reach the page. Filtering in the front-end would ship the titles to the
-    browser and merely not draw them.
+    *unlocked* is accepted for backward compatibility and ignored.
 
     Folders come back collapsed (``expanded: False``) unless the stored record
     says otherwise -- the user asked for "dont expand folders".
@@ -473,7 +359,6 @@ def tree(books=None, unlocked=()) -> dict:
     with _lock:
         shelves = _load()
 
-    unlocked = set(unlocked or ())
     by_key = {}
     for book in books or []:
         key = book.get("key") or book.get("url") or book.get("directory") or ""
@@ -492,26 +377,21 @@ def tree(books=None, unlocked=()) -> dict:
         for shelf in sorted(children_of.get(parent, []),
                             key=lambda s: (not s.get("pinned"),
                                            s["name"].lower())):
-            locked = bool(shelf.get("hash")) and shelf["id"] not in unlocked
             node = _public(shelf)
             node["depth"] = depth
-            node["hidden"] = locked
+            node["hidden"] = False
             # Collapsed by default: the user asked that folders not expand.
-            node["expanded"] = bool(shelf.get("expanded")) and not locked
+            node["expanded"] = bool(shelf.get("expanded"))
             mine = []
             for key in shelf.get("books") or []:
                 filed.add(key)
                 for book in by_key.get(key, []):
                     mine.append(book)
-            node["books"] = [] if locked else mine
+            node["books"] = mine
             node["book_count"] = len(mine)
             kids = build(shelf["id"], depth + 1)
-            node["children"] = [] if locked else kids
+            node["children"] = kids
             node["child_count"] = len(kids)
-            # A locked shelf still reports how much it holds, so the tree can
-            # say "12 hidden" rather than pretending the shelf is empty.
-            if locked:
-                node["book_count"] = len(mine)
             rows.append(node)
         return rows
 

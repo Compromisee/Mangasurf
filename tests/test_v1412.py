@@ -45,9 +45,8 @@ def isolated_home(monkeypatch):
     import mangasurf.config as appconfig
     import mangasurf.features as features
     import mangasurf.library as library
-    import mangasurf.passlock as passlock
 
-    for module in (appconfig, passlock, features, library):
+    for module in (appconfig, features, library):
         importlib.reload(module)
     import mangasurf.gui as gui
     importlib.reload(gui)

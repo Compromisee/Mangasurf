@@ -18,10 +18,7 @@ Design rules, each chosen deliberately:
     changes meaning. New fields may appear at any time, so a consumer must
     ignore ones it does not recognise.
 
-*   **Locked shelves are respected.** A locked shelf's books do not appear.
-    A privacy screen that any local script can walk around is not one.
-
-*   **No secrets.** No lock salts, no hashes, no access tokens. ``paths()``
+*   **No secrets.** No access tokens are exposed. ``paths()``
     names the files, which is enough to find them; reading them is the
     caller's business and the OS's decision.
 
@@ -99,40 +96,6 @@ def _download_dir() -> str:
     return ""
 
 
-def _unlocked() -> set:
-    """Shelves the user has opened in this process.
-
-    Held on ``ReaderApi`` because that is where the desktop app and the RPC
-    bridge both put it. Reading it here means "unlock a shelf in the app, and
-    a local script can see it too" -- which is the behaviour a user expects
-    from one running program. It is still in memory only, so it dies with the
-    process.
-
-    Imported lazily: localapi must stay usable in a bare
-    ``python -c "from mangasurf import localapi"`` without dragging in the
-    reader stack.
-    """
-    try:
-        from .reader.api import ReaderApi
-        return set(ReaderApi._unlocked_shelves)
-    except Exception:
-        return set()
-
-
-def _hidden_keys() -> set:
-    """Books on a locked shelf that has not been opened this session.
-
-    ``shelves.locked_ids`` already includes descendants of a locked shelf.
-    """
-    locked = shelves.locked_ids() - _unlocked()
-    if not locked:
-        return set()
-    keys = set()
-    for shelf in shelves._load():
-        if shelf.get("id") in locked:
-            keys.update(shelf.get("books") or [])
-    return keys
-
 
 def books(include_chapters: bool = False) -> list:
     """Every series in the library, as absolute paths and counts.
@@ -141,12 +104,9 @@ def books(include_chapters: bool = False) -> list:
     900-chapter series is a lot of JSON to hand someone who only wanted to
     know where the folder is.
     """
-    hidden = _hidden_keys()
     out = []
     for entry in library.load_library().values():
         key = library._key(entry.get("url") or "") or entry.get("directory") or ""
-        if key in hidden:
-            continue
         chapters = entry.get("chapters") or {}
         outputs = [os.path.abspath(p) for p in (entry.get("outputs") or []) if p]
         row = {
@@ -186,13 +146,10 @@ def reading() -> list:
     """
     from .reader.api import load_positions
 
-    hidden_dirs = _hidden_dirs()
     out = []
     for record in load_positions().values():
         path = record.get("path") or ""
         if not path or not os.path.exists(path):
-            continue
-        if _under(path, hidden_dirs):
             continue
         total = int(record.get("total") or 0)
         index = int(record.get("index") or 0)
@@ -210,37 +167,6 @@ def reading() -> list:
     out.sort(key=lambda r: r.get("at") or "", reverse=True)
     return out
 
-
-def _hidden_dirs() -> list:
-    keys = _hidden_keys()
-    if not keys:
-        return []
-    roots = []
-    for entry in library.load_library().values():
-        key = library._key(entry.get("url") or "") or entry.get("directory") or ""
-        if key not in keys:
-            continue
-        if entry.get("directory"):
-            roots.append(os.path.abspath(entry["directory"]))
-        for out in entry.get("outputs") or []:
-            if out:
-                roots.append(os.path.abspath(out))
-    return roots
-
-
-def _under(path, roots) -> bool:
-    if not roots:
-        return False
-    target = os.path.abspath(path)
-    for root in roots:
-        if target == root:
-            return True
-        try:
-            if os.path.commonpath([target, root]) == root:
-                return True
-        except ValueError:
-            continue
-    return False
 
 
 def covers() -> list:
@@ -294,21 +220,8 @@ def sources() -> list:
 
 
 def shelf_tree() -> list:
-    """Shelves as a nested tree. Locked shelves report no contents.
-
-    Passes the *unfiltered* book list on purpose: shelves.tree does the
-    hiding itself and needs the locked books present to report an honest
-    "12 hidden" count. It still never returns their titles.
-    """
-    every = books()
-    hidden = _hidden_keys()
-    if hidden:
-        # books() already dropped them, so put them back for counting only.
-        for entry in library.load_library().values():
-            key = library._key(entry.get("url") or "") or entry.get("directory") or ""
-            if key in hidden:
-                every.append({"key": key, "title": entry.get("title") or ""})
-    return shelves.tree(every, unlocked=_unlocked())["shelves"]
+    """Shelves as a nested tree."""
+    return shelves.tree(books())["shelves"]
 
 
 def stats() -> dict:
@@ -323,7 +236,6 @@ def stats() -> dict:
                            if 0.01 < r["fraction"] < 0.99),
         "finished": sum(1 for r in positions if r["finished"]),
         "shelves": len(shelves.load_shelves()),
-        "locked_shelves": len(shelves.locked_ids()),
     }
 
 
@@ -363,7 +275,6 @@ def info() -> dict:
         },
         "notes": [
             "Everything under /local is read-only.",
-            "Books on a locked shelf are omitted from every endpoint.",
             "All paths are absolute.",
             "Unknown fields may be added; ignore what you do not recognise.",
         ],

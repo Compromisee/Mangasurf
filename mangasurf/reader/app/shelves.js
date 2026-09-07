@@ -1,19 +1,12 @@
-/* shelves.js — the library shelf tree: folders, tags, pins and locks.
+/* shelves.js — the library shelf tree: folders, tags and pins.
  *
  * Kept out of app.js because app.js was already ~2400 lines and this is a
- * self-contained feature: it owns one aside, two dialogs and a handful of
+ * self-contained feature: it owns one aside, one dialog and a handful of
  * endpoints, and talks to the rest of the app through the `call` and `toast`
  * functions it is handed.
  *
- * Two rules the Python side enforces and this file relies on rather than
- * duplicating:
- *
- *   1. A locked shelf arrives with `books: []` and `children: []`. The titles
- *      are never sent to the page, so there is nothing here to leak even if
- *      the markup were wrong. `book_count` still arrives so the row can say
- *      how much is hidden.
- *   2. Folders arrive collapsed. The user asked that folders not expand, so
- *      the open set starts empty and only grows when a twisty is clicked.
+ * Folders arrive collapsed. The user asked that folders not expand, so the
+ * open set starts empty and only grows when a twisty is clicked.
  */
 
 const $ = sel => document.querySelector(sel)
@@ -27,7 +20,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         selected: '',           // '' = show everything
         tags: new Set(),        // active tag filter
         editing: null,          // shelf being edited, or null for "new"
-        unlocking: null,
         visible: true,
     }
 
@@ -44,9 +36,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
     function flatten(nodes = state.tree.shelves, depth = 0, out = []) {
         for (const node of nodes) {
             out.push({ id: node.id, name: node.name, depth })
-            // A locked shelf reports no children, so this stops there --
-            // which is correct: you cannot file something into a shelf you
-            // cannot open.
             flatten(node.children || [], depth + 1, out)
         }
         return out
@@ -91,12 +80,9 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
     function rowFor(node) {
         const open = state.open.has(node.id)
         const kids = (node.children || []).length
-        const hasKids = kids > 0 || (node.books || []).length > 0 || node.hidden
-        const cls = ['tree-row', open ? 'open' : '', node.locked ? 'locked' : '',
+        const hasKids = kids > 0 || (node.books || []).length > 0
+        const cls = ['tree-row', open ? 'open' : '',
                      state.selected === node.id ? 'on' : ''].filter(Boolean).join(' ')
-        const count = node.hidden
-            ? `${node.book_count || 0} hidden`
-            : String(node.book_count || 0)
         return `
         <button class="${cls}" role="treeitem" data-shelf="${esc(node.id)}"
                 aria-expanded="${hasKids ? open : ''}"
@@ -105,15 +91,14 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
           <span class="twisty" data-twisty="${esc(node.id)}">${
               hasKids ? '<span class="mi">chevron_right</span>' : ''}</span>
           <span class="mi fico" style="${node.colour ? `color:${esc(node.colour)}` : ''}"
-                >${node.locked ? 'folder_off' : (open ? 'folder_open' : 'folder')}</span>
+                >${open ? 'folder_open' : 'folder'}</span>
           <span class="tname">${esc(node.name)}</span>
           ${(node.tags || []).length
               ? `<span class="tree-tags" title="${esc((node.tags || []).join(', '))}">`
                 + (node.tags || []).slice(0, 3).map(() => '<i></i>').join('') + '</span>'
               : ''}
           ${node.pinned ? '<span class="mi tpin" title="Pinned">push_pin</span>' : ''}
-          ${node.locked ? '<span class="mi tlock" title="Locked">lock</span>' : ''}
-          <span class="tcount">${esc(count)}</span>
+          <span class="tcount">${esc(String(node.book_count || 0))}</span>
         </button>`
     }
 
@@ -133,7 +118,7 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         for (const node of nodes) {
             if (!matchesTags(node)) continue
             html += rowFor(node)
-            if (state.open.has(node.id) && !node.hidden) {
+            if (state.open.has(node.id)) {
                 html += branch(node.children || [])
                 for (const book of node.books || [])
                     html += bookRow(book, (node.depth || 0) + 1)
@@ -157,11 +142,10 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         if (hList) {
             hList.innerHTML = shelves.map(s => {
                 const isSelected = state.selected === s.id
-                const isLocked = !!s.locked
                 const colour = s.colour ? `style="border-color:${esc(s.colour)}"` : ''
                 return `
                 <button class="h-shelf-pill ${isSelected ? 'on' : ''}" data-shelf-id="${esc(s.id)}" ${colour} type="button">
-                    <span class="mi">${isLocked ? 'lock' : 'folder'}</span>
+                    <span class="mi">folder</span>
                     <span>${esc(s.name)}</span>
                     <span class="h-badge">${s.book_count ?? 0}</span>
                 </button>`
@@ -199,10 +183,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         $('#shelf-name').value = shelf?.name || ''
         $('#shelf-tags').value = (shelf?.tags || []).join(', ')
         $('#shelf-pinned').checked = !!shelf?.pinned
-        $('#shelf-locked').checked = !!shelf?.locked
-        $('#shelf-pin-open').checked = shelf ? !!shelf.pin_to_open : true
-        $('#shelf-pass').value = ''
-        $('#shelf-lock-fields').hidden = !shelf?.locked
         $('#shelf-delete').hidden = !shelf
         paintColours(shelf?.colour || '')
         setError('')
@@ -231,9 +211,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         const tags = $('#shelf-tags').value
         const parent = $('#shelf-parent').value || ''
         const pinned = $('#shelf-pinned').checked
-        const wantLock = $('#shelf-locked').checked
-        const pass = $('#shelf-pass').value
-        const pinOpen = $('#shelf-pin-open').checked
 
         let id = state.editing?.id
         if (!id) {
@@ -246,20 +223,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
             const moved = await call('shelf_set_parent', id, parent)
             if (!moved?.ok) return setError(moved?.error || 'Could not move the shelf')
             await call('shelf_update', id, { colour, tags, pinned })
-        }
-
-        if (wantLock && pass) {
-            const res = await call('shelf_set_lock', id, pass, pinOpen)
-            if (!res?.ok) return setError(res?.error || 'Could not lock the shelf')
-        } else if (wantLock && !state.editing?.locked) {
-            return setError('Choose a passcode, or turn the lock off')
-        } else if (!wantLock && state.editing?.locked) {
-            // Removing a lock needs the passcode, which is not in this form:
-            // send the user through the unlock dialog instead of silently
-            // leaving the lock in place.
-            const res = await call('shelf_clear_lock', id, pass)
-            if (!res?.ok) return setError(res?.error
-                || 'Enter the current passcode to remove the lock')
         }
 
         $('#shelf-dlg').hidden = true
@@ -279,33 +242,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         toast?.('Shelf deleted. Its books stayed in the library.')
     }
 
-    /* ── unlocking ────────────────────────────────────────────────────── */
-
-    function askUnlock(node) {
-        state.unlocking = node
-        $('#shelf-unlock-name').textContent = node.name
-        $('#shelf-unlock-pass').value = ''
-        const err = $('#shelf-unlock-err')
-        err.hidden = true
-        $('#shelf-unlock').hidden = false
-        $('#shelf-unlock-pass').focus()
-    }
-
-    async function tryUnlock() {
-        const node = state.unlocking
-        if (!node) return
-        const res = await call('shelf_unlock', node.id, $('#shelf-unlock-pass').value)
-        const err = $('#shelf-unlock-err')
-        if (!res?.ok) {
-            err.textContent = res?.error || 'Wrong passcode'
-            err.hidden = false
-            return
-        }
-        $('#shelf-unlock').hidden = true
-        state.open.add(node.id)
-        await refresh()
-    }
-
     /* ── events ───────────────────────────────────────────────────────── */
 
     function toggle(id) {
@@ -323,10 +259,6 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
             const btn = e.target.closest('.h-shelf-pill')
             if (!btn) return
             const shelfId = btn.dataset.shelfId || ''
-            if (shelfId) {
-                const node = findNode(shelfId)
-                if (node && node.locked && node.pin_to_open) return askUnlock(node)
-            }
             state.selected = state.selected === shelfId ? '' : shelfId
             render()
         })
@@ -341,14 +273,10 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
             if (!node) return
 
             const onTwisty = !!e.target.closest('[data-twisty]')
-            // A locked shelf that asks for its PIN opens the dialog however
-            // it was clicked; one locked without "ask every time" simply
-            // stays collapsed and marked until deliberately expanded.
-            if (node.locked && node.pin_to_open) return askUnlock(node)
             if (onTwisty) return toggle(node.id)
 
             state.selected = state.selected === node.id ? '' : node.id
-            if (state.selected && !node.locked) state.open.add(node.id)
+            if (state.selected) state.open.add(node.id)
             render()
         })
 
@@ -384,28 +312,12 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
         })
 
         $('#shelf-new')?.addEventListener('click', () => openEditor(null))
-        $('#shelf-lock-all')?.addEventListener('click', async () => {
-            await call('shelf_lock_now', '')
-            state.open.clear()
-            await refresh()
-            toast?.('Every shelf locked')
-        })
         $('#shelf-cancel')?.addEventListener('click', () => { $('#shelf-dlg').hidden = true })
         $('#shelf-save')?.addEventListener('click', save)
         $('#shelf-delete')?.addEventListener('click', remove)
-        $('#shelf-locked')?.addEventListener('change', e => {
-            $('#shelf-lock-fields').hidden = !e.target.checked
-        })
         $('#shelf-colour')?.addEventListener('click', e => {
             const swatch = e.target.closest('[data-colour]')
             if (swatch) paintColours(swatch.dataset.colour)
-        })
-        $('#shelf-unlock-cancel')?.addEventListener('click', () => {
-            $('#shelf-unlock').hidden = true
-        })
-        $('#shelf-unlock-go')?.addEventListener('click', tryUnlock)
-        $('#shelf-unlock-pass')?.addEventListener('keydown', e => {
-            if (e.key === 'Enter') tryUnlock()
         })
         $('#shelf-name')?.addEventListener('keydown', e => {
             if (e.key === 'Enter') save()
@@ -420,10 +332,8 @@ export function createShelves({ call, esc, toast, onOpenBook, onFilter }) {
 
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return
-            for (const id of ['#shelf-dlg', '#shelf-unlock']) {
-                const el = $(id)
-                if (el && !el.hidden) { el.hidden = true; e.stopPropagation(); return }
-            }
+            const el = $('#shelf-dlg')
+            if (el && !el.hidden) { el.hidden = true; e.stopPropagation() }
         })
     }
 

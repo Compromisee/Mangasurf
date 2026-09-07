@@ -597,12 +597,6 @@ def create_app(token=None, api=None, buffer=None, log=None, no_auth=False):
                 return True
         except Exception:
             pass
-        try:
-            locked_paths = api._locked_paths() if hasattr(api, "_locked_paths") else ()
-            if any(path.startswith(lp) for lp in locked_paths if lp):
-                return False
-        except Exception:
-            pass
         return os.path.isfile(path) or os.path.isdir(path)
 
     def _send_range(path: str, ctype: str):

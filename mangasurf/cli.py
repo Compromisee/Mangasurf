@@ -62,7 +62,7 @@ def build_parser():
             "  mangasurf config disable natomanga         exclude a source\n"
             "  mangasurf config up mangakatana            rank a source higher\n"
             "  mangasurf stats                            download statistics\n"
-            "  mangasurf lock set                         set an app passcode\n"
+
             "  mangasurf watch add <url>                  track a series for updates\n"
             "  mangasurf watch check                      check every watched series\n"
             "  mangasurf disk usage                       disk usage per series\n"
@@ -88,7 +88,7 @@ def build_parser():
     )
     parser.add_argument("target", nargs="?",
                         help="manga URL, or a command: search | info | sources | config | "
-                             "stats | history | lock | export | watch | disk | "
+                             "stats | history | export | watch | disk | "
                              "trending | genres | health | library | gui | tui | "
                              "menu | resume | covers")
     parser.add_argument("query", nargs="*", help="arguments for search / info")
@@ -327,58 +327,6 @@ def cmd_history(args) -> int:
                       str(item.get("results", 0)), item.get("date", ""))
     console.print(table)
     return 0
-
-
-def cmd_lock(args) -> int:
-    """Manage the app passcode from the terminal."""
-    import getpass
-
-    from . import passlock
-
-    rest = [a for a in args.query]
-    action = (rest[0].lower() if rest else "status")
-
-    if action == "status":
-        status = passlock.status()
-        console.print(Panel(
-            f"Passcode: [{ACCENT}]{'on' if status['enabled'] else 'off'}[/]\n"
-            f"Auto-lock: {status['auto_lock_minutes'] or 'never'}\n"
-            f"Recovery key configured: {'yes' if status['has_recovery'] else 'no'}",
-            title="[bold]Lock[/]", border_style=ACCENT, box=box.ROUNDED))
-        return 0
-
-    if action in ("set", "on", "enable"):
-        code = getpass.getpass("New passcode: ")
-        if code != getpass.getpass("Confirm passcode: "):
-            console.print("[red]Passcodes do not match.[/]")
-            return 1
-        result = passlock.set_passcode(code)
-        if not result.get("ok"):
-            console.print(f"[red]{result['error']}[/]")
-            return 1
-        console.print(Panel(
-            f"[bold]{result['recovery_key']}[/]\n\n"
-            f"[{DIM}]Store this somewhere safe. It is shown once and is the only "
-            f"way back in if you forget the passcode.[/]",
-            title="[bold]Recovery key[/]", border_style=ACCENT, box=box.ROUNDED))
-        return 0
-
-    if action in ("off", "disable"):
-        result = passlock.disable(getpass.getpass("Current passcode: "))
-        console.print("Lock disabled." if result.get("ok")
-                      else f"[red]{result['error']}[/]")
-        return 0 if result.get("ok") else 1
-
-    if action == "change":
-        current = getpass.getpass("Current passcode: ")
-        new = getpass.getpass("New passcode: ")
-        result = passlock.change_passcode(current, new)
-        console.print("Passcode changed." if result.get("ok")
-                      else f"[red]{result['error']}[/]")
-        return 0 if result.get("ok") else 1
-
-    console.print(f"[{DIM}]Usage: mangasurf lock status|set|change|off[/]")
-    return 1
 
 
 def cmd_export(args) -> int:
@@ -1335,8 +1283,6 @@ def main(argv=None):
         return cmd_stats()
     if command == "history":
         return cmd_history(args)
-    if command == "lock":
-        return cmd_lock(args)
     if command == "export":
         return cmd_export(args)
     if command == "watch":

@@ -15,9 +15,8 @@ than by reading code:
   description of the library: paths, books, positions, covers, sources,
   shelves, stats. Documented for other programs in MD/AGENT.md.
 
-The rule that matters most here: a locked shelf must stay hidden through
-*every* one of those surfaces. A privacy screen a local script can walk
-around is not one.
+Every downloaded book is visible through every surface. Shelf locks were
+removed, so nothing is withheld from the local API.
 """
 import importlib
 import json
@@ -63,7 +62,6 @@ def live(tmp_path, monkeypatch):
 
     import mangasurf.paths
     import mangasurf.library
-    import mangasurf.passlock
     import mangasurf.shelves
     import mangasurf.reader.books
     import mangasurf.reader.api
@@ -71,7 +69,7 @@ def live(tmp_path, monkeypatch):
     import mangasurf.gui
     import mangasurf.server
 
-    for module in (mangasurf.paths, mangasurf.library, mangasurf.passlock,
+    for module in (mangasurf.paths, mangasurf.library,
                    mangasurf.shelves, mangasurf.reader.books, mangasurf.reader.api,
                    mangasurf.localapi, mangasurf.gui, mangasurf.server):
         importlib.reload(module)
@@ -103,10 +101,8 @@ def live(tmp_path, monkeypatch):
 
     shelves.create("Private")
     shelves.add_book("private", secret[0])
-    shelves.set_lock("private", "hunter2")
 
     api = mangasurf.gui.Api()
-    mangasurf.reader.api.ReaderApi._unlocked_shelves = set()
     app = mangasurf.server.create_app(token="tok", api=api)
 
     import werkzeug.serving
@@ -188,11 +184,11 @@ def test_streaming_needs_the_token(live):
     assert got.status_code == 401
 
 
-def test_a_locked_book_cannot_be_streamed(live):
-    """reader_open refuses it, so its folder is never allowed."""
+def test_a_downloaded_book_can_be_streamed(live):
+    """Every downloaded folder is streamable now that shelf locks are gone."""
     page = os.path.join(live["secret"][1], "000.png")
     got = live["get"]("/stream/page", params={"token": "tok", "path": page})
-    assert got.status_code == 404
+    assert got.status_code == 200
 
 
 # ──────────────────────────────────────────────────── the local API
@@ -285,49 +281,7 @@ def test_reading_reports_page_and_percent(live):
 def test_stats_add_up(live):
     stats = live["get"]("/local/stats").json()
     assert stats["series"] == len(live["get"]("/local/books").json()["books"])
-    assert stats["locked_shelves"] >= 1
-
-
-# ─────────────────────────────────────── locked shelves stay locked
-
-
-def test_a_locked_book_is_absent_from_books(live):
-    titles = [b["title"] for b in live["get"]("/local/books").json()["books"]]
-    assert titles == ["Public Series"]
-
-
-def test_a_locked_book_is_absent_from_covers(live):
-    titles = [c["title"] for c in live["get"]("/local/covers").json()["covers"]]
-    assert "Secret Series" not in titles
-
-
-def test_a_locked_book_is_absent_from_reading(live):
-    live["api"].reader_save_position(
-        os.path.join(live["secret"][1], "000.png"), index=1, total=3,
-        title="Secret Series")
-    titles = [r["title"] for r in live["get"]("/local/reading").json()["reading"]]
-    assert "Secret Series" not in titles
-
-
-def test_the_shelf_tree_shows_the_padlock_but_not_the_contents(live):
-    shelves = live["get"]("/local/shelves").json()["shelves"]
-    assert len(shelves) == 1
-    node = shelves[0]
-    assert node["locked"] is True
-    assert node["books"] == []
-    assert node["book_count"] == 1          # honest about how much is hidden
-
-
-def test_no_payload_leaks_a_passcode_or_its_verifier(live):
-    blob = json.dumps([live["get"](f"/local/{n}").json() for n in ENDPOINTS])
-    for secret in ("hunter2", '"hash"', '"salt"', '"iterations"'):
-        assert secret not in blob, secret
-
-
-def test_unlocking_reveals_the_book_again(live):
-    assert live["api"].shelf_unlock("private", "hunter2")["ok"] is True
-    titles = [b["title"] for b in live["get"]("/local/books").json()["books"]]
-    assert "Secret Series" in titles
+    assert "locked_shelves" not in stats
 
 
 # ────────────────────────────────────────────── offline, no server

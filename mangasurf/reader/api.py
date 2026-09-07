@@ -240,10 +240,8 @@ class ReaderApi:
     def reader_library(self, include_locked: bool = False):
         """Everything downloaded, as things the reader can open.
 
-        Books on a locked shelf are withheld. The tree hiding them is not
-        enough on its own: the main grid is fed by this call, so a lock that
-        only filtered the sidebar left every hidden title sitting in the grid
-        next to the padlock -- measured, and visible in the screenshots.
+        ``include_locked`` is accepted (and ignored) for backward compatibility
+        with callers written before shelf locks were removed.
         """
         items = books.library_books()
         positions = load_positions()
@@ -256,14 +254,7 @@ class ReaderApi:
                 if pos:
                     item["position"] = pos
 
-        hidden = 0
-        if not include_locked:
-            secret = self._locked_book_keys()
-            if secret:
-                kept = [b for b in items if b["key"] not in secret]
-                hidden = len(items) - len(kept)
-                items = kept
-        return {"ok": True, "books": items, "count": len(items), "hidden": hidden}
+        return {"ok": True, "books": items, "count": len(items), "hidden": 0}
 
     def scan_library_folders(self, roots: list = None):
         """Explicitly recheck and index all configured library folders and output dir."""
@@ -412,79 +403,12 @@ class ReaderApi:
         update_settings({"library_folders": folders})
         return {"ok": True, "folders": folders}
 
-    def _locked_book_keys(self) -> set:
-        """Book keys sitting on a shelf that is locked and not yet opened."""
-        locked = shelf_store.locked_ids() - set(ReaderApi._unlocked_shelves)
-        if not locked:
-            return set()
-        keys = set()
-        for shelf in shelf_store._load():
-            if shelf.get("id") in locked:
-                keys.update(shelf.get("books") or [])
-        return keys
-
-    def _locked_paths(self) -> list:
-        """Directories belonging to locked books.
-
-        Reading positions are keyed by path, so hiding a locked book from the
-        continue-reading row means going from shelf keys back to folders on
-        disk.
-        """
-        keys = self._locked_book_keys()
-        if not keys:
-            return []
-        roots = []
-        for entry in library.load_library().values():
-            key = library._key(entry.get("url") or "") or entry.get("directory") or ""
-            if key not in keys:
-                continue
-            if entry.get("directory"):
-                roots.append(os.path.abspath(entry["directory"]))
-            for out in entry.get("outputs") or []:
-                if out:
-                    roots.append(os.path.abspath(out))
-        return roots
-
-    @staticmethod
-    def _is_under(path: str, roots) -> bool:
-        """True when *path* is one of *roots* or sits inside one.
-
-        Uses commonpath rather than startswith: "/library/Foo2" starts with
-        "/library/Foo" as a string but is a different folder.
-        """
-        if not roots:
-            return False
-        target = os.path.abspath(path or "")
-        for root in roots:
-            if target == root:
-                return True
-            try:
-                if os.path.commonpath([target, root]) == root:
-                    return True
-            except ValueError:          # different drives on Windows
-                continue
-        return False
-
     # ------------------------------------------------------------- shelves
 
-    #: Shelf ids the user has unlocked in this run. Deliberately in memory
-    #: only: closing the app re-locks every shelf, which is what a lock is
-    #: for. Persisting it would make "locked" mean "locked once, ever".
-    _unlocked_shelves = set()
-
     def shelf_tree(self):
-        """The library as a tree of shelves, for the left-hand sidebar.
-
-        Locked shelves come back with their contents removed rather than
-        merely flagged -- filtering in the browser would still have shipped
-        every hidden title to the page.
-        """
-        # Asks for the unfiltered list on purpose: shelf_store.tree() does the
-        # hiding itself, and it needs the locked books present to report an
-        # honest "12 hidden" count. It still never returns their titles.
+        """The library as a tree of shelves, for the left-hand sidebar."""
         library_books = self.reader_library(include_locked=True).get("books", [])
-        data = shelf_store.tree(library_books,
-                                unlocked=ReaderApi._unlocked_shelves)
+        data = shelf_store.tree(library_books)
         return {"ok": True, **data}
 
     def shelf_list(self):
@@ -522,48 +446,14 @@ class ReaderApi:
     def shelf_set_tags(self, shelf_id: str, tags=None):
         return shelf_store.set_tags(shelf_id, tags)
 
-    def shelf_set_lock(self, shelf_id: str, passcode: str,
-                       pin_to_open: bool = True):
-        result = shelf_store.set_lock(shelf_id, passcode, pin_to_open=pin_to_open)
-        if result.get("ok"):
-            # Locking a shelf you are looking at should take effect at once.
-            ReaderApi._unlocked_shelves.discard(shelf_id)
-        return result
-
-    def shelf_unlock(self, shelf_id: str, passcode: str = ""):
-        result = shelf_store.unlock(shelf_id, passcode)
-        if result.get("ok"):
-            ReaderApi._unlocked_shelves.add(shelf_id)
-        return result
-
-    def shelf_lock_now(self, shelf_id: str = ""):
-        """Re-lock one shelf, or every shelf when no id is given."""
-        if shelf_id:
-            ReaderApi._unlocked_shelves.discard(shelf_id)
-        else:
-            ReaderApi._unlocked_shelves.clear()
-        return {"ok": True}
-
-    def shelf_clear_lock(self, shelf_id: str, passcode: str = ""):
-        return shelf_store.clear_lock(shelf_id, passcode)
-
     def reader_recent(self, limit: int = 12):
-        """Continue-reading shelf: most recently opened, still on disk.
-
-        Also honours shelf locks. This list is built from reading *positions*,
-        which are keyed by file path and never went near a shelf -- so locking
-        a shelf hid it from the grid and the tree while the book stayed on the
-        continue-reading row, complete with title and cover. Measured.
-        """
+        """Continue-reading shelf: most recently opened, still on disk."""
         positions = sorted(load_positions().values(),
                            key=lambda r: r.get("at") or "", reverse=True)
-        secret = self._locked_paths()
         out = []
         for record in positions:
             path = record.get("path") or ""
             if not path or not os.path.exists(path):
-                continue
-            if self._is_under(path, secret):
                 continue
             row = {**record, **books.describe(path)}
             # The shelf rendered an empty square: nothing here ever supplied a
@@ -656,13 +546,6 @@ class ReaderApi:
         path = os.path.abspath(raw_path)
         if not path or not os.path.exists(path):
             return {"ok": False, "error": "Not found"}
-
-        # Hiding a book from the lists is not the same as refusing to open it.
-        # A path is easy to keep -- in a bookmark, in reading.json, in a link
-        # someone typed -- so the lock is enforced here as well.
-        if self._is_under(path, self._locked_paths()):
-            return {"ok": False, "error": "That book is on a locked shelf",
-                    "locked": True}
 
         server = self._asset_server()
         info = books.describe(path)

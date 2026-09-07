@@ -23,9 +23,8 @@ def isolated_home(monkeypatch):
     import mangasurf.config as config
     import mangasurf.features as features
     import mangasurf.library as library
-    import mangasurf.passlock as passlock
 
-    for module in (config, passlock, features, library):
+    for module in (config, features, library):
         importlib.reload(module)
     yield home
 
@@ -125,121 +124,6 @@ def test_describe_merges_metadata_and_config():
     assert len(rows) == len(SOURCES)
     assert {"id", "name", "base_url", "rank", "enabled"} <= set(rows[0])
     assert [r["rank"] for r in rows] == sorted(r["rank"] for r in rows)
-
-
-# ============================================================= passlock
-
-
-def test_lock_is_off_by_default():
-    from mangasurf.passlock import status
-
-    assert status()["enabled"] is False
-    assert status()["configured"] is False
-
-
-def test_set_and_verify():
-    from mangasurf.passlock import set_passcode, status, verify
-
-    result = set_passcode("opensesame")
-    assert result["ok"] and result["recovery_key"]
-    assert status()["enabled"] is True
-    assert verify("opensesame")["ok"] is True
-    assert verify("wrong")["ok"] is False
-
-
-def test_passcode_is_never_stored_in_plaintext(isolated_home):
-    from mangasurf.passlock import LOCK_PATH, set_passcode
-
-    secret = "sup3r-secret-code"
-    result = set_passcode(secret)
-    raw = open(LOCK_PATH, encoding="utf-8").read()
-    assert secret not in raw
-    assert result["recovery_key"] not in raw
-
-
-def test_salts_differ_between_installs():
-    """Two identical passcodes must not produce the same stored hash."""
-    import json
-
-    from mangasurf.passlock import LOCK_PATH, set_passcode
-
-    set_passcode("same-code")
-    first = json.load(open(LOCK_PATH))
-    set_passcode("same-code")
-    second = json.load(open(LOCK_PATH))
-    assert first["salt"] != second["salt"]
-    assert first["hash"] != second["hash"]
-
-
-def test_short_passcodes_are_rejected():
-    from mangasurf.passlock import set_passcode
-
-    assert set_passcode("ab")["ok"] is False
-
-
-def test_change_requires_the_current_passcode():
-    from mangasurf.passlock import change_passcode, set_passcode, verify
-
-    set_passcode("first-code")
-    assert change_passcode("wrong", "second-code")["ok"] is False
-    assert change_passcode("first-code", "second-code")["ok"] is True
-    assert verify("second-code")["ok"] is True
-    assert verify("first-code")["ok"] is False
-
-
-def test_disable_requires_the_passcode():
-    from mangasurf.passlock import disable, set_passcode, status
-
-    set_passcode("lockme123")
-    assert disable("nope")["ok"] is False
-    assert status()["enabled"] is True
-    assert disable("lockme123")["ok"] is True
-    assert status()["enabled"] is False
-
-
-def test_recovery_key_resets_the_passcode():
-    from mangasurf.passlock import recover, set_passcode, verify
-
-    key = set_passcode("forgotten")["recovery_key"]
-    assert recover("WRONG-KEY-HERE-XXXXX", "newcode")["ok"] is False
-    assert recover(key, "brandnew")["ok"] is True
-    assert verify("brandnew")["ok"] is True
-
-
-def test_recovery_key_is_case_insensitive_and_ignores_spaces():
-    from mangasurf.passlock import recover, set_passcode
-
-    key = set_passcode("something")["recovery_key"]
-    assert recover(key.lower().replace("-", "- "), "another1")["ok"] is True
-
-
-def test_throttling_kicks_in_after_repeated_failures():
-    from mangasurf.passlock import MAX_ATTEMPTS, set_passcode, verify
-
-    set_passcode("correct-code")
-    for _ in range(MAX_ATTEMPTS):
-        result = verify("bad")
-    assert result["ok"] is False
-    assert result.get("cooldown", 0) > 0
-    # even the right passcode is refused during the cooldown
-    assert verify("correct-code")["ok"] is False
-
-
-def test_verify_passes_when_lock_is_disabled():
-    from mangasurf.passlock import verify
-
-    assert verify("anything")["ok"] is True
-
-
-def test_update_options_without_passcode():
-    from mangasurf.passlock import set_passcode, status, update_options
-
-    set_passcode("mycode123")
-    update_options(auto_lock_minutes=15, blur_covers=False, hint="the usual")
-    current = status()
-    assert current["auto_lock_minutes"] == 15
-    assert current["blur_covers"] is False
-    assert current["hint"] == "the usual"
 
 
 # ============================================================= history
