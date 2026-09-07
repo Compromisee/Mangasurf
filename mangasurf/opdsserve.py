@@ -446,6 +446,24 @@ def build_url(host, port, token=None):
     return f"http://{address}:{port}/opds"
 
 
+def build_open_url(host, port, token=None):
+    """One-tap catalog URL for OPDS reader apps.
+
+    OPDS clients such as Thorium, Readest, Panels, Aldiko and KyBook prompt
+    for a username/password on first connect. When a token is set, embedding
+    it as the basic-auth credentials lets the reader open the catalog with a
+    single tap instead of asking. Any username works, so we use ``reader``.
+    """
+    from urllib.parse import quote
+    from .server import local_ip
+
+    address = local_ip() if host in ("0.0.0.0", "") else host
+    token = (token or "").strip()
+    if not token:
+        return f"http://{address}:{port}/opds"
+    return f"http://reader:{quote(token, safe='')}@{address}:{port}/opds"
+
+
 def serve(host="0.0.0.0", port=None, token=None, no_auth=False,
           verbose=None, log=None, on_ready=None, debug=False,
           server_instance_holder=None):

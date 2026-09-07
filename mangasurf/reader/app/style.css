@@ -1573,6 +1573,51 @@ kbd {
     font-size: 13px !important; color: #10b981 !important; opacity: 1 !important;
 }
 
+/* ── Reading-state highlights (manga page chapter list) ────────────────
+ * Fully read          -> amber-yellow
+ * Fully read + dotted -> blue
+ * Partially read      -> in-row progress bar filled to the read fraction */
+.ch { position: relative; overflow: hidden; }
+.ch.is-read {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border: 1px solid rgba(245, 158, 11, 0.42) !important;
+}
+.ch.is-read .mi { color: #f59e0b !important; }
+.ch.is-read .cname { color: #fef3c7 !important; font-weight: var(--fw-semi) !important; }
+.ch.is-read:hover { background: rgba(245, 158, 11, 0.22) !important; border-color: #f59e0b !important; }
+.ch.is-read.sel { border-color: var(--accent) !important; background: var(--accent-soft) !important; }
+
+.ch.is-readdl {
+    background: rgba(59, 130, 246, 0.14) !important;
+    border: 1px solid rgba(59, 130, 246, 0.48) !important;
+}
+.ch.is-readdl .mi { color: #60a5fa !important; }
+.ch.is-readdl .cname { color: #dbeafe !important; font-weight: var(--fw-semi) !important; }
+.ch.is-readdl:hover { background: rgba(59, 130, 246, 0.24) !important; border-color: #60a5fa !important; }
+.ch.is-readdl.sel { border-color: var(--accent) !important; background: var(--accent-soft) !important; }
+
+.ch-state-label {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 7px; border-radius: var(--r-pill);
+    font-size: 10.5px; font-weight: var(--fw-bold); letter-spacing: 0.02em;
+    white-space: nowrap; flex: 0 0 auto;
+}
+.ch-state-label .mi { font-size: 12px !important; color: inherit !important; }
+.ch-state-label.read { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.ch-state-label.readdl { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.42); }
+
+/* Partial-read progress bar, filling the bottom edge of the row. */
+.ch.is-partial { border: 1px dashed var(--border-2) !important; }
+.ch-progress {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+    background: var(--surface-3); pointer-events: none;
+}
+.ch-progress-fill {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--accent), #f59e0b);
+    transition: width 0.4s var(--ease);
+}
+
 /* ── Read Online Button on Chapter Row ────────────────────────────────── */
 .ch-read-online-btn {
     display: inline-flex; align-items: center; gap: 4px;

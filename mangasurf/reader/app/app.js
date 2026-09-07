@@ -1291,6 +1291,23 @@ async function openDetail(url, source) {
     detail.info = info
     detail.chapters = info.chapters || res?.chapters || []
 
+    // Per-chapter read state (fully read / downloaded / partial fraction),
+    // provided by get_manga and used to colour the chapter rows.
+    detail.chapterState = res?.chapter_state || {}
+    detail.readSet = new Set(res?.read || [])
+    detail.downloadedSet = new Set(res?.downloaded || [])
+
+    // Remember the series for the reader: when a chapter is streamed online
+    // the detail view is closed, so this is captured here, at load time.
+    state.currentSeries = {
+        url,
+        chapters: detail.chapters,
+        chapterState: detail.chapterState,
+        readSet: detail.readSet,
+        downloadedSet: detail.downloadedSet,
+    }
+    state.readingSeries = null
+
     const match = libraryCache.find(b => {
         if (b.url && b.url === url) return true
         const bNorm = (b.title || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -1510,16 +1527,30 @@ function renderChapters() {
         const name = String(chapter.name || chapter.title || chapter.chapter || `Chapter ${index + 1}`)
         const downloaded = isChapterDownloaded(chapter, index)
         const chosen = detail.selected.has(index)
-        const icon = chosen ? 'check_circle' : (downloaded ? 'check_circle' : 'radio_button_unchecked')
+        const state = detail.chapterState?.[`i:${index}`] || {}
+        const isRead = !!state.read || detail.readSet?.has(name)
+        const isDl = downloaded || detail.downloadedSet?.has(name)
+        const frac = Math.max(0, Math.min(1, Number(state.fraction) || 0))
+        const partial = !isRead && frac > 0.005 && frac < 0.995
+        const icon = chosen ? 'check_circle' : (isRead && isDl ? 'check_circle' : (downloaded ? 'check_circle' : 'radio_button_unchecked'))
         const extra = chapter.date || chapter.scanlator || ''
-        return `<div class="ch ${chosen ? 'sel' : ''} ${downloaded ? 'have downloaded is-downloaded' : ''}" data-index="${index}" data-chapter-url="${esc(chapter.url || '')}">
-          <span class="mi ${downloaded ? 'ch-dl-icon' : ''}">${icon}</span>
-          <span class="cname">${esc(name)}</span>
-          ${downloaded ? '<span class="ch-dl-badge"><span class="mi">download_done</span>Downloaded</span>' : ''}
+        let mod = ''
+        if (isRead && isDl) mod = 'is-readdl'            // fully read + downloaded -> blue
+        else if (isRead) mod = 'is-read'                 // fully read -> amber-yellow
+        else if (partial) mod = 'is-partial'             // partial -> progress bar
+        const bar = partial
+            ? `<span class="ch-progress"><span class="ch-progress-fill" style="width:${Math.round(frac * 100)}%"></span></span>`
+            : ''
+        const statusTag = isRead ? `<span class="ch-state-label ${isDl ? 'readdl' : 'read'}"><span class="mi">done_all</span>${isDl ? 'Read · Down' : 'Read'}</span>` : ''
+        return `<div class="ch ${chosen ? 'sel' : ''} ${isDl ? 'have downloaded is-downloaded' : ''} ${mod}" data-index="${index}" data-chapter-url="${esc(chapter.url || '')}">
+          <span class="mi ${isDl ? 'ch-dl-icon' : ''}">${icon}</span>
+          <span class="cname">${esc(name)}</span>${statusTag}
+          ${isDl ? '<span class="ch-dl-badge"><span class="mi">download_done</span>Downloaded</span>' : ''}
           <button class="ch-read-online-btn" data-index="${index}" data-chapter-url="${esc(chapter.url || '')}" title="Read this chapter online without downloading" type="button">
             <span class="mi">auto_stories</span>Read Online
           </button>
           ${extra ? `<span class="cmeta">${esc(extra)}</span>` : ''}
+          ${bar}
         </div>`
     }).join('') : emptyChapterMessage()
 
@@ -1713,14 +1744,15 @@ function wireDetail() {
             return
         }
 
-        // 2. Stream online directly from the source!
+        // 2. Stream online directly from the source! Start from the FIRST
+        // chapter unless the user explicitly picked another one.
         let targetChapter = null
         if (detail.selected.size > 0) {
             const firstIdx = [...detail.selected].sort((a, b) => a - b)[0]
             targetChapter = detail.chapters[firstIdx]
         }
         if (!targetChapter && detail.chapters.length > 0) {
-            targetChapter = detail.chapters[detail.chapters.length - 1] || detail.chapters[0]
+            targetChapter = detail.chapters[0]
         }
 
         if (targetChapter) {
@@ -2266,6 +2298,17 @@ function renderServersHub(data) {
     if (opdsInput) {
         opdsInput.value = opds.url || (opds.host_ip ? `http://${opds.host_ip}:${opds.port || 8578}/opds` : `http://localhost:${opds.port || 8578}/opds`)
     }
+
+    // One-tap links that open the catalog directly in an OPDS reader app.
+    // The access token is embedded as basic-auth credentials, so Thorium,
+    // Readest, Panels, Aldiko and KyBook connect on the first tap.
+    const opdsOpenUrl = opds.open_url || opdsInput?.value
+    for (const sel of ['#lnk-open-opds', '#lnk-open-opds-main']) {
+        const link = $(sel)
+        if (link) link.href = opdsOpenUrl || '#'
+    }
+    const opdsOpenBox = $('#srv-opds-open-actions')
+    if (opdsOpenBox) opdsOpenBox.hidden = !opdsOpenUrl
 
     const opdsTsBox = $('#srv-opds-ts-box')
     const opdsTsInput = $('#srv-opds-ts-input')
@@ -3557,6 +3600,16 @@ async function openPath(path) {
     if (res.url) res.url = streamUrl(res.url)
     if (res.cover) res.cover = streamUrl(res.cover)
     state.book = res
+    // For online reading, carry the series context so the in-reader chapter
+    // list can show every chapter of the series (with its read state) rather
+    // than only local sibling folders.
+    state.readingSeries = null
+    if (res.is_online && state.currentSeries?.chapters?.length) {
+        state.readingSeries = {
+            ...state.currentSeries,
+            currentUrl: path,
+        }
+    }
     $('#r-title').textContent = res.title || 'Untitled'
     $('#reader').hidden = false
     document.body.style.overflow = 'hidden'
@@ -3746,6 +3799,43 @@ function savePosition(now = false, { quiet = false } = {}) {
                             mv.fraction, mv.length, mv.mode, book.title)
     clearTimeout(state.saveTimer)
     if (now) send(); else state.saveTimer = setTimeout(send, 800)
+    maybeMarkChapterRead()
+}
+
+/** Mark an online chapter as read once it has been finished.
+ *
+ * The manga page highlights fully-read chapters amber and downloaded+read
+ * blue. For that to mean anything, finishing a chapter online must record it.
+ * A chapter counts as read past 98% or when the reader reports the end; this
+ * fires on the debounced save so it does not write on every page.
+ */
+let _markReadTimer = null
+function maybeMarkChapterRead() {
+    const mv = $('#mv'), book = state.book
+    if (!book || !book.is_online || !state.currentSeries?.url) return
+    const completion = Math.max(0, Math.min(1, Number(mv.fraction) || 0))
+    const finished = completion >= 0.98 || (mv.length > 0 && (mv.index + 1) >= mv.length)
+    if (!finished) return
+    clearTimeout(_markReadTimer)
+    _markReadTimer = setTimeout(async () => {
+        try {
+            // Find the matching chapter by URL, then by name.
+            let chapter = (state.currentSeries.chapters || []).find(
+                ch => (ch.url || ch.link || '') === (book.path || ''))
+            if (!chapter) {
+                const base = decodeURIComponent((book.path || '').split('/').pop() || '')
+                chapter = (state.currentSeries.chapters || []).find(
+                    ch => String(ch.name || ch.title || '').includes(base) || base.includes(String(ch.name || '')))
+            }
+            const name = String(chapter?.name || chapter?.title || '')
+            if (!name) return
+            await call('mark_read', state.currentSeries.url, name, true)
+            // Refresh the detail page state if it is open.
+            if (detail.url === state.currentSeries.url) {
+                detail.readSet?.add(name)
+            }
+        } catch { /* silent - marking is best-effort */ }
+    }, 400)
 }
 
 async function loadChapters() {
@@ -3758,6 +3848,27 @@ async function loadChapters() {
     state.chapters = res?.chapters || []
     const list = $('#chap-items')
     if (!list) return
+
+    // Reading online: list the whole series with per-chapter read state.
+    if (state.book.is_online && state.readingSeries?.chapters?.length) {
+        const { chapters, chapterState, readSet, currentUrl } = state.readingSeries
+        const order = chapters.map((ch, i) => ({ ch, i }))
+        order.reverse()      // newest first, like the manga page
+        list.innerHTML = order.map(({ ch, i }) => {
+            const name = String(ch.name || ch.title || ch.chapter || `Chapter ${i + 1}`)
+            const url = ch.url || ch.link || ''
+            const st = chapterState?.[`i:${i}`] || {}
+            const isRead = !!st.read || readSet?.has(name)
+            const frac = Math.max(0, Math.min(1, Number(st.fraction) || 0))
+            const on = url === currentUrl
+            const cs = isRead ? '<span class="cs chap-read">Read</span>'
+                : (frac > 0.005 && frac < 0.995 ? `<span class="cs">${Math.round(frac * 100)}%</span>` : '')
+            return `<div class="chap ${on ? 'on' : ''} ${isRead ? 'chap-is-read' : ''}" data-stream-url="${esc(url)}">
+              ${esc(name)}${cs}
+            </div>`
+        }).join('')
+        return
+    }
 
     // Sibling chapter archives or folders in the series directory
     if (state.chapters.length > 1) {
@@ -4803,6 +4914,16 @@ function wire() {
 
     // Chapter list & TOC clicks
     $('#chap-items')?.addEventListener('click', e => {
+        const streamEl = e.target.closest('[data-stream-url]')
+        if (streamEl) {
+            const url = streamEl.dataset.streamUrl
+            if (url) {
+                savePosition(true)
+                openPath(url)
+                $('#r-chaplist').hidden = true
+            }
+            return
+        }
         const tocEl = e.target.closest('[data-goto-toc]')
         if (tocEl) {
             const href = tocEl.dataset.gotoToc

@@ -1267,8 +1267,14 @@
                     <div class="srv-url-label">Catalog Feed URL</div>
                     <div class="srv-url-display">
                       <input type="text" readonly id="srv-opds-url-input" class="srv-url-input" value="http://--:8578/opds">
+                      <a class="btn icon sm srv-open-link" id="lnk-open-opds" href="#" target="_blank" rel="noopener" title="Open this catalog in your OPDS reader app" type="button"><span class="mi">open_in_new</span></a>
                       <button class="btn icon sm" id="btn-copy-opds-url" title="Copy OPDS URL" type="button"><span class="mi">content_copy</span></button>
                     </div>
+                  </div>
+
+                  <div class="srv-opds-open-actions" id="srv-opds-open-actions" hidden>
+                    <a class="btn sm srv-opds-open" id="lnk-open-opds-main" href="#" target="_blank" rel="noopener"><span class="mi">book</span>Open in Reader App</a>
+                    <span class="srv-opds-open-note">One tap into Thorium, Readest, Panels or Aldiko.</span>
                   </div>
 
                   <div class="srv-url-row" id="srv-opds-ts-box" hidden>

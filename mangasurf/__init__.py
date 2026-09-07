@@ -26,8 +26,9 @@ del _THIS_DIR
 
 from . import paths
 
-__version__ = "1.7.6"
+__version__ = "1.8.0"
 __app_name__ = "Mangasurf"
+__release__ = "Mangasurf - Arctica"
 __author__ = "Mangasurf Team"
 
 # Backwards compatibility alias

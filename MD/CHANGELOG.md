@@ -4,6 +4,40 @@ All notable changes to **Mangasurf**, newest first.
 
 ---
 
+## [1.8.0] — Mangasurf - Arctica v1.8.0
+
+### OPDS for OPDS reader apps, as a one-tap link
+- The OPDS catalog URL is now both copy-able **and** clickable. A new
+  "Open in Reader App" link embeds the access token as basic-auth credentials
+  (`http://reader:<token>@<host>:8578/opds`), so Thorium, Readest, Panels,
+  Aldiko and KyBook open the catalog on the first tap with no prompt.
+- Tailscale gets its own one-tap link too, for readers on your tailnet.
+
+### Read-state chapter list on the manga page
+- Fully-read chapters are highlighted **amber-yellow**.
+- Chapters that are fully-read **and** downloaded are highlighted **blue**.
+- Partially-read chapters render as an in-row **horizontal progress bar** filled
+  to the read fraction.
+- Read state is supplied per chapter by `get_manga` (`chapter_state`), keyed by
+  chapter URL / name / 1-based index, combining tracking (read/unread) and the
+  reader's saved position fraction.
+
+### Read button + reader
+- The prominent **Read** button now defaults to the **first** chapter when
+  reading online, instead of the last.
+- The reader's **Chapters** tab now lists every online chapter of the series
+  (with read-state) alongside local sibling folders/archives, and lets you jump
+  between chapters without leaving the reader.
+- Finished online chapters are auto-marked read (past ~98% or when the reader
+  reports the end), so the highlights stay accurate.
+
+### Branding & website
+- Release branded **"Mangasurf - Arctica"**, version bumped to **1.8.0**.
+- Website rebuilt in a retro-cool, rustic, beautiful theme.
+- Roadmap updated with the v1.8.0 (Arctica) milestones.
+
+---
+
 ## [1.7.6] — Mangasurf v1.7.6: Password & Shelf-Lock Removal, Clean Server Auth
 
 ### App-lock and per-shelf passcodes removed

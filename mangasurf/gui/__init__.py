@@ -1448,6 +1448,56 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         except Exception as e:
             return {"ok": False, "error": str(e), "genres": []}
 
+    def _chapter_state(self, url: str, chapters: list):
+        """Per-chapter read state for the manga page.
+
+        Returns a dict keyed by chapter URL (falling back to the chapter name,
+        then its 1-based index) with ``read`` (fully read), ``downloaded``,
+        and ``fraction`` (0..1 reading position from the reader, for the
+        partially-read progress bar).
+        """
+        import os as _os
+
+        read = tracking.read_chapters(url)
+        downloaded = set(library.match_downloaded(url, chapters))
+        try:
+            from ..reader.api import _key as _poskey, load_positions
+            positions = load_positions()
+        except Exception:
+            positions = {}
+            _poskey = lambda p: p
+
+        out = {}
+        for i, ch in enumerate(chapters or []):
+            if not isinstance(ch, dict):
+                continue
+            name = ch.get("name") or ch.get("title") or str(ch) or f"Chapter {i + 1}"
+            ch_url = ch.get("url") or ch.get("link") or ""
+            frac = 0.0
+            if ch_url:
+                pkey = _poskey(ch_url)
+                frac = (positions.get(pkey) or {}).get("fraction") or 0.0
+            # Local downloads: try matching a downloaded chapter's path too.
+            if not frac:
+                for pkey in positions:
+                    if _os.path.basename(pkey).lower() in (name.lower(),):
+                        frac = (positions.get(pkey) or {}).get("fraction") or 0.0
+                        if frac:
+                            break
+            state = {
+                "read": name in read,
+                "downloaded": name in downloaded,
+                "fraction": round(float(frac), 4),
+                "name": name,
+                "url": ch_url,
+            }
+            out[f"i:{i}"] = state
+            if ch_url:
+                out[ch_url] = state
+            if name:
+                out[name] = state
+        return out
+
     def get_manga(self, url: str, source_id: str = None):
         try:
             source = self._source(source_id, url=url)
@@ -1469,6 +1519,10 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
                 "read": sorted(tracking.read_chapters(url)),
                 "progress": tracking.progress_for(url, chapters),
                 "note": tracking.get_note(url),
+                # Per-chapter reading state so the manga page can colour
+                # fully-read, downloaded-and-read, and partially-read rows and
+                # render each row's progress fraction in the panel.
+                "chapter_state": self._chapter_state(url, chapters),
             }
         except Exception as e:
             logger.exception("get_manga failed")
@@ -2352,7 +2406,7 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
 
     def get_opds_config(self):
         """Catalog settings and its URL, for the Settings panel."""
-        from ..opdsserve import build_url, opds_port
+        from ..opdsserve import build_open_url, build_url, opds_port
         from ..servercfg import load_server_settings
 
         settings = load_settings()
@@ -2385,6 +2439,10 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
         url = build_url(host_ip, port)
         local_url = f"http://localhost:{port}/opds"
         ts_url = f"http://{ts_ip}:{port}/opds" if ts_ip else ""
+        # One-tap link with the access token embedded as basic-auth creds so
+        # OPDS apps (Thorium, Readest, Panels, Aldiko, KyBook) open it directly.
+        open_url = build_open_url(host_ip, port, cfg["token"])
+        ts_open_url = build_open_url(ts_ip, port, cfg["token"]) if ts_ip else ""
 
         return {
             "ok": True,
@@ -2395,6 +2453,8 @@ class Api(ReaderApi, metaclass=_SafeApiMeta):
             "running": is_running,
             "url": url,
             "local_url": local_url,
+            "open_url": open_url,
+            "tailscale_open_url": ts_open_url,
             "tailscale_ip": ts_ip or "",
             "tailscale_url": ts_url,
             "host_ip": host_ip,
